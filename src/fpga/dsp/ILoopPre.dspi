@@ -1,0 +1,62 @@
+//********************************************
+// ILoopPre.dspi
+//********************************************
+// Standard current control loop - pre
+//********************************************
+
+#INCLUDE "FpgaDSPHStatics.dspi"
+#INCLUDE "FpgaAnPStatics.dspi"
+#INCLUDE "ProcDSPHStatics.dspi"
+#INCLUDE "UserDSPHStatics.dspi"
+
+//********************************************
+
+[REGISTER]  C_ZERO      0x080  // zero
+[REGISTER]  C_1DSQT3    0x088  // 1/(sqrt(3))
+[REGISTER]  C_SQT3D2    0x090  // sqrt(3)/2
+[REGISTER]  C_1D2       0x098  // 1/2
+
+[REGISTER]  S_KI_D      0x0A0  
+[REGISTER]  S_KI_Q      0x0A8 
+
+[REGISTER]  C_1D3       0x0B0  // 1/3
+
+[REGISTER]  T_SIND3     0x0C0  // sin/3
+[REGISTER]  T_COSD3     0x0C8  // cos/3
+[REGISTER]  T_SINDSQT3  0x0D0  // sin/sqrt(3)
+[REGISTER]  T_COSDSQT3  0x0D8  // cos/sqrt(3)
+[REGISTER]  C_1D125     0x0E0  // crs for Dayco
+[REGISTER]  T_VOUT_B    0x0E8
+[REGISTER]  T_LMTSHIFT  0x0F0
+[REGISTER]  T_LMTLIM    0x0F8
+
+[REGISTER]  P_VDC_SEL   0x100
+[REGISTER]  P_VDC_VAL   0x108
+
+[REGISTER]  T_IFBEQ_U   0x110
+[REGISTER]  T_IFBEQ_V   0x118
+[REGISTER]  T_IFBEQ_W   0x120
+[REGISTER]  C_1D4       0x128  // 1/4
+[REGISTER]  C_1D8       0x130  // 1/8
+[REGISTER]  C_7D8       0x138  // 7/8
+[REGISTER]  T_VOUT_D    0x140  // output of I_PI_D loop (crs for Dayco)
+[REGISTER]  T_VOUT_Q    0x148  // output of I_PI_Q loop (crs for Dayco)
+[REGISTER]  T_FLTIFB_ID  0x150 // output of I_PI_D loop (crs for Dayco)
+[REGISTER]  T_FLTIFB_IQ  0x158 // output of I_PI_Q loop (crs for Dayco)
+
+[INPUT]     P_KI        0x10 
+[INPUT]     P_KP        0x11 
+[INPUT]     P_OUTSHIFT  0x12 
+[INPUT]     P_OUTLIM    0x13
+[INPUT]     IREF_D      0x14 
+[INPUT]     P_CORR_VD   0x17  // crs for Dayco
+[INPUT]     P_CORR_VQ   0x18  // crs for Dayco
+[INPUT]     P_VDC_SETVAL 0x19 // crs for Dayco
+
+//********************************************
+// Constants
+[INSTRUCTION] (K_SIN  + C_ZERO) * C_1D3    + C_ZERO     |--> T_SIND3
+[INSTRUCTION] (K_COS  + C_ZERO) * C_1D3    + C_ZERO     |--> T_COSD3
+[INSTRUCTION] (K_SIN  + C_ZERO) * C_1DSQT3 + C_ZERO     |--> T_SINDSQT3
+[INSTRUCTION] (K_COS  + C_ZERO) * C_1DSQT3 + C_ZERO     |--> T_COSDSQT3
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO   - P_OUTSHIFT |--> T_LMTSHIFT

@@ -1,0 +1,66 @@
+//********************************************
+// ILoopPost.dspi
+//********************************************
+// Standard current control loop - post
+//********************************************
+
+//********************************************
+// I direct/quadrature PID
+[INSTRUCTION] (C_ZERO + C_ZERO)  * C_ZERO + P_OUTLIM | << T_LMTSHIFT | --> T_LMTLIM
+
+[INSTRUCTION] (IREF_D - IFB_ID)  * P_KI + S_KI_D | LMT T_LMTLIM
+[INSTRUCTION] [LMT] + C_ZERO                     | --> S_KI_D
+[INSTRUCTION] (IREF_D - IFB_AD)  * P_KP+[ALU]    | LMT T_LMTLIM
+[INSTRUCTION] [LMT] + C_ZERO     | << P_OUTSHIFT | --> VOUT_D
+
+[INSTRUCTION] (IREF_FQ - IFB_IQ) * P_KI + S_KI_Q | LMT T_LMTLIM
+[INSTRUCTION] [LMT] + C_ZERO                     | --> S_KI_Q
+[INSTRUCTION] (IREF_FQ - IFB_AQ) * P_KP + [ALU]  | LMT T_LMTLIM
+[INSTRUCTION] [LMT] + C_ZERO     | << P_OUTSHIFT | --> VOUT_Q
+
+//********************************************
+// inverse clark+park
+[INSTRUCTION] (-K_COS    + C_ZERO) * VOUT_D + C_ZERO
+[INSTRUCTION] ( K_SIN    + C_ZERO) * VOUT_Q + [ALU]   | --> VOUT_U
+
+[INSTRUCTION] (-K_SIN    + C_ZERO) * VOUT_D + C_ZERO
+[INSTRUCTION] (-K_COS    + C_ZERO) * VOUT_Q + [ALU]   | --> T_VOUT_B
+
+[INSTRUCTION] (-C_1D2    + C_ZERO) * VOUT_U + C_ZERO
+[INSTRUCTION] ( C_SQT3D2 + C_ZERO) * T_VOUT_B + [ALU] | --> VOUT_V
+
+[INSTRUCTION] (-VOUT_U   - VOUT_U) * C_1D2  - VOUT_V  | --> VOUT_W
+
+//********************************************
+// sum and differences for pwm modulator
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_U
+[INSTRUCTION] -VOUT_V + [ALU]                     | --> VDIF_UV
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_U
+[INSTRUCTION]  VOUT_V + [ALU]                     | --> VSUM_UV
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_U
+[INSTRUCTION] -VOUT_W + [ALU]                     | --> VDIF_UW
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_V
+[INSTRUCTION] -VOUT_W + [ALU]                     | --> VDIF_VW
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_U
+[INSTRUCTION]  VOUT_W + [ALU]                     | --> VSUM_UW
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_V
+[INSTRUCTION]  VOUT_W + [ALU]                     | --> VSUM_VW
+
+//********************************************
+// copy reference Vdc for pwm modulator,
+// selecting between adc reading or
+// user fixed value
+// due to internal optimizations and in order to
+// switch with only one variable:
+// P_VDC_SET=+1/2 => use VDC_A
+// P_VDC_SET=-1/2 => use P_VDC_VAL
+[INSTRUCTION] (C_1D2 + P_VDC_SEL) * VDC_A     + C_ZERO
+[INSTRUCTION] (C_1D2 - P_VDC_SEL) * P_VDC_VAL + [ALU] | --> VDC_OUT
+
+//********************************************
+// zeroes arm_comp user offset
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO | --> VDC_ARMC
+
+//********************************************
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO | --> DONE
+

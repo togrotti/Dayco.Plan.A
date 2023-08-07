@@ -1,0 +1,25 @@
+//********************************************
+// ProcDSPHStatics.dspi
+// Rev 1
+//********************************************
+// Fixed-address DSPH in/out direct bus for
+// static data used by the standard firmware
+//********************************************
+
+[REGISTER]  IFB_ID      0x050  
+[REGISTER]  IFB_AD      0x058
+[REGISTER]  IFB_IQ      0x060  
+[REGISTER]  IFB_AQ      0x068
+[REGISTER]  VOUT_D      0x070
+[REGISTER]  VOUT_Q      0x078
+
+[INPUT]     IREF_FQ     0x09
+[INPUT]     K_SIN       0x15 
+[INPUT]     K_COS       0x16 
+
+[OUTPUT]    IFB_AD      0x00
+[OUTPUT]    IFB_AQ      0x01
+[OUTPUT]    VOUT_D      0x02
+[OUTPUT]    VOUT_Q      0x03
+[OUTPUT]    VOUT_U      0x04
+[OUTPUT]    VOUT_V      0x05

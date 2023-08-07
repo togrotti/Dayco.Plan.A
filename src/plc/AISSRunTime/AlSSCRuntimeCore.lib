@@ -1,0 +1,1847 @@
+/*------------------------------------------------------------------------------
+**
+**	Copyright:	AXEL s.r.l. 2011
+**
+**	PLCIECRUN.C:	Runtime driver for SoftScope
+**
+**-----------------------------------------------------------------------------
+**
+**	IMPORTANT:
+**	THIS MODULE SHOULDN'T BE MODIFIED BY THE CUSTOMER
+**
+**------------------------------------------------------------------------------*/
+
+/*	Runtime configuration check */
+#pragma GCC optimize (2)
+#include "AlSSCConfCheck.h"
+
+/*	Reading of a sample	*/
+#if ! defined( SSC_GET32BITVALUE )
+	#if defined( ALPLC_P_ARM32 ) || defined(ALPLC_P_ARM_THUMB2) || defined( ALPLC_P_ARM32VFP2 ) || defined(ALPLC_P_ARM_THUMB2VFP2) || defined( ALPLC_P_ARM32VFP2_SP ) || defined( ALPLC_P_ARM_THUMB2VFP2_SP )
+		#define SSC_GET32BITVALUE(pSrc, pDest) \
+			if (((addr_t)pSrc & 3) != 0) \
+			{ /* unaligned 32bit access, single byte copy */ \
+				((uint8_t*)pDest)[0] = ((uint8_t*)pSrc)[0];	\
+				((uint8_t*)pDest)[1] = ((uint8_t*)pSrc)[1];	\
+				((uint8_t*)pDest)[2] = ((uint8_t*)pSrc)[2];	\
+				((uint8_t*)pDest)[3] = ((uint8_t*)pSrc)[3];	\
+			} \
+			else \
+			{ \
+				*pDest = *pSrc; \
+			}
+	#elif defined( ALPLC_P_TIDSP )
+		#define SSC_GET32BITVALUE(pSrc, pDest) \
+			if (((addr_t)pSrc & 1) != 0) \
+			{ /* unaligned 16bit access, single word copy */ \
+				((uint16_t*)pDest)[0] = ((uint16_t*)pSrc)[0];   \
+				((uint16_t*)pDest)[1] = ((uint16_t*)pSrc)[1];   \
+			} \
+			else \
+			{ \
+				*pDest = *pSrc; \
+			}
+	#else
+		#define SSC_GET32BITVALUE(pSrc, pDest)	*pDest = *pSrc;
+	#endif /* defined( ALPLC_P_ARM32 ) */
+#endif /* ! defined( SSC_GET32BITVALUE ) */
+
+#if ! defined( SSC_GET64BITVALUE )
+	#if defined( ALPLC_P_ARM32 ) || defined(ALPLC_P_ARM_THUMB2) || defined( ALPLC_P_ARM32VFP2 ) || defined(ALPLC_P_ARM_THUMB2VFP2) || defined( ALPLC_P_ARM32VFP2_SP ) || defined( ALPLC_P_ARM_THUMB2VFP2_SP )
+		#define SSC_GET64BITVALUE(pSrc, pDest) \
+			if (((addr_t)pSrc & 7) != 0) \
+			{ /* unaligned 64bit access, single byte copy */ \
+				((uint8_t*)pDest)[0] = ((uint8_t*)pSrc)[0];	\
+				((uint8_t*)pDest)[1] = ((uint8_t*)pSrc)[1];	\
+				((uint8_t*)pDest)[2] = ((uint8_t*)pSrc)[2];	\
+				((uint8_t*)pDest)[3] = ((uint8_t*)pSrc)[3];	\
+				((uint8_t*)pDest)[4] = ((uint8_t*)pSrc)[4];	\
+				((uint8_t*)pDest)[5] = ((uint8_t*)pSrc)[5];	\
+				((uint8_t*)pDest)[6] = ((uint8_t*)pSrc)[6];	\
+				((uint8_t*)pDest)[7] = ((uint8_t*)pSrc)[7];	\
+			} \
+			else \
+			{ \
+				*pDest = *pSrc; \
+			}
+	#elif defined( ALPLC_P_TIDSP )
+		#define SSC_GET64BITVALUE(pSrc, pDest) \
+			if (((addr_t)pSrc & 3) != 0) \
+			{ /* unaligned 32bit access, single word copy */ \
+				((uint16_t*)pDest)[0] = ((uint16_t*)pSrc)[0];   \
+				((uint16_t*)pDest)[1] = ((uint16_t*)pSrc)[1];   \
+				((uint16_t*)pDest)[2] = ((uint16_t*)pSrc)[2];   \
+				((uint16_t*)pDest)[3] = ((uint16_t*)pSrc)[3];   \
+			} \
+			else \
+			{ \
+				*pDest = *pSrc; \
+			}
+	#else
+		#define SSC_GET64BITVALUE(pSrc, pDest)	*pDest = *pSrc;
+	#endif /* defined( ALPLC_P_ARM32 ) */
+#endif /* ! defined( SSC_GET32BITVALUE ) */
+
+
+/*	Reading of a sample	(for retrocompatibility and external definition)  */
+#if ! defined( SSC_GETSAMPLE )
+	#define SSC_GETSAMPLE(pSrc)					{ SSC_GET32BITVALUE(pSrc, PDW_SAMPLE_BUFFER); PDW_SAMPLE_BUFFER++; }
+#endif
+
+/*	Reading of the value of the trigger variable (for retrocompatibility and external definition) */
+#if ! defined( SSC_GETTRIGVALUE )
+	#define SSC_GETTRIGVALUE(pSrc, dest)		SSC_GET32BITVALUE(((uint32_t*)pSrc), ((uint32_t*)&dest))
+#endif /* ! defined( SSC_GETTRIGVALUE ) */
+
+
+/*	Pointers types inside the buffer (type can be externally defined with SSC_SAMPLES_MQUALIFIER) */
+#if defined( SSC_SAMPLES_MQUALIFIER )
+#define SAMPLEBUFPTR_T SSC_SAMPLES_MQUALIFIER
+#else
+#define SAMPLEBUFPTR_T uint32_t *
+#endif
+
+/*	Size of BOOL types, if not defined defaults to 1 */
+#ifndef SSC_BOOL_SIZE
+#define SSC_BOOL_SIZE 1
+#endif
+
+/* Define SSC_EXT_AREA_ADDRESS manually if Softscope buffer is assigned to an external area */
+#ifndef SSC_EXT_AREA_ADDRESS
+#define SSC_EXT_AREA_ADDRESS
+#endif
+
+/*	ACQUISITION_CONTROL_DATA_VERSION is used to manage saved samples data log inconsistency */
+#define ACQUISITION_CONTROL_DATA_VERSION	1
+#define ACQUISITION_CONTROL_DATA_ID			0x1122AABB
+
+#if defined( SSC_SAVEACQ_SUPPORTED )
+/*	Acquisition final parameters values */
+typedef struct _SSC_ACQ_END_STATUS
+{
+	uint32_t dwSampleCount;				/*	Acquired samples */
+	uint32_t dwTriggerPosition;			/*	Trigger position at the end of the acquisition */
+	uint32_t dwAcquiredDataId;			/*	Acquired data id (same of acquisitionId) */
+	uint32_t dwAbsTimeRef;				/*	Absolute time reference */
+}
+SSC_ACQ_END_STATUS;
+#endif	//	SSC_SAVEACQ_SUPPORTED
+
+/*	Acquisition control data	*/
+typedef struct _ACQUIRE_CONTROL_DATA
+{
+#if defined( SSC_SAVEACQ_SUPPORTED )
+	/*	Structure version */
+	uint32_t			id;					/*	must be 0x1122AABB */
+	uint32_t			version;			/*	modify ACQUISITION_CONTROL_DATA_VERSION definition if this structure changes!!! */
+	uint32_t			size;				/*	size of the structure */
+	SSC_ACQ_END_STATUS	endStatus;			/*	status at the end of the acquisition that must be saved/restored together with samples data */
+#endif	//	SSC_SAVEACQ_SUPPORTED
+
+	SSC_BUFFER_CTRL	ctrl;					/*	Acquisition index and counter */
+	uint32_t		samplesBuffer[ SSC_NUM_SAMPLES ];	/*	Buffer for acquired data	*/
+	SAMPLEBUFPTR_T  pdwSampleBuffer;		/*	Pointer to the next sample storage	*/
+	SAMPLEBUFPTR_T  pdwEndBuffer;			/*	Pointer to the end (limit) of the acquisition buffer	*/
+}
+ACQUIRE_CONTROL_DATA;
+
+/*	ACQUISITION_CONFIG_DATA_VERSION is used to manage saved config data log inconsistency */
+#define ACQUISITION_CONFIG_DATA_VERSION		1
+#define ACQUISITION_CONFIG_DATA_ID			0x1234ABCD
+
+typedef struct _ACQUISITION_CONFIG_DATA
+{
+#if defined( SSC_SAVEACQ_SUPPORTED )
+	/*	Structure version */
+	uint32_t	id;					/*	must always be 0x1234ABCD */
+	uint32_t	version;				/*	modify ACQUISITION_CONFIG_DATA_VERSION definition if this structure changes!!! */
+	uint32_t	size;					/*	size of the structure */
+	uint32_t	softwareId;				/*	software id to check (PLC memoid, PLC codeid or other) */
+	uint32_t	dwAcquisitionId;			/*	acquisition id saved to rearm autorestart */
+#endif	//	SSC_SAVEACQ_SUPPORTED
+
+	/*	Signals definitions	*/
+	SIGN_DWTYPES	ssSignalsDataTypes[ SSC_NUMTRACKS ];	/*	Data type */
+	SIGN_ADDRESS	ssSignalsAddresses[ SSC_NUMTRACKS ];	/*	Address type */
+
+	/*	Trigger definition */
+	SIGN_DWTYPES	ssTriggerDataType;		/*	Data type */
+	SIGN_ADDRESS	ssTriggerAddress;		/*	Address type */
+	uint64_t		dwTriggerThreshold;		/*	Threshold value for the trigger */
+	uint32_t		dwPreTriggerCount;		/*	Position of the trigger inside the buffer (pre-trigger) */
+	uint16_t		wTriggerEdge;			/*	Type of trigger edge: rising / falling */
+	uint16_t		wTriggerCmpType;		/*	Type of trigger comparison operation. default trgCmpNumeric */	
+	uint16_t		wTriggerCommand;		/*	Auto or normal */
+
+	/*	Prescaler per tempo di acquisizione */
+	uint32_t		dwTimePrescaler;
+
+	/*	Numero campioni da acquisire */
+	uint32_t		dwSamplesRequired;
+
+	/*	Acquisition mode (standard or realtime) */
+	uint16_t		wOperationMode;			/*	default acqStandard */
+
+#if defined( SSC_SAVEACQ_SUPPORTED )
+	/*	Log enabled */
+	bool_t			bLoggingEnabled;		/*	default false */
+#endif	//	SSC_SAVEACQ_SUPPORTED
+#if defined( SSC_RESTARTACQ_SUPPORTED )
+	/*	Auto restart */
+	bool_t			bAutoRestart;			/*	default false */
+#endif	//	SSC_RESTARTACQ_SUPPORTED
+}
+ACQUISITION_CONFIG_DATA;
+
+/*	Configuration data set by SoftScope */
+static ACQUISITION_CONFIG_DATA m_acqConfig;
+
+/*	Constant used for indetermined data addresses */
+static const uint64_t m_dwAlwaysZero = 0;
+
+/*	Threshold value for the trigger */
+static uint64_t		m_dwTriggerThreshold = 0;
+
+/*	Position of the trigger inside the buffer (pre-trigger) */
+static uint32_t		m_dwPreTriggerCount = 0;
+
+/*	Numero campioni da acquisire */
+static uint32_t		m_dwSamplesRequired = 0;
+
+/*	Conteggio prescaler per tempo di acquisizione */
+static uint32_t		m_dwTimePrescalerCnt = 0;
+
+/*	Values of the trigger */
+static uint64_t		m_dwPreviousTriggerValue;
+static uint64_t		m_dwActualTriggerValue;
+static const uint64_t*	m_pdwTriggerValue;
+
+/*	Acquisition buffer control (can be externally defined with SSC_SAMPLES_BUFFER macro) */
+#if defined( SSC_SAMPLES_BUFFER )
+
+static SAMPLEBUFPTR_T  m_pdwSampleBuffer;					/*	Pointer to the next sample storage	*/
+static SAMPLEBUFPTR_T  m_pdwEndBuffer;						/*	Pointer to the end (limit) of the acquisition buffer	*/
+
+#define PDW_BUFFER			SSC_SAMPLES_BUFFER
+#define PDW_SAMPLE_BUFFER	m_pdwSampleBuffer
+#define PDW_END_BUFFER		m_pdwEndBuffer
+
+#elif defined( SSC_REALTIME_ACQUIRE ) || defined( SSC_PUSH_ACQUIRE )
+
+#if defined( SSC_PUSH_ACQUIRE )
+#if !defined( SSC_NUM_ACQ_CONTROL_STRUCT )
+#define SSC_NUM_ACQ_CONTROL_STRUCT	2
+#endif	//	SSC_NUM_ACQ_CONTROL_STRUCT
+#else	//	SSC_PUSH_ACQUIRE
+#define SSC_NUM_ACQ_CONTROL_STRUCT	2
+#endif	//	SSC_REALTIME_ACQUIRE
+
+/*	Double buffer of real-time acquisition	*/
+static SSC_EXT_AREA_ADDRESS ACQUIRE_CONTROL_DATA m_acqControl[ SSC_NUM_ACQ_CONTROL_STRUCT ];
+
+/*	Active acquisition data buffer	*/
+static ACQUIRE_CONTROL_DATA* volatile m_ptrAcqControl = &m_acqControl[0];
+
+/*	Next acquisition data buffer	*/
+static ACQUIRE_CONTROL_DATA* volatile m_ptrNextAcqControl = &m_acqControl[0];
+static ACQUIRE_CONTROL_DATA* volatile m_ptrPushAcqControl = NULL;
+
+#define PDW_SAMPLE_BUFFER	m_ptrAcqControl->pdwSampleBuffer
+#define PDW_END_BUFFER		m_ptrAcqControl->pdwEndBuffer
+#define PDW_BUFFER			m_ptrAcqControl->samplesBuffer
+#define PDW_COUNTER			m_ptrAcqControl->ctrl.dwSamplesCounter
+
+/*	Addresses of the real-time acquisition data	*/
+#define PDW_RT_BUFFER0		&(m_acqControl[0].ctrl)
+#define PDW_RT_BUFFER1		&(m_acqControl[1].ctrl)
+
+#if defined( SSC_PUSH_ACQUIRE )
+/*	Samples counter value for push data out*/
+static uint32_t m_dwPushThreshold = 0;
+/*	Acquisition ctrl index */
+static volatile uint32_t m_dwNextAcqCtrlIndex = 0;
+/*	Acquisition push data index */
+static volatile uint32_t m_dwPushAcqCtrlIndex = 0;
+#endif	//	SSC_PUSH_ACQUIRE
+
+#else
+
+/*	Single buffer of static (traditional) acquisition	*/
+static SSC_EXT_AREA_ADDRESS ACQUIRE_CONTROL_DATA m_acqControl;
+
+#define PDW_SAMPLE_BUFFER	m_acqControl.pdwSampleBuffer
+#define PDW_END_BUFFER		m_acqControl.pdwEndBuffer
+#define PDW_BUFFER			m_acqControl.samplesBuffer
+
+#endif
+
+#if defined( SSC_SAVEACQ_SUPPORTED )
+
+typedef struct _XML_CONFIG_DATA
+{
+	bool_t isValid;
+	uint32_t dataSize;
+	void * dataAddress;
+}
+XML_CONFIG_DATA;
+
+static XML_CONFIG_DATA m_sscXmlConfigData;
+
+static bool_t volatile m_bSaveAcqSamples = FALSE;
+static bool_t volatile m_bLoadAcqRequest = FALSE;
+
+static void SScopeSaveManager(void);
+
+#if defined( SSC_RESTARTACQ_SUPPORTED )
+
+static bool_t volatile m_lastAcquisitionDone = FALSE;
+static void PingArrived();
+
+#endif	//	SSC_RESTARTACQ_SUPPORTED
+#endif	//	SSC_SAVEACQ_SUPPORTED
+
+/*	Internal trigger control	*/
+static uint32_t		m_dwEndSampleCount;
+
+/*	Data sources */
+static uint32_t *	m_pdwSource[ SSC_NUMTRACKS ];
+
+/*	Index of the last configured track */
+static uint32_t m_dwLastConfiguredTrack = 0;
+
+/*	Number of active tracks (64bit tracks counted *2), same as NumTargetTracks in SoftScopeCore */
+static uint32_t m_dwActiveTracks = 0;
+
+static bool_t		m_isTrack64bit[SSC_NUMTRACKS];
+static bool_t		m_isTrigger64bit;
+
+/*	Syncronous sample counter */
+static uint32_t m_dwSyncSampleCounter = 0;
+
+/*	Monitor get/set cmd */
+typedef struct _ssc_monitor_cmd_t
+{
+	SIGN_DWTYPES	ssMonitorDataType;		/*	Data type */
+	SIGN_ADDRESS	ssMonitorAddress;		/*	Address type */
+	uint64_t		value;
+} ssc_monitor_cmd_t;
+static ssc_monitor_cmd_t m_sscMonitorCmd;
+
+/*	Edge detection macros and functions */
+#define SS_RISING_TRIG_DETECT(type)		*((type*)&m_dwActualTriggerValue) >= *((type*)&m_dwTriggerThreshold) && *((type*)&m_dwPreviousTriggerValue) < *((type*)&m_dwTriggerThreshold)
+#define SS_FALLING_TRIG_DETECT(type)	*((type*)&m_dwActualTriggerValue) <= *((type*)&m_dwTriggerThreshold) && *((type*)&m_dwPreviousTriggerValue) > *((type*)&m_dwTriggerThreshold)
+
+static bool_t BOOL_TrueTrigDetect(void)			{	return TRUE;								}
+/* Numeric trigger comparison functions */
+static bool_t BOOL_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( bool_t );		}
+static bool_t BOOL_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( bool_t );	}
+static bool_t SINT_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( int8_t );		}
+static bool_t SINT_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( int8_t );	}
+static bool_t USINT_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( uint8_t );	}
+static bool_t USINT_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( uint8_t );	}
+static bool_t INT_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( int16_t );	}
+static bool_t INT_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( int16_t );	}
+static bool_t UINT_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( uint16_t );	}
+static bool_t UINT_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( uint16_t );	}
+static bool_t DINT_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( int32_t );	}
+static bool_t DINT_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( int32_t );	}
+static bool_t UDINT_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( uint32_t );	}
+static bool_t UDINT_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( uint32_t );	}
+static bool_t LINT_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( int64_t );	}
+static bool_t LINT_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( int64_t );	}
+static bool_t ULINT_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( uint64_t );	}
+static bool_t ULINT_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( uint64_t );	}
+static bool_t REAL_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( float32_t );	}
+static bool_t REAL_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( float32_t );	}
+static bool_t LREAL_RisingTrigDetect(void)		{	return SS_RISING_TRIG_DETECT( double );		}
+static bool_t LREAL_FallingTrigDetect(void)		{	return SS_FALLING_TRIG_DETECT( double);		}
+/* LogicalAND trigger comparison functions: threshold is the bitmask to apply */
+static bool_t LogicalAND_RisingTrigDetect(void)		{ return ((m_dwActualTriggerValue & m_dwTriggerThreshold) == m_dwTriggerThreshold) && ((m_dwPreviousTriggerValue & m_dwTriggerThreshold) != m_dwTriggerThreshold); }
+static bool_t LogicalAND_FallingTrigDetect(void)	{ return ((m_dwActualTriggerValue & m_dwTriggerThreshold) != m_dwTriggerThreshold) && ((m_dwPreviousTriggerValue & m_dwTriggerThreshold) == m_dwTriggerThreshold); }
+
+
+/*	Actual compare function */
+static bool_t	(*m_fnzTrigDetect)(void) = BOOL_TrueTrigDetect;
+
+
+/* memcpy may not be present... our own basic implementation */
+static void sscMemCpy(void* dest, const void* src, uint32_t len)
+{
+	/* try to do atomic copy first, if aligned */
+	switch (len)
+	{
+		case 1:
+			*(uint8_t*)dest = *(const uint8_t*)src;
+			return;
+
+		case 2:
+			if ((addr_t)dest % 2 == 0 && (addr_t)src % 2 == 0)
+			{
+				*(uint16_t*)dest = *(const uint16_t*)src;
+				return;
+			}
+			break;
+
+		case 4:
+			if ((addr_t)dest % 4 == 0 && (addr_t)src % 4 == 0)
+			{
+				*(uint32_t*)dest = *(const uint32_t*)src;
+				return;
+			}
+			break;
+
+		case 8:
+			if ((addr_t)dest % 8 == 0 && (addr_t)src % 8 == 0)
+			{
+				*(uint64_t*)dest = *(const uint64_t*)src;
+				return;
+			}
+			break;
+	}
+
+	/* fallback, byte-by-byte copy */
+	const uint8_t* csrc = (const uint8_t*)src;
+	uint8_t* cdest = (uint8_t*)dest;
+
+	while (len--)
+		*cdest++ = *csrc++;
+}
+
+static uint8_t GetTypeSize(TYVAR type)
+{
+	switch (type)
+	{
+		case tyvNull:
+			return 0;
+		case tyvBool:
+			return SSC_BOOL_SIZE;
+		case tyvByte:
+		case tyvUSInt:
+		case tyvSInt:
+			return sizeof(uint8_t);
+		case tyvWord:
+		case tyvInt:
+		case tyvUInt:
+			return sizeof(uint16_t);
+		case tyvDWord:
+		case tyvDInt:
+		case tyvUDInt:
+		case tyvReal:
+			return sizeof(uint32_t);
+		case tyvLInt:
+		case tyvULInt:
+		case tyvLWord:
+		case tyvLReal:
+			return sizeof(uint64_t);
+		default:
+			/* unhandled type ! */
+			return 0;
+	}
+}
+
+static uint32_t * SSGetDataAddress( const SIGN_DWTYPES * sigType, const SIGN_ADDRESS * sigAddr )
+{
+	uint32_t * addr = NULL;
+
+	switch( sigType->s.bAddrType )
+	{
+	case tyaPhysical:
+		#if defined( SSC_GET_PHYSADDR )
+		addr = SSC_GET_PHYSADDR( sigAddr->adrPhysAddress );
+		#endif
+		break;
+
+	case tyaDataBlockInp:
+		#if defined( SSC_GET_DBADDR )
+		addr = SSC_GET_DBADDR( DBTY_INP, sigAddr->dbAddress.wDataBlock, sigAddr->dbAddress.wIndex );
+		#endif
+		break;
+
+	case tyaDataBlockOut:
+		#if defined( SSC_GET_DBADDR )
+		addr = SSC_GET_DBADDR( DBTY_OUT, sigAddr->dbAddress.wDataBlock, sigAddr->dbAddress.wIndex );
+		#endif
+		break;
+
+	case tyaDataBlockMem:
+		#if defined( SSC_GET_DBADDR )
+		addr = SSC_GET_DBADDR( DBTY_MEMO, sigAddr->dbAddress.wDataBlock, sigAddr->dbAddress.wIndex );
+		#endif
+		break;
+
+	case tyaObjDict:
+		#if defined( SSC_GET_OBJADDR )
+		addr = SSC_GET_OBJADDR( sigAddr->dictObjectAddress.wObjectIndex, sigAddr->dictObjectAddress.wObjectSubIndex );
+		#endif
+		break;
+
+	case tyaRelativeAddr:
+		#if defined( SSC_GET_RELATIVEADDR )
+		addr = SSC_GET_RELATIVEADDR( (RELATIVE_ADDR_BASE)sigAddr->relativeAddress.bBase, sigAddr->relativeAddress.dwOffset );
+		#endif
+		break;
+	}
+
+	if (addr != NULL && sigType->s.wDataElement != 0)
+		/* add offset for array item acquisition if specified */
+		addr = (uint32_t*)( (addr_t)addr + GetTypeSize((TYVAR)sigType->s.bDataType) * sigType->s.wDataElement );
+
+	return addr != NULL ? addr : ( uint32_t* ) &m_dwAlwaysZero;
+}
+
+/*
+ *	Get variable/parameter value for SoftScope monitor window
+ */
+static bool_t GetMonitorCmdValue(const SIGN_DWTYPES * sigType, const SIGN_ADDRESS * sigAddr, uint64_t* pValue)
+{
+	*pValue = 0;
+	if (sigType->s.bAddrType == tyaObjDict)
+	{
+	#if defined( SSC_GET_OBJVALUE )
+		uint8_t size = GetTypeSize((TYVAR)sigType->s.bDataType);
+		return SSC_GET_OBJVALUE(sigAddr->dictObjectAddress.wObjectIndex, sigAddr->dictObjectAddress.wObjectSubIndex, pValue, size);
+	#else
+		return FALSE;
+	#endif	//	SSC_GET_OBJVALUE
+	}
+	else
+	{
+		/*	Get memory address from specified type */
+		uint32_t* address = SSGetDataAddress(sigType, sigAddr);
+		if (address == (uint32_t*)&m_dwAlwaysZero)
+			return FALSE;
+
+		uint8_t len = GetTypeSize((TYVAR)sigType->s.bDataType);
+		sscMemCpy(pValue, (const void*)address, len);
+		return TRUE;
+	}
+}
+
+/*
+ *	Set softscope monitor value into variable/parameter value
+ */
+static bool_t SetMonitorCmdValue(const SIGN_DWTYPES * sigType, const SIGN_ADDRESS * sigAddr, uint64_t value)
+{
+	if (sigType->s.bAddrType == tyaObjDict)
+	{
+#if defined( SSC_SET_OBJVALUE )
+		uint8_t size = GetTypeSize((TYVAR)sigType->s.bDataType);
+		return SSC_SET_OBJVALUE(sigAddr->dictObjectAddress.wObjectIndex, sigAddr->dictObjectAddress.wObjectSubIndex, value, size);
+#else
+		return FALSE;
+#endif	//	SSC_SET_OBJVALUE
+	}
+	else
+	{
+		uint32_t* address = SSGetDataAddress(sigType, sigAddr);
+		if (address == (uint32_t*)&m_dwAlwaysZero)
+			return FALSE;
+
+		uint8_t len = GetTypeSize((TYVAR)sigType->s.bDataType);
+		sscMemCpy(address, &value, len);
+		return TRUE;
+	}
+}
+
+/*											*/
+/*	Management of SoftScope commands		*/
+/*											*/
+#if defined( SSC_GET_OBJADDR )
+static bool_t SSCGetObjectScale(uint32_t numTrack)
+{
+	float flValue;
+	if (SSC_GET_OBJSCALE(m_acqConfig.ssSignalsAddresses[numTrack].dictObjectAddress.wObjectIndex, m_acqConfig.ssSignalsAddresses[numTrack].dictObjectAddress.wObjectSubIndex, &flValue))
+	{
+		SSC_R_DATA = *((uint32_t*)&flValue);
+		return TRUE;
+	}
+	else
+		return FALSE;
+}
+
+static bool_t SSCGetObjectOffset(uint32_t numTrack)
+{
+	float flValue;
+	if (SSC_GET_OBJOFFSET(m_acqConfig.ssSignalsAddresses[numTrack].dictObjectAddress.wObjectIndex, m_acqConfig.ssSignalsAddresses[numTrack].dictObjectAddress.wObjectSubIndex, &flValue))
+	{
+		SSC_R_DATA = *((uint32_t*)&flValue);
+		return TRUE;
+	}
+	else
+		return FALSE;
+}
+
+static bool_t SSCGetObjectType(uint32_t numTrack)
+{
+	uint8_t typePar;
+	uint8_t typeVar;
+	if (SSC_GET_OBJTYPES(m_acqConfig.ssSignalsAddresses[numTrack].dictObjectAddress.wObjectIndex, m_acqConfig.ssSignalsAddresses[numTrack].dictObjectAddress.wObjectSubIndex, &typePar, &typeVar))
+	{
+		SSC_R_DATA = (typePar << 8) | typeVar;
+		return TRUE;
+	}
+	else
+		return FALSE;
+}
+#endif // SSC_GET_OBJADDR
+
+static void SScopeCommandManager(void)
+{
+	bool_t commandOk = TRUE;
+
+	/*  Check for SoftScope commands */
+	switch( SSC_R_COMMAND )
+	{
+	case SSC_GET_FEATURES:
+		SSC_R_DATA = SSC_FEATURES;
+		break;
+
+	case SSC_IDLE_COMMAND:
+	case SSC_ACK_CODE:
+	case SSC_NACK_CODE:
+		return;
+
+	case SSC_SET_TRACK0_DATATYPE:
+	case SSC_SET_TRACK1_DATATYPE:
+	case SSC_SET_TRACK2_DATATYPE:
+	case SSC_SET_TRACK3_DATATYPE:
+	case SSC_SET_TRACK4_DATATYPE:
+	case SSC_SET_TRACK5_DATATYPE:
+	case SSC_SET_TRACK6_DATATYPE:
+	case SSC_SET_TRACK7_DATATYPE:
+		m_acqConfig.ssSignalsDataTypes[ SSC_R_COMMAND - SSC_SET_TRACK0_DATATYPE ].dw = (uint32_t)SSC_R_DATA;
+		break;
+
+	case SSC_SET_TRACK8_DATATYPE:
+	case SSC_SET_TRACK9_DATATYPE:
+	case SSC_SET_TRACK10_DATATYPE:
+	case SSC_SET_TRACK11_DATATYPE:
+	case SSC_SET_TRACK12_DATATYPE:
+	case SSC_SET_TRACK13_DATATYPE:
+	case SSC_SET_TRACK14_DATATYPE:
+	case SSC_SET_TRACK15_DATATYPE:
+	case SSC_SET_TRACK16_DATATYPE:
+	case SSC_SET_TRACK17_DATATYPE:
+	case SSC_SET_TRACK18_DATATYPE:
+	case SSC_SET_TRACK19_DATATYPE:
+		m_acqConfig.ssSignalsDataTypes[ SSC_R_COMMAND - SSC_SET_TRACK8_DATATYPE + 8 ].dw = (uint32_t)SSC_R_DATA;
+		break;
+
+	case SSC_SET_TRACK0_ADDR:
+	case SSC_SET_TRACK1_ADDR:
+	case SSC_SET_TRACK2_ADDR:
+	case SSC_SET_TRACK3_ADDR:
+	case SSC_SET_TRACK4_ADDR:
+	case SSC_SET_TRACK5_ADDR:
+	case SSC_SET_TRACK6_ADDR:
+	case SSC_SET_TRACK7_ADDR:
+		m_acqConfig.ssSignalsAddresses[ SSC_R_COMMAND - SSC_SET_TRACK0_ADDR ].adrPhysAddress = SSC_R_DATA;
+		break;
+
+	case SSC_SET_TRACK8_ADDR:
+	case SSC_SET_TRACK9_ADDR:
+	case SSC_SET_TRACK10_ADDR:
+	case SSC_SET_TRACK11_ADDR:
+	case SSC_SET_TRACK12_ADDR:
+	case SSC_SET_TRACK13_ADDR:
+	case SSC_SET_TRACK14_ADDR:
+	case SSC_SET_TRACK15_ADDR:
+	case SSC_SET_TRACK16_ADDR:
+	case SSC_SET_TRACK17_ADDR:
+	case SSC_SET_TRACK18_ADDR:
+	case SSC_SET_TRACK19_ADDR:
+		m_acqConfig.ssSignalsAddresses[ SSC_R_COMMAND - SSC_SET_TRACK8_ADDR + 8 ].adrPhysAddress = SSC_R_DATA;
+		break;
+
+	case SSC_SET_TRIG_DATATYPE:
+		m_acqConfig.ssTriggerDataType.dw = (uint32_t)SSC_R_DATA;
+		break;
+
+	case SSC_SET_TRIG_ADDR:
+		m_acqConfig.ssTriggerAddress.adrPhysAddress = SSC_R_DATA;
+		break;
+
+	case SSC_SET_TIME_PRESCALER:
+		m_acqConfig.dwTimePrescaler = (uint32_t)SSC_R_DATA;
+		break;
+
+	case SSC_SET_SAMPLE_REQUIRED:
+		m_acqConfig.dwSamplesRequired = (uint32_t)SSC_R_DATA;
+		break;
+
+	case SSC_SET_TRIGGER_EDGE:
+		m_acqConfig.wTriggerEdge = (uint16_t)SSC_R_DATA;
+		break;
+
+	case SSC_SET_TRIGGER_THR:
+		m_acqConfig.dwTriggerThreshold = (uint32_t)SSC_R_DATA;
+		break;
+
+	case SSC_SET_TRIGGER_THR_HI:
+		/* upper 32bit part of trigger threshold, for 64bit trigger tracks */
+		m_acqConfig.dwTriggerThreshold |= (uint64_t)SSC_R_DATA << 32;
+		break;
+
+	case SSC_SET_TRIGGER_PRE:
+		m_acqConfig.dwPreTriggerCount = (uint32_t)SSC_R_DATA;
+		break;
+
+	case SSC_GET_SAMPLEBUFFSIZE:
+		SSC_R_DATA = SSC_NUM_SAMPLES;
+		break;
+
+	case SSC_GET_NUMTRACKS:
+		SSC_R_DATA = SSC_NUMTRACKS;
+		break;
+
+	case SSC_GET_SAMPLE_TIMEBASE:
+		SSC_R_DATA = SSC_TIME_BASE;
+		break;
+
+	case SSC_GET_SAMPLE_BUFFBASE:
+		#ifdef SSC_DBMEMORYACCESS
+		SSC_R_DATA = (addr_t)(DBLK_SSC_BASE + DBLK_SSC_BUF);
+		#else
+		SSC_R_DATA = (addr_t)PDW_BUFFER;
+		#endif
+		break;
+
+	case SSC_GET_SYN_SAMPLE_COUNTER:
+		SSC_R_DATA = (addr_t)m_dwSyncSampleCounter;
+		break;
+
+	/* read scale from internal database (applies only to dictionary objects tracks) */
+	case SSC_GET_OBJECT0_SCALE:
+	case SSC_GET_OBJECT1_SCALE:
+	case SSC_GET_OBJECT2_SCALE:
+	case SSC_GET_OBJECT3_SCALE:
+	case SSC_GET_OBJECT4_SCALE:
+	case SSC_GET_OBJECT5_SCALE:
+	case SSC_GET_OBJECT6_SCALE:
+	case SSC_GET_OBJECT7_SCALE:
+		#if defined( SSC_GET_OBJADDR )
+		if (!SSCGetObjectScale(SSC_R_COMMAND - SSC_GET_OBJECT0_SCALE))
+			commandOk = FALSE;
+		#else
+		commandOk = FALSE;
+		#endif
+		break;
+
+	case SSC_GET_OBJECT8_SCALE:
+	case SSC_GET_OBJECT9_SCALE:
+	case SSC_GET_OBJECT10_SCALE:
+	case SSC_GET_OBJECT11_SCALE:
+	case SSC_GET_OBJECT12_SCALE:
+	case SSC_GET_OBJECT13_SCALE:
+	case SSC_GET_OBJECT14_SCALE:
+	case SSC_GET_OBJECT15_SCALE:
+	case SSC_GET_OBJECT16_SCALE:
+	case SSC_GET_OBJECT17_SCALE:
+	case SSC_GET_OBJECT18_SCALE:
+	case SSC_GET_OBJECT19_SCALE:
+		#if defined( SSC_GET_OBJADDR )
+		if (!SSCGetObjectScale(SSC_R_COMMAND - SSC_GET_OBJECT8_SCALE + 8))
+			commandOk = FALSE;
+		#else
+		commandOk = FALSE;
+		#endif
+		break;
+
+	/* read offset from internal database (applies only to dictionary objects tracks) */
+	case SSC_GET_OBJECT0_OFFSET:
+	case SSC_GET_OBJECT1_OFFSET:
+	case SSC_GET_OBJECT2_OFFSET:
+	case SSC_GET_OBJECT3_OFFSET:
+	case SSC_GET_OBJECT4_OFFSET:
+	case SSC_GET_OBJECT5_OFFSET:
+	case SSC_GET_OBJECT6_OFFSET:
+	case SSC_GET_OBJECT7_OFFSET:
+		#if defined( SSC_GET_OBJADDR )
+		if (!SSCGetObjectOffset(SSC_R_COMMAND - SSC_GET_OBJECT0_OFFSET))
+			commandOk = FALSE;
+		#else
+		commandOk = FALSE;
+		#endif
+		break;
+
+	case SSC_GET_OBJECT8_OFFSET:
+	case SSC_GET_OBJECT9_OFFSET:
+	case SSC_GET_OBJECT10_OFFSET:
+	case SSC_GET_OBJECT11_OFFSET:
+	case SSC_GET_OBJECT12_OFFSET:
+	case SSC_GET_OBJECT13_OFFSET:
+	case SSC_GET_OBJECT14_OFFSET:
+	case SSC_GET_OBJECT15_OFFSET:
+	case SSC_GET_OBJECT16_OFFSET:
+	case SSC_GET_OBJECT17_OFFSET:
+	case SSC_GET_OBJECT18_OFFSET:
+	case SSC_GET_OBJECT19_OFFSET:
+		#if defined( SSC_GET_OBJADDR )
+		if (!SSCGetObjectOffset(SSC_R_COMMAND - SSC_GET_OBJECT8_OFFSET + 8))
+			commandOk = FALSE;
+		#else
+		commandOk = FALSE;
+		#endif
+		break;
+
+	/* read datatype from internal database (applies only to dictionary objects tracks) */
+	case SSC_GET_OBJECT0_DATATYPE:
+	case SSC_GET_OBJECT1_DATATYPE:
+	case SSC_GET_OBJECT2_DATATYPE:
+	case SSC_GET_OBJECT3_DATATYPE:
+	case SSC_GET_OBJECT4_DATATYPE:
+	case SSC_GET_OBJECT5_DATATYPE:
+	case SSC_GET_OBJECT6_DATATYPE:
+	case SSC_GET_OBJECT7_DATATYPE:
+		#if defined( SSC_GET_OBJADDR )
+		if (!SSCGetObjectType(SSC_R_COMMAND - SSC_GET_OBJECT0_DATATYPE))
+			commandOk = FALSE;
+		#else
+		commandOk = FALSE;
+		#endif
+		break;
+
+	case SSC_GET_OBJECT8_DATATYPE:
+	case SSC_GET_OBJECT9_DATATYPE:
+	case SSC_GET_OBJECT10_DATATYPE:
+	case SSC_GET_OBJECT11_DATATYPE:
+	case SSC_GET_OBJECT12_DATATYPE:
+	case SSC_GET_OBJECT13_DATATYPE:
+	case SSC_GET_OBJECT14_DATATYPE:
+	case SSC_GET_OBJECT15_DATATYPE:
+	case SSC_GET_OBJECT16_DATATYPE:
+	case SSC_GET_OBJECT17_DATATYPE:
+	case SSC_GET_OBJECT18_DATATYPE:
+	case SSC_GET_OBJECT19_DATATYPE:
+		#if defined( SSC_GET_OBJADDR )
+		if (!SSCGetObjectType(SSC_R_COMMAND - SSC_GET_OBJECT8_DATATYPE + 8))
+			commandOk = FALSE;
+		#else
+		commandOk = FALSE;
+		#endif
+		break;
+
+	case SSC_SET_TRIGGER_CMPTYPE:
+		m_acqConfig.wTriggerCmpType = (uint16_t)SSC_R_DATA;
+		break;
+
+	#if defined( SSC_REALTIME_ACQUIRE ) || defined( SSC_PUSH_ACQUIRE )
+
+	case SSC_SET_ACQUISITION_MODE:
+		m_acqConfig.wOperationMode = (uint16_t)SSC_R_DATA;
+		break;
+
+	#endif
+	#if defined( SSC_REALTIME_ACQUIRE )
+
+	case SSC_GET_RTSAMPLE_BUFF0:
+		#ifdef SSC_DBMEMORYACCESS
+		SSC_R_DATA = (addr_t)(DBLK_SSC_BASE + DBLK_SSC_RTBUF0);
+		#else
+		SSC_R_DATA = (addr_t)PDW_RT_BUFFER0;
+		#endif
+		break;
+
+	case SSC_GET_RTSAMPLE_BUFF1:
+		#ifdef SSC_DBMEMORYACCESS
+		SSC_R_DATA = (addr_t)(DBLK_SSC_BASE + DBLK_SSC_RTBUF1);
+		#else
+		SSC_R_DATA = (addr_t)PDW_RT_BUFFER1;
+		#endif
+		break;
+
+	#endif
+
+	/* will force trigger detection */
+	case SSC_FORCE_TRIGGER_CONDITION:
+		if( SSC_R_W_TRIGGERSTATUS == trgPreTriggering )
+			m_fnzTrigDetect = BOOL_TrueTrigDetect;
+		else
+			commandOk = FALSE;
+		break;
+	
+	case SSC_RESET_ALL_TRACKS:
+	{
+		uint32_t i;
+		for (i = 0; i < SSC_NUMTRACKS; i++)
+		{
+			m_acqConfig.ssSignalsAddresses[i].adrPhysAddress = 0;
+			m_acqConfig.ssSignalsDataTypes[i].dw = 0;
+		}
+		break;
+	}
+
+	#if defined( SSC_SAVEACQ_SUPPORTED )
+
+	case SSC_SET_LOG_MODE_ENABLED:
+		m_acqConfig.bLoggingEnabled = (bool_t)SSC_R_DATA;
+		break;
+
+	case SSC_GET_LOG_MODE_ENABLED:
+		SSC_R_DATA = m_acqConfig.bLoggingEnabled;
+		break;
+
+	case SSC_NOTIFY_XML_CONFIG_DATA_BUFFER_REQUIRED_SIZE:
+		/*	reset current xml data area, new download will be done	*/
+		m_sscXmlConfigData.dataAddress = 0;
+		m_sscXmlConfigData.dataSize = 0;
+		m_sscXmlConfigData.isValid = FALSE;
+		SSC_NOTIFY_XML_CONFIG_DATA_SIZE((uint32_t)SSC_R_DATA);
+		break;
+
+	case SSC_GET_XML_CONFIG_DATA_BUFFER_ADDRESS:
+		#ifdef SSC_DBMEMORYACCESS
+		SSC_R_DATA = (addr_t)(DBLK_SSC_BASE + DBLK_SSC_CFGDATA);
+		#else
+		SSC_R_DATA = (addr_t)SSC_GET_XML_CONFIG_DATA_ADDRESS();
+		#endif
+		break;
+
+	case SSC_GET_XML_CONFIG_DATA_BUFFER_SIZE:
+		SSC_R_DATA = SSC_GET_XML_CONFIG_DATA_SIZE();
+		break;
+
+	case SSC_NOTIFY_XML_CONFIG_DATA_DOWNLOAD_COMPLETED:
+		/*	reset current xml data area	*/
+		m_sscXmlConfigData.dataAddress = SSC_GET_XML_CONFIG_DATA_ADDRESS();
+		m_sscXmlConfigData.dataSize = SSC_GET_XML_CONFIG_DATA_SIZE();
+		m_sscXmlConfigData.isValid = TRUE;
+		break;
+
+	case SSC_LOAD_ACQ_REQUEST:
+		commandOk = (SSC_R_W_TRIGGERSTATUS == trgIdle || SSC_R_W_TRIGGERSTATUS == trgStopped);
+		if ( commandOk )
+			m_bLoadAcqRequest = TRUE;
+		break;
+
+	#endif	//	SSC_SAVEACQ_SUPPORTED
+
+	#if defined( SSC_RESTARTACQ_SUPPORTED )
+
+	case SSC_SET_AUTORESTART_MODE:
+		m_acqConfig.bAutoRestart = (bool_t)SSC_R_DATA;
+		break;
+
+	case SSC_GET_AUTORESTART_MODE:
+		SSC_R_DATA = m_acqConfig.bAutoRestart;
+		break;
+
+	case SSC_PING:
+		PingArrived();
+		break;
+
+	#endif	//	SSC_RESTARTACQ_SUPPORTED
+
+	case SSC_MONITOR_ADDR:
+		m_sscMonitorCmd.ssMonitorAddress.adrPhysAddress = SSC_R_DATA;
+		m_sscMonitorCmd.value = 0;
+		break;
+
+	case SSC_MONITOR_DATATYPE:
+		m_sscMonitorCmd.ssMonitorDataType.dw = (uint32_t)SSC_R_DATA;
+		m_sscMonitorCmd.value = 0;
+		break;
+
+	case SSC_MONITOR_SET_VALUE:
+		m_sscMonitorCmd.value |= (uint32_t)SSC_R_DATA;
+		commandOk = SetMonitorCmdValue(&m_sscMonitorCmd.ssMonitorDataType, &m_sscMonitorCmd.ssMonitorAddress, m_sscMonitorCmd.value);
+		break;
+
+	case SSC_MONITOR_GET_VALUE:
+		m_sscMonitorCmd.value = 0;
+		commandOk = GetMonitorCmdValue(&m_sscMonitorCmd.ssMonitorDataType, &m_sscMonitorCmd.ssMonitorAddress, &m_sscMonitorCmd.value);
+		if (commandOk)
+		{
+			SSC_R_DATA = (uint32_t)m_sscMonitorCmd.value;
+		}
+		break;
+
+	case SSC_MONITOR_SET_VALUE_HI:
+		// setta parte alta del valore da scrivere (invocato da softscope PRIMA della SSC_MONITOR_SET_VALUE)
+		m_sscMonitorCmd.value = (uint64_t)SSC_R_DATA << 32;
+		break;
+
+	case SSC_MONITOR_GET_VALUE_HI:
+		// rende parte alta del valore letto (invocato da softscope DOPO la SSC_MONITOR_GET_VALUE)
+		SSC_R_DATA = (uint32_t)(m_sscMonitorCmd.value >> 32);
+		break;
+
+	default:
+		commandOk = FALSE;
+		break;
+	}
+
+	/*	Command return code */
+	SSC_R_COMMAND = commandOk ? SSC_ACK_CODE : SSC_NACK_CODE;
+}
+
+static void SScopeInitAcqConfig(void)
+{
+	uint32_t i;
+	for (i = 0; i < SSC_NUMTRACKS; i++)
+	{
+		m_acqConfig.ssSignalsAddresses[i].adrPhysAddress = 0;
+		m_acqConfig.ssSignalsDataTypes[i].dw = 0;
+	}
+
+	m_acqConfig.ssTriggerAddress.adrPhysAddress = 0;
+	m_acqConfig.ssTriggerDataType.dw = 0;
+
+	m_acqConfig.dwTriggerThreshold = 0;
+	m_acqConfig.dwPreTriggerCount = 0;
+	m_acqConfig.wTriggerEdge = trgEdgeFalling;
+	m_acqConfig.wTriggerCmpType = trgCmpNumeric;
+	m_acqConfig.dwTimePrescaler = 1;	
+	m_acqConfig.dwSamplesRequired = 0;	
+
+#if defined( SSC_SAVEACQ_SUPPORTED )
+	m_acqConfig.bLoggingEnabled = FALSE;
+#endif	//	SSC_SAVEACQ_SUPPORTED
+#if defined( SSC_RESTARTACQ_SUPPORTED )
+	m_acqConfig.bAutoRestart = FALSE;
+#endif	//	SSC_RESTARTACQ_SUPPORTED
+	m_acqConfig.wOperationMode = acqStandard;
+
+	/*	other initialization settings */
+	m_dwTimePrescalerCnt = 0;
+}
+
+#if defined( SSC_PUSH_ACQUIRE )
+/** 
+ *  Executes the switch of the realtime data buffer and prepares
+ *  the data for the push transmission
+ */ 
+
+bool_t ALSSCGETPUSHDATA( uint32_t * dataCount, uint8_t ** dataBuffer )
+{
+	/*	No data transmission if overflow happened */
+	if ( m_dwPushAcqCtrlIndex == m_dwNextAcqCtrlIndex )
+		return FALSE;
+
+	/*	Buffer for push data transmission */
+	m_ptrPushAcqControl = &m_acqControl[ m_dwPushAcqCtrlIndex++ ];
+	if ( m_dwPushAcqCtrlIndex == SSC_NUM_ACQ_CONTROL_STRUCT )
+		m_dwPushAcqCtrlIndex = 0;
+
+	/*	No data transmission if push buffer not selected or overflow happened */
+	if( m_ptrPushAcqControl == NULL || m_ptrPushAcqControl->ctrl.dwSampleIndex != 0 )
+		return FALSE;
+
+	/*	Increment the syncronous sample counter with the number samples processed */
+	m_dwSyncSampleCounter += m_ptrPushAcqControl->ctrl.dwSamplesCounter;
+
+	/*	Use sample index field (always 0 in this mode) to place the verification counter (inverse of the dwSamplesCounter) 	*/
+	/*	The SoftScope will check for the matching of dwSampleIndex = ~dwSamplesCounter 										*/
+	m_ptrPushAcqControl->ctrl.dwSampleIndex = ~m_ptrPushAcqControl->ctrl.dwSamplesCounter;
+
+	/*	Data to be transmitted	*/
+	*dataCount = sizeof( m_ptrPushAcqControl->ctrl ) + m_ptrPushAcqControl->ctrl.dwSamplesCounter * sizeof(uint32_t) * m_dwActiveTracks;
+	*dataBuffer = (uint8_t *)&m_ptrPushAcqControl->ctrl;
+
+	return TRUE;
+}
+
+static void AlSSCPushBufferSwitch()
+{
+	ACQUIRE_CONTROL_DATA* volatile nextAcqControl;
+		
+	/*	Determine the next buffer for acquisition */
+	if ( ++m_dwNextAcqCtrlIndex == SSC_NUM_ACQ_CONTROL_STRUCT )
+		m_dwNextAcqCtrlIndex = 0;
+
+	nextAcqControl = &m_acqControl[ m_dwNextAcqCtrlIndex ];
+
+	/*	Prepare buffer for acquisition */
+	nextAcqControl->pdwSampleBuffer = nextAcqControl->samplesBuffer;
+	nextAcqControl->ctrl.dwSamplesCounter = 0;
+	nextAcqControl->ctrl.dwSampleIndex = 0;
+
+	/*	Switch to the new acquisition buffer */
+	m_ptrAcqControl = nextAcqControl;
+}
+
+#endif	//	SSC_PUSH_ACQUIRE
+
+/*										*/
+/*	Sampling function of SoftScope		*/
+/*										*/
+
+void ALSSCACQUIRE(void)
+{
+	uint32_t idx;
+
+	#if defined( SSC_REALTIME_ACQUIRE )
+	/*	Possible real-time acquisition data switch request for realtime mode (not push) */
+	if( m_ptrAcqControl != m_ptrNextAcqControl )
+		m_ptrAcqControl = m_ptrNextAcqControl;
+	#endif									
+										
+	/*	Idle status: no operation */
+	if( SSC_R_W_TRIGGERSTATUS == trgIdle || SSC_R_W_TRIGGERSTATUS == trgStopped )
+		return;
+
+	/*  Increment counter for time prescaler, and exit now if not reached */
+	m_dwTimePrescalerCnt++;
+	if( m_dwTimePrescalerCnt < m_acqConfig.dwTimePrescaler )
+		return;
+
+	m_dwTimePrescalerCnt = 0;
+
+	/*	Save trigger value for edge detection */
+	m_dwPreviousTriggerValue = m_dwActualTriggerValue;
+
+	/*	Sampling of the actual trigger value */
+	if (m_isTrigger64bit)
+	{
+		SSC_GET64BITVALUE(m_pdwTriggerValue, &m_dwActualTriggerValue);
+	}
+	else
+	{
+		/* reading of the actual value of the trigger (32bit size), using old macro */
+		SSC_GETTRIGVALUE( m_pdwTriggerValue, m_dwActualTriggerValue );
+	}
+
+	/*	Pre-triggering: collect data until pre-trigger threshold is reached then enable trigger
+		At least one sample is needed, otherwise when m_dwPreTriggerCount==0 the m_dwPreviousTriggerValue would not be valid */
+	if( SSC_R_W_TRIGGERSTATUS == trgPreTriggering )
+	{
+		if (SSC_R_DW_SAMPLECOUNT > 0 && SSC_R_DW_SAMPLECOUNT >= m_dwPreTriggerCount)
+		{
+			/*	Check for trigger condition if trigger is enabled */
+			if( m_fnzTrigDetect() )
+			{
+				m_dwEndSampleCount = SSC_R_DW_SAMPLECOUNT - m_dwPreTriggerCount + m_dwSamplesRequired;
+				SSC_R_DW_TRIGGERPOSITION = (uint32_t)( PDW_SAMPLE_BUFFER - PDW_BUFFER );
+				SSC_R_W_TRIGGERSTATUS = trgTriggered;
+
+				/*	Notify trigger event to target */
+				#if defined( SSC_ONTRIGGER_EVENT )
+				SSC_ONTRIGGER_EVENT();
+				#endif	//	SSC_ONTRIGGER_EVENT
+			}
+		}
+	}
+
+	/*	Sampling of the values */
+	for( idx = 0; idx <= m_dwLastConfiguredTrack; idx++ )
+	{
+		uint32_t * pdwSrc = m_pdwSource[idx];
+		if( pdwSrc != NULL )
+		{
+			SSC_GETSAMPLE( pdwSrc );
+
+			if (m_isTrack64bit[idx])
+			{
+				/* 64bit values require 2 consecutive values */
+				pdwSrc++;
+				SSC_GETSAMPLE(pdwSrc);
+			}
+		}
+	}
+
+	/*	Check if buffer pointer reached the end and, in the case, restart from beginning  */
+	if( PDW_SAMPLE_BUFFER >= PDW_END_BUFFER )
+		PDW_SAMPLE_BUFFER = PDW_BUFFER;
+
+	/*	Number of acquired samples	*/
+	++ SSC_R_DW_SAMPLECOUNT;
+
+	#if defined( SSC_REALTIME_ACQUIRE ) || defined( SSC_PUSH_ACQUIRE )
+
+	/*	Number of samples in the current buffer	*/
+	++ PDW_COUNTER;
+	
+	if( m_acqConfig.wOperationMode == acqStandard )
+	{
+	#endif
+
+		/*	Check if acquisition is finished */
+		if( SSC_R_W_TRIGGERSTATUS == trgTriggered && SSC_R_DW_SAMPLECOUNT >= m_dwEndSampleCount )
+		{
+			SSC_R_DW_ACQUIREDDATAID = SSC_R_DW_ACQUISITIONID;
+			SSC_R_W_TRIGGERSTATUS = trgIdle;
+
+			#if defined( SSC_SAVEACQ_SUPPORTED )
+			#if defined( SSC_REALTIME_ACQUIRE ) || defined( SSC_PUSH_ACQUIRE )
+			ACQUIRE_CONTROL_DATA * pAcqControl = m_ptrAcqControl;
+			#else	//	SSC_REALTIME_ACQUIRE
+			ACQUIRE_CONTROL_DATA * pAcqControl = &m_acqControl;
+			#endif	//	!SSC_REALTIME_ACQUIRE
+
+			/*	update structure */
+			pAcqControl->id = ACQUISITION_CONTROL_DATA_ID;
+			pAcqControl->version = ACQUISITION_CONTROL_DATA_VERSION;
+			pAcqControl->size = sizeof( ACQUIRE_CONTROL_DATA );
+
+			/*	save status */
+			pAcqControl->endStatus.dwSampleCount = SSC_R_DW_SAMPLECOUNT;			/*	Acquired samples */
+			pAcqControl->endStatus.dwTriggerPosition = SSC_R_DW_TRIGGERPOSITION;	/*	Trigger position */
+			pAcqControl->endStatus.dwAcquiredDataId = SSC_R_DW_ACQUIREDDATAID;		/*	Acquired data id */
+			#if defined( SSC_R_DW_ABSTIMEREF )
+			/*	Absolute time reference if supported */
+			pAcqControl->endStatus.dwAbsTimeRef = SSC_R_DW_ABSTIMEREF;
+			#else
+			pAcqControl->endStatus.dwAbsTimeRef = 0;
+			#endif	//	defined( SSC_GET_ABSTIMEREF ) && defined( SSC_R_DW_ABSTIMEREF )
+
+			/*	Set busy flag for session to be saved */
+			if ( m_acqConfig.bLoggingEnabled ) m_bSaveAcqSamples = TRUE;
+			#endif	//	SSC_SAVEACQ_SUPPORTED
+
+			#if defined( SSC_RESTARTACQ_SUPPORTED )
+			m_lastAcquisitionDone = TRUE;
+			#endif	//	SSC_RESTARTACQ_SUPPORTED
+
+			/*	Notify acquisition completed event to target */
+			#if defined( SSC_ONENDACQUISITION_EVENT )
+			SSC_ONENDACQUISITION_EVENT();
+			#endif	//	SSC_ONENDACQUISITION_EVENT
+		}
+
+	#if defined( SSC_REALTIME_ACQUIRE ) || defined( SSC_PUSH_ACQUIRE )
+	}
+	#endif
+	#if defined( SSC_PUSH_ACQUIRE )
+	else
+	{
+		if( PDW_COUNTER >= m_dwPushThreshold )
+		{
+			AlSSCPushBufferSwitch();
+			ALSSCSIGNALPUSHDATA();
+		}
+	}
+	#endif
+}
+
+
+#if defined( SSC_REALTIME_ACQUIRE )
+/** 
+ * 	Executes the switch of the realtime data buffer and 
+ * 	returns the size of data that should be read by SoftScope 
+ *  The returned size is formatted as follows:
+ *  	1 bit data area index + 31 bits data size
+ */ 
+
+uint32_t ALSSCRTDATASWITCH(void)
+{
+	uint32_t rdDataSize;
+	uint32_t rdControlDataIndex;
+	ACQUIRE_CONTROL_DATA* volatile nextAcqControl;
+
+	/*	Actual acquisition data	*/
+	ACQUIRE_CONTROL_DATA* volatile actAcqControl = m_ptrAcqControl;
+
+	/*	Determine next data area for acquisition	*/
+	rdControlDataIndex = actAcqControl == &m_acqControl[ 0 ] ? 1 : 0;
+	nextAcqControl = &m_acqControl[ rdControlDataIndex ];
+
+	/*	Prepare data for acquisition in the next buffer	*/
+	nextAcqControl->pdwSampleBuffer = nextAcqControl->samplesBuffer;
+	nextAcqControl->ctrl.dwSamplesCounter = 0;
+
+	/*	Require data switch to the ACQUIRE task	*/
+	m_ptrNextAcqControl = nextAcqControl;
+
+	/*	Wait for the switch in the ACQUIRE task	*/
+	while( m_ptrAcqControl != m_ptrNextAcqControl )
+	{
+		/*	TODO: implement a timeout	*/
+	}
+
+	/*	Increment the syncronous sample counter with the number samples processed */
+	m_dwSyncSampleCounter += actAcqControl->ctrl.dwSamplesCounter;
+
+	/*  The size of data to be read is the sum of the counter + all acquired samples, with
+	    the exception of the empty buffer that will require no read operations	*/
+	if( actAcqControl->ctrl.dwSamplesCounter == 0 )
+		return 0;
+
+	/*	Number of samples and start index position	*/
+	if( actAcqControl->ctrl.dwSamplesCounter > m_dwSamplesRequired )
+	{
+		rdDataSize = m_dwSamplesRequired * m_dwActiveTracks;
+		actAcqControl->ctrl.dwSampleIndex = (uint32_t)( actAcqControl->pdwSampleBuffer - actAcqControl->samplesBuffer );
+	}
+	else
+	{
+		rdDataSize = actAcqControl->ctrl.dwSamplesCounter * m_dwActiveTracks;
+		actAcqControl->ctrl.dwSampleIndex = 0;
+	}
+	
+	/*	Transform the dimension into bytes	*/
+	rdDataSize *= sizeof( uint32_t );
+
+	/*	Add the indexes part (dwSamplesCounter + dwSampleIndex)	*/
+	rdDataSize += sizeof( SSC_BUFFER_CTRL );
+
+	/*	Re-position the index on the actual data area index	*/
+	rdControlDataIndex = rdControlDataIndex == 0 ? 1 : 0;
+
+	/*  Place the bit with the data area index on top of the DWORD
+		(a zero is assumed in this position, means dataSize <= 16MB)	*/
+	rdDataSize = rdDataSize | ( rdControlDataIndex << 31 );
+
+	return rdDataSize;
+}
+#endif	//	SSC_REALTIME_ACQUIRE
+
+void ALSSCSTOP(void)
+{
+	SSC_R_W_TRIGGERSTATUS = trgStopped;
+	m_dwTimePrescalerCnt = 0;
+}
+
+
+/*												*/
+/*	Background management of SoftScope commands	*/
+/*												*/
+
+void ALSSCMANAGE(void)
+{
+	uint32_t n;
+	#if defined( SSC_PUSH_ACQUIRE )
+	uint32_t thresholdSecond;
+	#endif	//	SSC_PUSH_ACQUIRE
+	
+	static uint16_t wPreviousTriggerCommand = trgCmdIdle;
+	static uint16_t wActualTriggerCommand = trgCmdIdle;
+
+	#if defined( SSC_SAVEACQ_SUPPORTED )
+	/* 	Manage acquisition save */
+	SScopeSaveManager();
+	#endif	//	SSC_SAVEACQ_SUPPORTED
+
+	/*	Management of SoftScope commands */
+	SScopeCommandManager();
+
+	/*	Latch trigger command from SoftScope */
+	wPreviousTriggerCommand = wActualTriggerCommand;
+	wActualTriggerCommand = SSC_R_W_TRIGGERREQUIREDMODE;
+
+	/*	Stop status: set all data to initial condition */
+	if( wActualTriggerCommand == trgCmdStop )
+	{
+		SSC_R_W_TRIGGERSTATUS = trgStopped;
+		m_dwTimePrescalerCnt = 0;
+		return;
+	}
+	
+	/*	Wait rising edge of an active trigger command */
+	if( ! ( wPreviousTriggerCommand == trgCmdIdle && ( wActualTriggerCommand == trgCmdAuto || wActualTriggerCommand == trgCmdNormal )))
+		return;
+
+	/*	Configuration set by SoftScope */
+
+	/*	Update start trigger command (can be used for auto restart) */
+	m_acqConfig.wTriggerCommand = wActualTriggerCommand;
+
+	#if defined( SSC_SAVEACQ_SUPPORTED )
+
+	if ( SSC_R_DW_ACQUISITIONID != m_acqConfig.dwAcquisitionId )
+	{
+		/*	acquisition is saved only if changes */
+		m_acqConfig.dwAcquisitionId = SSC_R_DW_ACQUISITIONID;
+
+		#if defined( ALSSC_STORE_CURRENT_XML_CONFIG_DATA )
+		/*	it is possible to save XML config data now if specified ALSSC_SAVE_XML_CONFIG_DATA function */
+		if (m_sscXmlConfigData.isValid && m_acqConfig.bLoggingEnabled )
+		{
+			if (!ALSSC_STORE_CURRENT_XML_CONFIG_DATA(m_sscXmlConfigData.dataAddress, m_sscXmlConfigData.dataSize))
+				return;	//	save error, abort
+		}
+		#endif	//	ALSSC_STORE_CURRENT_XML_CONFIG_DATA
+
+		#if defined( ALSSC_STORE_CURRENT_SSC_CONFIG_DATA )
+		if ( m_acqConfig.bLoggingEnabled )
+		{
+			/*	update before store */
+			m_acqConfig.id = ACQUISITION_CONFIG_DATA_ID;
+			m_acqConfig.version = ACQUISITION_CONFIG_DATA_VERSION;
+			m_acqConfig.size = sizeof( m_acqConfig );
+
+			#if defined( ALSSC_GET_SOFTWARE_ID )
+			m_acqConfig.softwareId = ALSSC_GET_SOFTWARE_ID();
+			#else	//	ALSSC_GET_SOFTWARE_ID
+			m_acqConfig.softwareId = 0;
+			#endif	//	!ALSSC_GET_SOFTWARE_ID
+		
+			/*	it is possible to save acqConfig data now if specified ALSSC_SAVE_SSC_CONFIG_DATA */
+			if (!ALSSC_STORE_CURRENT_SSC_CONFIG_DATA(&m_acqConfig, sizeof(m_acqConfig)))
+				return;	//	save error, abort
+		}
+		#endif	//	ALSSC_STORE_CURRENT_SSC_CONFIG_DATA
+	}
+	#endif	//	SSC_SAVEACQ_SUPPORTED
+
+	/*	m_dwSamplesRequired is the actual value used as sample number setting, default configuration value can be adjusted in this function */
+	m_dwSamplesRequired = m_acqConfig.dwSamplesRequired;
+
+	/*	Prepare all track data pointers */
+	m_dwActiveTracks = 0;
+	m_dwLastConfiguredTrack = 0;
+	for( n = 0; n < SSC_NUMTRACKS; n++ )
+	{
+		m_isTrack64bit[n] = GetTypeSize((TYVAR)m_acqConfig.ssSignalsDataTypes[n].s.bDataType) == sizeof(uint64_t);
+
+			/*	Check if signal is set */
+		if( m_acqConfig.ssSignalsDataTypes[ n ].s.bDataType == tyvNull )
+		{
+			m_pdwSource[ n ] = NULL;
+			continue;
+		}
+
+		/*	Track count and address setting */
+		if (m_isTrack64bit[n])
+			m_dwActiveTracks += 2;	/* 64bit values require 2 consecutive values */
+		else
+			m_dwActiveTracks++;
+
+		m_pdwSource[ n ] = SSGetDataAddress( &m_acqConfig.ssSignalsDataTypes[ n ], &m_acqConfig.ssSignalsAddresses[ n ] );
+
+		if( m_pdwSource[ n ] != NULL )
+			m_dwLastConfiguredTrack = n;
+	}
+
+	if( m_dwActiveTracks == 0 )
+		return;
+
+	/*	Setting of the trigger data */
+	if( wActualTriggerCommand != trgCmdNormal )
+	{
+		m_fnzTrigDetect   = BOOL_TrueTrigDetect;
+		m_pdwTriggerValue = &m_dwAlwaysZero;
+		m_dwTriggerThreshold = 0;
+		m_dwPreTriggerCount = 0;
+		m_isTrigger64bit = FALSE;
+	}
+	else
+	{
+		/*	m_dwTriggerThreshold is the actual value used as trigger threshold, default configuration value can be adjusted in this function */
+		m_dwTriggerThreshold = m_acqConfig.dwTriggerThreshold;
+		/*	m_dwPreTriggerCount is the actual value used as pre trigger count, default configuration value can be adjusted in this function */
+		m_dwPreTriggerCount = m_acqConfig.dwPreTriggerCount;
+
+		/*	Get trigger source address */
+		m_pdwTriggerValue = (const uint64_t*)SSGetDataAddress( &m_acqConfig.ssTriggerDataType, &m_acqConfig.ssTriggerAddress );
+		m_isTrigger64bit = GetTypeSize((TYVAR)m_acqConfig.ssTriggerDataType.s.bDataType) == sizeof(uint64_t);
+
+		/*	Trigger function settings */
+		if( m_acqConfig.wTriggerEdge == trgEdgeRising )
+		{
+			if (m_acqConfig.wTriggerCmpType == trgCmpLogicalAND)
+			{
+				m_fnzTrigDetect = LogicalAND_RisingTrigDetect;
+			}
+			else
+			{
+				/* standard numeric comparison */
+				switch( m_acqConfig.ssTriggerDataType.s.bDataType )
+				{
+				default: m_fnzTrigDetect = BOOL_TrueTrigDetect; break;
+
+				case tyvBool: m_fnzTrigDetect = BOOL_RisingTrigDetect; m_acqConfig.dwTriggerThreshold = 1; break;
+
+				case tyvSInt: m_fnzTrigDetect = SINT_RisingTrigDetect; break;
+
+				case tyvUSInt:
+				case tyvByte: m_fnzTrigDetect = USINT_RisingTrigDetect; break;
+
+				case tyvInt: m_fnzTrigDetect = INT_RisingTrigDetect; break;
+
+				case tyvUInt:
+				case tyvWord: m_fnzTrigDetect = UINT_RisingTrigDetect; break;
+
+				case tyvDInt: m_fnzTrigDetect = DINT_RisingTrigDetect; break;
+
+				case tyvUDInt:
+				case tyvDWord: m_fnzTrigDetect = UDINT_RisingTrigDetect; break;
+
+				case tyvLInt: m_fnzTrigDetect = LINT_RisingTrigDetect; break;
+
+				case tyvULInt:
+				case tyvLWord: m_fnzTrigDetect = ULINT_RisingTrigDetect; break;
+
+				case tyvReal: m_fnzTrigDetect = REAL_RisingTrigDetect; break;
+				case tyvLReal: m_fnzTrigDetect = LREAL_RisingTrigDetect; break;
+				}
+			}
+		}
+		else if( m_acqConfig.wTriggerEdge == trgEdgeFalling )
+		{
+			if (m_acqConfig.wTriggerCmpType == trgCmpLogicalAND)
+			{
+				m_fnzTrigDetect = LogicalAND_FallingTrigDetect;
+			}
+			else
+			{
+				/* standard numeric comparison */
+				switch( m_acqConfig.ssTriggerDataType.s.bDataType )
+				{
+				default: m_fnzTrigDetect = BOOL_TrueTrigDetect; break;
+
+				case tyvBool: m_fnzTrigDetect = BOOL_FallingTrigDetect; m_dwTriggerThreshold = 0; break;
+
+				case tyvSInt: m_fnzTrigDetect = SINT_FallingTrigDetect; break;
+
+				case tyvUSInt:
+				case tyvByte: m_fnzTrigDetect = USINT_FallingTrigDetect; break;
+
+				case tyvInt: m_fnzTrigDetect = INT_FallingTrigDetect; break;
+
+				case tyvUInt:
+				case tyvWord: m_fnzTrigDetect = UINT_FallingTrigDetect; break;
+
+				case tyvDInt: m_fnzTrigDetect = DINT_FallingTrigDetect; break;
+
+				case tyvUDInt:
+				case tyvDWord: m_fnzTrigDetect = UDINT_FallingTrigDetect; break;
+
+				case tyvLInt: m_fnzTrigDetect = LINT_FallingTrigDetect; break;
+
+				case tyvULInt:
+				case tyvLWord: m_fnzTrigDetect = ULINT_FallingTrigDetect; break;
+
+				case tyvReal: m_fnzTrigDetect = REAL_FallingTrigDetect; break;
+				case tyvLReal: m_fnzTrigDetect = LREAL_FallingTrigDetect; break;
+				}
+			}
+		}
+		else
+		{
+			m_fnzTrigDetect = BOOL_TrueTrigDetect;
+		}
+	}
+
+
+	/*	N is now the maximum of samples allowed */
+	n = ARRSIZE( PDW_BUFFER ) / m_dwActiveTracks;
+
+	/*	Check for correct number of samples required */
+	if( m_acqConfig.dwSamplesRequired == 0 || m_acqConfig.dwSamplesRequired > n )
+	{
+		m_dwSamplesRequired = n;
+	}
+
+	/*	Check for suitable pre-trigger count */
+	if( m_acqConfig.dwPreTriggerCount > m_dwSamplesRequired )
+	{
+		m_dwPreTriggerCount = m_dwSamplesRequired;
+	}
+    
+	#if defined( SSC_REALTIME_ACQUIRE ) || defined( SSC_PUSH_ACQUIRE )
+	/*	Reset of realtime buffers and indexes	*/
+	for ( n = 0; n < SSC_NUM_ACQ_CONTROL_STRUCT; n++ )
+	{
+		m_acqControl[n].ctrl.dwSampleIndex = 0;
+		m_acqControl[n].ctrl.dwSamplesCounter = 0;
+		m_acqControl[n].pdwSampleBuffer = &(m_acqControl[n].samplesBuffer[0]);
+		m_acqControl[n].pdwEndBuffer = m_acqControl[n].pdwSampleBuffer + m_dwSamplesRequired * m_dwActiveTracks;
+	}
+
+	/*	Acquisition ID for real-time mode is updated immediately because always ready	*/
+	if( m_acqConfig.wOperationMode == acqRealTime )
+		SSC_R_DW_ACQUIREDDATAID = SSC_R_DW_ACQUISITIONID;
+
+	#if defined( SSC_PUSH_ACQUIRE )
+
+	//	Calculation of the threshold to send data at least each second at this sample rate an prescaler
+	thresholdSecond = (1000000000 / (SSC_TIME_BASE * m_acqConfig.dwTimePrescaler));
+
+	//	1st step: data will be push when the limit of the buffer is reached
+	m_dwPushThreshold = SSC_NUM_SAMPLES / m_dwActiveTracks;
+
+	//	Next acq ctrl index
+	m_dwNextAcqCtrlIndex = 0;
+	//	Push acq ctrl index
+	m_dwPushAcqCtrlIndex = 0;
+
+	//	2nd step: at least a data push per second should happen 
+	if( m_dwPushThreshold > thresholdSecond && thresholdSecond > 0 )
+		m_dwPushThreshold = thresholdSecond;
+	
+	//	3rd step: data push must be performed with a single transmission packet 
+	if(( m_dwPushThreshold * sizeof( uint32_t ) * m_dwActiveTracks ) > SSC_PUSHDATA_SYSCAPABILITY )
+		m_dwPushThreshold = ( SSC_PUSHDATA_SYSCAPABILITY / sizeof( uint32_t )) / m_dwActiveTracks;
+
+	#endif
+	#endif
+
+	/*	Pointer to sample buffer */
+	PDW_SAMPLE_BUFFER = PDW_BUFFER;
+	PDW_END_BUFFER = PDW_BUFFER + m_dwSamplesRequired * m_dwActiveTracks;
+
+	/*	Samples counter starts counting from 0 */
+	SSC_R_DW_SAMPLECOUNT = 0;
+	
+	/*	Syncronous sample counter */
+	m_dwSyncSampleCounter = 0;
+
+	/*	Absolute time reference if supported */
+	#if defined( SSC_GET_ABSTIMEREF ) && defined( SSC_R_DW_ABSTIMEREF )
+	SSC_R_DW_ABSTIMEREF = SSC_GET_ABSTIMEREF;
+	#endif
+
+	/*	Reset trigger values */
+	m_dwActualTriggerValue   = 0;
+	m_dwPreviousTriggerValue = 0;
+
+	/*	Start of the acquisition */
+	SSC_R_W_TRIGGERSTATUS = trgPreTriggering;
+
+	/* Reset counter for time prescaler */
+	m_dwTimePrescalerCnt = 0;
+}
+
+
+/*												*/
+/*	Initialization of SoftScope runtime module	*/
+/*												*/
+
+void ALSSCINIT(void)
+{
+	SSC_R_W_TRIGGERREQUIREDMODE = trgCmdIdle;
+	SSC_R_DW_ACQUISITIONID = (uint32_t) -1;
+	SSC_R_DW_ACQUIREDDATAID = (uint32_t) -1;
+	SSC_R_W_TRIGGERSTATUS = trgIdle;
+	SSC_R_DW_SAMPLECOUNT = 0;
+
+	/*	Init m_acqConfig structure and other initial settings */
+	SScopeInitAcqConfig();
+
+	#if defined( SSC_R_DW_ABSTIMEREF )
+	SSC_R_DW_ABSTIMEREF = 0;
+	#endif
+}
+
+#if defined( SSC_SAVEACQ_SUPPORTED )
+
+/*	This flag is used to check if an application is loaded and can be put in run */
+static bool_t m_bAcqConfigLoaded = FALSE;
+
+bool_t ALSSCLOAD( void )
+{
+	#if defined( SSC_REALTIME_ACQUIRE ) || defined( SSC_PUSH_ACQUIRE )
+	ACQUIRE_CONTROL_DATA * pAcqControl = m_ptrAcqControl;
+	#else	//	SSC_REALTIME_ACQUIRE
+	ACQUIRE_CONTROL_DATA * pAcqControl = &m_acqControl;
+	#endif	//	!SSC_REALTIME_ACQUIRE
+
+	#if defined( ALSSCLOAD_ONAFTERLOAD )
+	bool_t bAcqSamplesLoaded = FALSE;
+	#endif  //  ALSSCLOAD_ONAFTERLOAD
+
+	m_bAcqConfigLoaded = FALSE;
+
+	/*	Not in idle status: cannot load another acquisition */
+	if ( !( SSC_R_W_TRIGGERSTATUS == trgIdle || SSC_R_W_TRIGGERSTATUS == trgStopped ) )
+		return FALSE;
+
+	/*	Can be used to load a log from target  */
+	#if defined( ALSSCLOAD_ONBEFORELOAD )
+	if ( !ALSSCLOAD_ONBEFORELOAD() )
+		return FALSE;
+	#endif	//	ALSSCLOAD_ONBEFORELOAD
+
+	/*	Load settings */
+	#if defined( ALSSC_LOAD_CURRENT_SSC_CONFIG_DATA )
+
+	/*	Config data must be ok */
+	m_bAcqConfigLoaded = FALSE;
+
+	if ( ALSSC_LOAD_CURRENT_SSC_CONFIG_DATA( &m_acqConfig, sizeof(ACQUISITION_CONFIG_DATA) ) )
+	{
+		/*	Validate loaded configuration */
+		if ( m_acqConfig.id == ACQUISITION_CONFIG_DATA_ID &&
+			 m_acqConfig.version == ACQUISITION_CONFIG_DATA_VERSION &&
+			 m_acqConfig.size == sizeof(ACQUISITION_CONFIG_DATA) )
+		{
+			//  ripristino acquisition id salvato nel registro con cui viene controllata la corrispondenza
+			SSC_R_DW_ACQUISITIONID = m_acqConfig.dwAcquisitionId;
+
+			#if defined( ALSSC_GET_SOFTWARE_ID )
+			if (m_acqConfig.softwareId == ALSSC_GET_SOFTWARE_ID() )
+				m_bAcqConfigLoaded = TRUE;
+			#else	//	ALSSC_GET_SOFTWARE_ID
+			m_bAcqConfigLoaded = TRUE;
+			#endif	//	!ALSSC_GET_SOFTWARE_ID
+		}
+	}
+	#endif	//	ALSSC_LOAD_CURRENT_SSC_CONFIG_DATA
+
+	/*	Load xml */
+	#if defined( ALSSC_LOAD_CURRENT_XML_CONFIG_DATA )
+	m_sscXmlConfigData.isValid = ALSSC_LOAD_CURRENT_XML_CONFIG_DATA( &m_sscXmlConfigData.dataAddress, &m_sscXmlConfigData.dataSize );
+	#else	//	ALSSC_LOAD_CURRENT_XML_CONFIG_DATA
+	m_sscXmlConfigData.isValid = FALSE;
+	#endif	//	!ALSSC_LOAD_CURRENT_XML_CONFIG_DATA
+
+	/*	Load results */
+	#if defined( ALSSC_LOAD_CURRENT_SSC_SAMPLES_DATA )
+
+	#if defined( ALSSCLOAD_ONAFTERLOAD )
+	/*	Samples loaded */
+	bAcqSamplesLoaded = FALSE;
+	#endif  //  ALSSCLOAD_ONAFTERLOAD
+
+	if ( ALSSC_LOAD_CURRENT_SSC_SAMPLES_DATA( pAcqControl, sizeof( ACQUIRE_CONTROL_DATA ) ) )
+	{
+		/*	Validate loaded configuration */
+		if ( pAcqControl->id == ACQUISITION_CONTROL_DATA_ID &&
+			 pAcqControl->version == ACQUISITION_CONTROL_DATA_VERSION &&
+			 pAcqControl->size == sizeof(ACQUIRE_CONTROL_DATA) )
+		{
+			SSC_R_DW_ACQUIREDDATAID = pAcqControl->endStatus.dwAcquiredDataId;
+			SSC_R_DW_SAMPLECOUNT = pAcqControl->endStatus.dwSampleCount;
+			SSC_R_DW_TRIGGERPOSITION = pAcqControl->endStatus.dwTriggerPosition;
+			#if defined( SSC_R_DW_ABSTIMEREF )
+			SSC_R_DW_ABSTIMEREF = pAcqControl->endStatus.dwAbsTimeRef;
+			#endif	// SSC_R_DW_ABSTIMEREF
+
+			#if defined( ALSSCLOAD_ONAFTERLOAD )
+			/*	Samples loaded */
+			bAcqSamplesLoaded = TRUE;
+			#endif  //  ALSSCLOAD_ONAFTERLOAD
+		}
+	}
+	#endif	//	ALSSC_LOAD_CURRENT_SSC_SAMPLES_DATA
+	
+	#if defined( ALSSCLOAD_ONAFTERLOAD )
+	/*	Notify result  */
+	ALSSCLOAD_ONAFTERLOAD( m_bAcqConfigLoaded, m_sscXmlConfigData.isValid, bAcqSamplesLoaded );
+	#endif	//	ALSSCLOAD_ONBEFORELOAD
+
+	return TRUE;
+}
+
+static bool_t AlSSCStart( void )
+{
+	//	Not in idle status: cannot start another acquisition
+	if ( !( SSC_R_W_TRIGGERSTATUS == trgIdle || SSC_R_W_TRIGGERSTATUS == trgStopped ) )
+		return FALSE;
+
+	//	This condition is verified only after ALSSCLOAD command call
+	if ( !m_bAcqConfigLoaded )
+		return FALSE;
+
+	//	Target can avoid the start of the acquisition
+	#if defined( ALSSCSTART_ONBEFORESTART )
+	if ( !ALSSCSTART_ONBEFORESTART() )
+		return FALSE;
+	#endif	//	ALSSCSTART_ONBEFORESTART
+
+	//	This is the start request
+	SSC_R_W_TRIGGERREQUIREDMODE = m_acqConfig.wTriggerCommand;
+
+	//	Update ALSSCMANAGE internal status
+	ALSSCMANAGE();
+
+	//	Reset trigger condition
+	SSC_R_W_TRIGGERREQUIREDMODE = trgCmdIdle;
+
+	return TRUE;
+}
+
+void SScopeSaveManager( void )
+{
+	//	if save acquisition required
+	if ( m_bSaveAcqSamples )
+	{
+		//	Specific target function must be defined
+		#if defined( ALSSC_STORE_CURRENT_SSC_SAMPLES_DATA )
+
+		#if defined( SSC_REALTIME_ACQUIRE ) || defined( SSC_PUSH_ACQUIRE )
+		ACQUIRE_CONTROL_DATA * pAcqControl = m_ptrAcqControl;
+		#else	//	SSC_REALTIME_ACQUIRE
+		ACQUIRE_CONTROL_DATA * pAcqControl = &m_acqControl;
+		#endif	//	!SSC_REALTIME_ACQUIRE
+
+		ALSSC_STORE_CURRENT_SSC_SAMPLES_DATA( pAcqControl, sizeof( ACQUIRE_CONTROL_DATA ) );
+
+		#endif	//	ALSSC_STORE_CURRENT_SSC_SAMPLES_DATA
+
+		#if defined( ALSSC_SAVE_LOG )
+		ALSSC_SAVE_LOG();
+		#endif	//	ALSSC_SAVE_LOG
+
+		m_bSaveAcqSamples = FALSE;
+	}
+
+	//	load acquisition
+	if ( m_bLoadAcqRequest )
+	{
+		ALSSCLOAD();
+
+		m_bLoadAcqRequest = FALSE;
+	}
+}
+
+#endif	//	SSC_SAVEACQ_SUPPORTED
+
+#if defined( SSC_RESTARTACQ_SUPPORTED )
+
+static volatile bool_t m_isPCConnected = FALSE;
+static volatile uint32_t m_lastPingTimestampMs = 0;
+
+static void PingArrived()
+{
+	m_isPCConnected = TRUE;
+	m_lastPingTimestampMs = SSC_SYS_CLOCK_MS;
+}
+
+static bool_t IsPCConnected()
+{
+	if ( !m_isPCConnected )
+		return FALSE;
+
+	uint32_t now = SSC_SYS_CLOCK_MS;
+	if ( now - m_lastPingTimestampMs > SSC_DISCONNECTION_TIME_MS )
+		m_isPCConnected = FALSE;
+
+	return m_isPCConnected;
+}
+
+void ALSSCRESTART()
+{
+	static volatile bool_t restart = SSC_AUTO_START_AT_BOOT;
+	static volatile bool_t isPCConnectedPrev = FALSE;
+
+	bool_t isPCConnectedActual = IsPCConnected();
+
+	if ( m_lastAcquisitionDone )
+	{
+		m_lastAcquisitionDone = FALSE;
+
+		//	riprova a fare ripartire
+		restart = TRUE;
+	}
+	else if ( !isPCConnectedActual && isPCConnectedPrev )
+	{
+		//	riprova a fare ripartire
+		restart = TRUE;
+	}
+
+	if ( restart && !isPCConnectedActual )
+	{
+		//	carico acquisizione corrente
+		if ( !m_bAcqConfigLoaded )
+			ALSSCLOAD();
+
+		//	se non ho una acquisizione corrente oppure il flag di auto restart e' a false non faccio niente
+		if ( !m_bAcqConfigLoaded || !m_acqConfig.bAutoRestart )
+		{
+			restart = FALSE;
+		}
+		else
+		{
+			//	resetto solo se riesco effettivamente a rilanciare l'acquisizione caricata
+			//	altrimenti il flag rimane pendente
+			if ( AlSSCStart() )
+				restart = FALSE;
+		}
+	}
+
+	//	aggiorno stato locale per monitoraggio fronte
+	isPCConnectedPrev = isPCConnectedActual;
+}
+#endif	//	SSC_RESTARTACQ_SUPPORTED
+

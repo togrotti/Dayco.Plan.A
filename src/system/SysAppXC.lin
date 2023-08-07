@@ -1,0 +1,95 @@
+/****************************************************************************/
+/* Project: AxM-E Control Board                                             */
+/*                                                                          */
+/* Copyright © 2005,2009, Phase Motion Control. All Rights Reserved.        */
+/*                                                                          */
+/* File        : SysAppXC.lin                                               */
+/* Author      : Fabio Terrile                                              */
+/*                                                                          */
+/* Description : Linker command file for System Application                 */
+/*                                                                          */
+/****************************************************************************/
+
+IXREF
+
+CLASSES
+(
+        /* NB: keep updated MemoryLayout.c */
+
+    NCONST   (0xC50230-0xC51FFF),
+    PLCCNST  (0xC52000-0xC53FFF),    /* must be granted read access */
+    SROM     (0xC60000-0xC64BFF),
+    ICODE    (0xC53000-0xC5FFFF,0xC64C00-0xCB5FFF),    /* check PLCDCODE class overlapping */ 
+    FCODE    (0xC53000-0xC5FFFF,0xC64C00-0xCB5FFF),
+    NCODE    (0xC53000-0xC5FFFF,0xC64C00-0xCB5FFF),
+    FCONST   (0xC53000-0xC5FFFF,0xC64C00-0xCB5FFF),
+    HCONST   (0xC53000-0xC5FFFF,0xC64C00-0xCB5FFF),
+    XCONST   (0xC53000-0xC5FFFF,0xC64C00-0xCB5FFF),
+
+        /* NB: NDATA must be same here and in the bootblock in order to     */
+        /*     let compiler do right huge<->near pointer conversion         */
+
+    NDATA    (0x8000-0xBFFF),                    NDATA0 (0x8000-0xBFFF), 
+    SDATA    (0xC000-0xD5FF, 0xF600-0xFDFF),     SDATA0 (0xC000-0xD5FF, 0xF600-0xFDFF),
+    IDATA    (0xD600-0xDFFF),                    IDATA0 (0xD600-0xDFFF),
+    FDATA    (0xE05000-0xE0FBFF),                FDATA0 (0xE05000-0xE0FBFF), 
+    HDATA    (0xE05000-0xE0FBFF),                HDATA0 (0xE05000-0xE0FBFF), 
+    XDATA    (0xE05000-0xE0FBFF),                XDATA0 (0xE05000-0xE0FBFF),
+
+    SYSLOGMG (0xE0FC00-0xE0FFFF),    /* keep clear over bootblock and other apps */
+    HDFTINFO (0xC50200-0xC5021F),    /* base address used from build tools */
+    PLCDINFO (0xC50220-0xC5022F),    /* base address used from build tools */
+    PLCCODE  (0xCC0000-0xCDFFFF),    /* also define PLC_LK_CODE_START and PLC_LK_CODE_SIZE */
+    PLCDCODE (0xCB6000-0xCBFFFF),    /* also define PLCD_LK_* below, check *CODE classes overlapping */
+    EXPBB    (0xC00240-0xC0027F)
+) 
+
+CINITTAB (0xC50230-0xC5FFFF)
+
+VECTAB (0xC50000) INTNO(UNHANDLED_INTERRUPT(FILL))
+
+ASSIGN
+(
+    VECTORTABLE_SEGMENT     (0xC5),
+    RAMMOD_FCODE_BEGIN      (0xE00000),
+    RAMMOD_FCODE_STATIC_END (0xE04C00),
+    RAMMOD_FCODE_DYN_ANPROC (0xE04C00),
+    RAMMOD_FCODE_ENDBEFORE  (0xE05000),
+
+    SYSLOG_CLK_BLK0_START   (0xC01000),
+    SYSLOG_CLK_BLK0_SIZE    (0x1000),
+    SYSLOG_CLK_BLK1_START   (0xC02000),
+    SYSLOG_CLK_BLK1_SIZE    (0x1000),
+    SYSLOG_CLK_BLK2_START   (0xC03000),
+    SYSLOG_CLK_BLK2_SIZE    (0x1000),
+
+    PARAMSTOR_BLK0_START    (0xC05000),
+    PARAMSTOR_BLK0_SIZE     (0x3000),
+    PARAMSTOR_BLK1_START    (0xC08000),
+    PARAMSTOR_BLK1_SIZE     (0x3000),
+
+    SYSLOG_ALRM_BLK0_START  (0xC0B000),
+    SYSLOG_ALRM_BLK0_SIZE   (0x1000),
+    SYSLOG_ALRM_BLK1_START  (0xC0C000),
+    SYSLOG_ALRM_BLK1_SIZE   (0x1000),
+
+    ACTIVATIONKEYS_START    (0xC0D000),
+    ACTIVATIONKEYS_SIZE     (0x1000),
+
+    BOOTBLOCKPARAM_START    (0xC0E000),
+    BOOTBLOCKPARAM_SIZE     (0x1000),
+
+    PLC_LK_CODE_START       (0xCC0000), /* also define PLCCODE in CLASSES defs */
+    PLC_LK_CODE_SIZE        (0x020000),
+
+    PLCD_LK_CODE_START      (0xCB6000), /* also define PLCDCODE in CLASSES defs, check *CODE classes overlapping */
+    PLCD_LK_CODE_SIZE       (0x00A000),
+
+    DIGITALSCOPE_LOG_START  (0xC30000),
+    DIGITALSCOPE_LOG_SIZE   (0x010000)
+)
+
+SECTIONS
+(
+    ?PR?RAMEXECUTIONMODULESWRAPPER%RAMMOD_FCODE (0xE00000)[]
+) 

@@ -1,0 +1,40 @@
+//********************************************
+// ILoopParBr2.dsph
+//********************************************
+// Standard current control loop for three
+// parallel bridges
+// names of registers and input are statically
+// linked to firmware source code
+//********************************************
+
+#INCLUDE "ILoopPre.dspi"
+
+//********************************************
+// compute equivalent currents IFBEQ = (IFB + IFB_BR1 + IFB_BR2)/3
+
+[INSTRUCTION] (IFB_AU + IFB_BR1_AU) * C_1D3 + C_ZERO        |--> T_IFBEQ_U
+[INSTRUCTION] (IFB_AV + IFB_BR1_AV) * C_1D3 + C_ZERO        |--> T_IFBEQ_V
+[INSTRUCTION] (IFB_AW + IFB_BR1_AW) * C_1D3 + C_ZERO        |--> T_IFBEQ_W
+
+[INSTRUCTION] (C_ZERO + IFB_BR2_AU) * C_1D3 + T_IFBEQ_U     |--> T_IFBEQ_U
+[INSTRUCTION] (C_ZERO + IFB_BR2_AV) * C_1D3 + T_IFBEQ_V     |--> T_IFBEQ_V
+[INSTRUCTION] (C_ZERO + IFB_BR2_AW) * C_1D3 + T_IFBEQ_W     |--> T_IFBEQ_W
+
+//********************************************
+// clark+park
+
+[INSTRUCTION] ( T_IFBEQ_U  + T_IFBEQ_U)  * T_COSD3    + C_ZERO
+[INSTRUCTION] ( T_SINDSQT3 - T_COSD3)    * T_IFBEQ_V  + [ALU]
+[INSTRUCTION] (-T_COSD3    - T_SINDSQT3) * T_IFBEQ_W  + [ALU]  |--> IFB_AD
+
+[INSTRUCTION] (-T_IFBEQ_U - T_IFBEQ_U)   * T_SIND3    + C_ZERO
+[INSTRUCTION] ( T_SIND3   + T_COSDSQT3)  * T_IFBEQ_V  + [ALU]
+[INSTRUCTION] ( T_SIND3   - T_COSDSQT3)  * T_IFBEQ_W  + [ALU]  |--> IFB_AQ
+
+[INSTRUCTION] (C_ZERO + C_ZERO)*C_ZERO + IFB_AD                |--> IFB_ID
+[INSTRUCTION] (C_ZERO + C_ZERO)*C_ZERO + IFB_AQ                |--> IFB_IQ
+
+//********************************************
+// common
+
+#INCLUDE "ILoopPost.dspi"

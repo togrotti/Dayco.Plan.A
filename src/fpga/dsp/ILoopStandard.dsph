@@ -1,0 +1,33 @@
+//********************************************
+// ILoop.dsph
+//********************************************
+// Standard current control loop
+// names of registers and input are statically
+// linked to firmware source code
+//********************************************
+
+#INCLUDE "ILoopPre.dspi"
+
+//********************************************
+// clark+park, twice for immediate and average values
+
+[INSTRUCTION] ( IFB_IU     + IFB_IU)     * T_COSD3 + C_ZERO
+[INSTRUCTION] ( T_SINDSQT3 - T_COSD3)    * IFB_IV  + [ALU]
+[INSTRUCTION] (-T_COSD3    - T_SINDSQT3) * IFB_IW  + [ALU]  |--> IFB_ID 
+
+[INSTRUCTION] (-IFB_IU  - IFB_IU)        * T_SIND3 + C_ZERO
+[INSTRUCTION] ( T_SIND3 + T_COSDSQT3)    * IFB_IV  + [ALU]
+[INSTRUCTION] ( T_SIND3 - T_COSDSQT3)    * IFB_IW  + [ALU]  |--> IFB_IQ
+
+[INSTRUCTION] ( IFB_AU     + IFB_AU)     * T_COSD3 + C_ZERO
+[INSTRUCTION] ( T_SINDSQT3 - T_COSD3)    * IFB_AV  + [ALU]
+[INSTRUCTION] (-T_COSD3    - T_SINDSQT3) * IFB_AW  + [ALU]  |--> IFB_AD
+
+[INSTRUCTION] (-IFB_AU  - IFB_AU)        * T_SIND3 + C_ZERO
+[INSTRUCTION] ( T_SIND3 + T_COSDSQT3)    * IFB_AV  + [ALU]
+[INSTRUCTION] ( T_SIND3 - T_COSDSQT3)    * IFB_AW  + [ALU]  |--> IFB_AQ
+
+//********************************************
+// common
+
+#INCLUDE "ILoopPost.dspi"

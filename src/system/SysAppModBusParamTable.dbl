@@ -1,0 +1,1029 @@
+/****************************************************************************/
+/* Project: Ax-Zynq Control Board                                           */
+/*                                                                          */
+/* Copyright © 2021, Ningbo Physis Technology Co.,Ltd. All Rights Reserved. */
+/*                                                                          */
+/* File        : SysAppModBusParamTable.c                                   */
+/* Author      : Fabio Terrile                                              */
+/*                                                                          */
+/* Description : System application parameter table for ModBus              */
+/*                                                                          */
+/****************************************************************************/
+
+#include "bus\modbus\ModBusComDB.h"
+#include "system\SysAppConfig.h"
+
+//****************************************************************************
+// Table def
+// #%n psCommonParamTable
+
+const MODBUSCOMDB_ENTRY hpsModBusParamTable[]=
+{
+    {  100 /*0064*/, #%p 0x7C00 },
+    {  101 /*0065*/, #%p 0x7C01 },
+    {  102 /*0066*/, #%p 0x7C02 },
+    {  103 /*0067*/, #%p 0x7C03 },
+    {  104 /*0068*/, #%p 0x7C04 },
+    {  105 /*0069*/, #%p 0x7C05 },
+    {  106 /*006A*/, #%p 0x7C06 },
+    {  107 /*006B*/, #%p 0x7C07 },
+
+#ifdef CFG_EN_MODBUSOVERCAN
+    {  108 /*006C*/, #%p 0x7CA0 },
+    {  109 /*006D*/, #%p 0x7CA1 },
+    {  110 /*006E*/, #%p 0x7CA2 },
+    {  111 /*006F*/, #%p 0x7CA3 },
+    {  112 /*0070*/, #%p 0x7CA4 },
+    {  113 /*0071*/, #%p 0x7CA5 },
+
+    {  120         , #%p 0x7CA6 },
+#endif
+
+    {  200         , #%p 0x7C80 },
+    {  201         , #%p 0x7C81 },
+    {  202         , #%p 0x7C82 },
+    {  203         , #%p 0x7C83 },
+    {  204         , #%p 0x7C84 },
+    {  205         , #%p 0x7C85 },
+    {  206         , #%p 0x7C86 },
+    {  207         , #%p 0x7C87 },
+    {  208         , #%p 0x7C88 },
+    {  209         , #%p 0x7C89 },
+
+    {13800 /*35E8*/, #%p 0x7C40 },
+    {13801 /*35E9*/, #%p 0x7C50 },
+    {14200         , #%p 0x7C10 },
+    {14700         , #%p 0x7C11 },
+    {15200         , #%p 0x7C12 },
+    {15700         , #%p 0x7C13 },
+
+    {18001 /*4651*/, #%p 0x7E00 },
+    {18002 /*4652*/, #%p 0x7E01 },
+    {18003 /*4653*/, #%p 0x7E02 },
+    {18004 /*4654*/, #%p 0x7E03 },
+    {18005 /*4655*/, #%p 0x7E04 },
+    {18006 /*4656*/, #%p 0x7E05 },
+    {18007 /*4657*/, #%p 0x7E06 },
+    {18008 /*4658*/, #%p 0x7E07 },
+    {18009 /*4659*/, #%p 0x7E08 },
+
+    {18010 /*465A*/, #%p 0x0190 },
+    {18011 /*465B*/, #%p 0x0191 },
+    {18013 /*465D*/, #%p 0x0193 },
+    {18014 /*465E*/, #%p 0x0194 },
+    {18015 /*465F*/, #%p 0x0195 },
+    {18016 /*4660*/, #%p 0x019E },
+#ifdef _APP_XC
+    {18017 /*4661*/, #%p 0x0196 },
+#endif
+
+    {18019 /*4663*/, #%p 0x7E09 },
+
+#ifndef _HW_DC
+    {18020 /*4664*/, #%p 0x01A0 },
+    {18021 /*4665*/, #%p 0x01A1 },
+    {18028 /*466C*/, #%p 0x01A8 },
+    {18029 /*466D*/, #%p 0x01A9 },
+    {18031 /*466F*/, #%p 0x01AB },
+    {18032 /*4670*/, #%p 0x01AC },
+    {18033 /*4671*/, #%p 0x01AD },
+    {18034 /*4672*/, #%p 0x01AE },
+    {18035 /*4673*/, #%p 0x01AF },
+    {18036 /*4674*/, #%p 0x01B0 },
+    {18037 /*4675*/, #%p 0x01B1 },
+#endif
+    {18038 /*4675*/, #%p 0x01C0 },
+    {18042 /*4676*/, #%p 0x01C4 },
+    {18046 /*4680*/, #%p 0x01C8 },
+    {18047 /*4681*/, #%p 0x01C9 },
+    {18048 /*4682*/, #%p 0x01CA },
+
+    {18050 /*4682*/, #%p 0x7C08 },
+    {18058 /*468A*/, #%p 0x7C09 },
+    {18059 /*468B*/, #%p 0x7C0A },
+
+    {18060 /*468C*/, #%p 0x0221 },
+    {18061 /*468D*/, #%p 0x0222 },
+    {18062 /*468E*/, #%p 0x0225 },
+    {18063 /*468F*/, #%p 0x0226 },
+
+    {18068 /*4694*/, #%p 0x0170 },
+
+#ifndef _HW_DC
+    {18070 /*4696*/, #%p 0x01AA },
+#endif
+
+    {18076 /*469C*/, #%p 0x010E },
+    {18077 /*469D*/, #%p 0x010F },
+
+    {18080 /*46A0*/, #%p 0x010D },
+    {18081 /*46A1*/, #%p 0x0101 },
+    {18082 /*46A2*/, #%p 0x0102 },
+                                                        
+    {18083 /*46A3*/, #%p 0x0104 },
+    {18084 /*46A4*/, #%p 0x0101 },
+    {18085 /*46A5*/, #%p 0x0102 },
+    {18086 /*46A6*/, #%p 0x0105 },
+
+    {18088 /*46A8*/, #%p 0x0224 },
+    {18089 /*46A9*/, #%p 0x0220 },
+    {18090 /*46AA*/, #%p 0x0223 },
+
+    {18094 /*46AE*/, #%p 0x0108 },
+    {18095 /*46AF*/, #%p 0x0109 },
+#ifndef _HW_DC
+    {18096 /*46B0*/, #%p 0x010A },
+#endif
+    {18097 /*46B1*/, #%p 0x010B },
+    {18098 /*46B2*/, #%p 0x0201 },
+
+    {19000 /*4A38*/, #%p 0x0210 },
+    {19001 /*4A39*/, #%p 0x0218 },
+    {19002 /*4A3A*/, #%p 0x0219 },
+    {19003 /*4A3B*/, #%p 0x021A },
+    {19004 /*4A3C*/, #%p 0x021B },
+    {19005 /*4A3D*/, #%p 0x0202 },
+    {19006 /*4A3E*/, #%p 0x021D },
+
+    {19010 /*4A42*/, #%p 0x0103 },
+    {19020 /*4A4C*/, #%p 0x0171 },
+    {19030 /*4A56*/, #%p 0x0172 },
+
+    {19050,          #%p 0x0250 },
+    {19051,          #%p 0x0251 },
+    {19052,          #%p 0x0252 },
+
+    {19100,          #%p 0x0230 },
+
+    {19200,          #%p 0x0240 },
+    {19201,          #%p 0x0241 },
+    {19202,          #%p 0x0242 },
+    {19203,          #%p 0x0243 },
+    {19204,          #%p 0x0244 },
+    {19205,          #%p 0x0245 },
+    {19207,          #%p 0x0246 },
+
+    {19300,          #%p 0x0200 },
+
+    {19340,          #%p 0x0150 },
+    {19341,          #%p 0x0151 },
+    {19342,          #%p 0x0152 },
+
+    {19350,          #%p 0x0110 },
+    {19351,          #%p 0x0111 },
+    {19352,          #%p 0x0112 },
+    {19353,          #%p 0x0113 },
+    {19354,          #%p 0x0114 },
+    {19355,          #%p 0x0115 },
+    {19356,          #%p 0x0116 }, // array di 8 x 16bit
+
+    {19370,          #%p 0x0120 },
+    {19371,          #%p 0x0121 },
+    {19372,          #%p 0x0122 },
+    {19373,          #%p 0x0123 },
+    {19374,          #%p 0x0124 },
+
+    {19400,          #%p 0x7E0A },
+    {19401,          #%p 0x7E0B },
+    {19402,          #%p 0x7E0C },
+    {19403,          #%p 0x7E0D },
+    {19404,          #%p 0x7E0E },
+    {19410,          #%p 0x7E10 },
+    {19426,          #%p 0x7E11 },
+
+    {19451,          #%p 0x7E21 },
+    {19452,          #%p 0x7E22 },
+    {19453,          #%p 0x7E23 },
+    {19454,          #%p 0x7E24 },
+
+    {19460,          #%p 0x7E30 },
+    {19461,          #%p 0x7E31 },
+    {19462,          #%p 0x7E32 },
+    {19463,          #%p 0x7E33 },
+    {19464,          #%p 0x7E34 },
+    {19465,          #%p 0x7E35 },
+    {19466,          #%p 0x7E36 },
+    {19467,          #%p 0x7E37 },
+
+    {19480,          #%p 0x7E40 },
+    {19481,          #%p 0x7E41 },
+    {19482,          #%p 0x7E42 },
+
+    {20010 /*4E2A*/, #%p 0x0400 },
+    {20011 /*4E2B*/, #%p 0x0401 },
+
+    {20049 /*4E51*/, #%p 0x0427 },
+#ifdef _HW_DC
+    {20050 /*4E52*/, #%p 0x0428 },
+    {20052 /*4E54*/, #%p 0x0429 },
+    {20054 /*4E56*/, #%p 0x042A },
+    {20056 /*4E58*/, #%p 0x042B },
+#endif
+
+    {20058 /*4E5A*/, #%p 0x0430 },
+    {20059 /*4E5A*/, #%p 0x0431 },
+
+    {20900 /*51A4*/, #%p 0x05F0 },
+    {20910 /*51AE*/, #%p 0x05F1 },
+    {20920 /*51B8*/, #%p 0x05F2 },
+
+    {21999         , #%p 0x019D },
+                                  
+        //****************************************************************************
+        // Drive Task Configuration
+        //****************************************************************************
+    {22000 /*55F0*/, #%p 0x5000}, /* Tipo di drive */
+        // do not use 22001-22009
+
+
+
+        //****************************************************************************
+        // Encoders
+        //****************************************************************************
+    {26000 /*6590*/, #%p 0x0800 }, /* Encoder supply voltage (RW) */ 
+    {26001 /*6591*/, #%p 0x0801 }, /* Main Encoder choosen (RW) */
+    {26002 /*6592*/, #%p 0x0802 }, /* Auxiliary Encoder choosen (RW) */
+    {26003 /*6593*/, #%p 0x0803 }, /* boolean to select which position-information will be used by the control loop (primary/auxiliary encoder) (RW) */
+    {26004 /*6594*/, #%p 0x0804 }, /* boolean to select which speed-information will be used by the control loop (primary/auxiliary encoder) (RW) */    
+    {26005 /*6595*/, #%p 0x0805 }, /* boolean to select which acceleration-information will be used by the control loop (primary/auxiliary encoder) (RW) */
+    {26006 /*6596*/, #%p 0x0806 }, /* boolean to select which electrical angle-information will be used by the FPGA (primary/auxiliary encoder) (RW) */
+    {26007 /*6597*/, #%p 0x0807 },
+    {26008 /*6598*/, #%p 0x0808 }, /* Delay after applying encoder supply [msec] */
+    {26009 /*6599*/, #%p 0x0809 },
+
+    /* ====== Main ====== */
+    {26010 /*65A0*/, #%p 0x0810 }, /* Main Encoder mechanical turns number (RO) */
+    {26011 /*65A1*/, #%p 0x0811 }, /* Main Encoder mechanical angle (RO) */
+    {26012 /*65A2*/, #%p 0x0812 }, /* Main sensor mechanical Abs position offset HI (RO) */
+    {26013 /*65A3*/, #%p 0x0813 }, /* Main sensor mechanical Abs position offset LO (RO) */
+    {26014 /*65A4*/, #%p 0x0814 }, /* Main Encoder mechanical speed (RO) */
+    {26015 /*65A5*/, #%p 0x0815 }, /* Main Encoder mechanical acceleration (RO) */
+    {26016 /*65A6*/, #%p 0x0816 }, /* Main Encoder electrical angle (RO) */
+    {26017 /*65A7*/, #%p 0x0817 }, /* Abs Pos 32 bit (RO) */
+    {26018 /*65A8*/, #%p 0x080E }, /* Status (RO) */
+
+    {26020 /*65A4*/, #%p 0x0820 }, /* Endat clock frequency (RW) */
+    {26021 /*65A5*/, #%p 0x0821 }, /* Endat CRC error counter (RO) */
+    {26022 /*65A6*/, #%p 0x0822 }, /* Propagation delay time [nsec] (RO) */
+    {26023 /*65A7*/, #%p 0x0823 },
+    {26024 /*65A8*/, #%p 0x0824 },
+    {26025 /*65A9*/, #%p 0x0825 },
+    {26026 /*65AA*/, #%p 0x0826 },
+    {26027 /*65AB*/, #%p 0x0827 },
+
+    {26030 /*65C0*/, #%p 0x0830 }, /* Incremental encoder line counts (RW) */
+//    {26031 /*65C2*/, #%p 0x0831 }, /* Incremental encoder mechanical offset (RW) */
+    {26032 /*65C2*/, #%p 0x0832 }, /* Incremental encoder poles number (RW) */ 
+    {26033 /*65C3*/, #%p 0x0833 }, /* 0 => DO NOT USE SinCosInterpolation; 1 => USE SinCosInterpolation (RW) */
+    {26034 /*65C4*/, #%p 0x0834 }, // 0 => Index Error Enabled; 1 => Index Error Disabled (RW)
+    {26035 /*65C5*/, #%p 0x0835 }, // 0 => sin^2 + cos^2 Error Enabled; 1 => sin^2 + cos^2 Error Disabled (RW)
+    {26036 /*65C6*/, #%p 0x0836 }, // sin^2 + cos^2 Error threshold (RW)
+    {26037 /*65C7*/, #%p 0x0837 }, // Index Error Tolerance (RW)
+    {26038 /*65C8*/, #%p 0x0838 }, // Has Index (RW)
+    {26039 /*65C9*/, #%p 0x0839 }, // SIN channel as read from ADC
+    {26040 /*65CA*/, #%p 0x083A }, // COS channel as read from ADC
+    {26041 /*65CB*/, #%p 0x083B }, // SIN^2+COS^2
+
+    {26042 /*65D2*/, #%p 0x0842 }, /* Hall encoder poles number (RW) */
+    {26043 /*65D3*/, #%p 0x0843 }, /* Hall encoder type (RW) */
+    {26044 /*65D4*/, #%p 0x0844 }, /* SIN channel as read from ADC (RO) */
+    {26045 /*65D5*/, #%p 0x0845 }, /* COS channel as read from ADC (RO) */
+
+    {26048 /*65C8*/, #%p 0x083F }, // Incremental encoder disable internal calibration
+
+    {26049 /*65C1*/, #%p 0x083C }, // Incremental encoder Swap Tracks
+    {26050 /*65C2*/, #%p 0x083D }, // Incremental encoder enable step/dir
+    {26051 /*65C3*/, #%p 0x083E }, // Incremental encoder enable up/down
+
+    {26052 /*65E2*/, #%p 0x0852 }, /* SinCos encoder poles number (RW) */ 
+    {26053 /*65E3*/, #%p 0x0853 }, /* flag Reverse Signals: 0 => Angle = Atan(Sin/Cos); 1 => Angle = 0xffff - Atan(Sin/Cos) (RW) */
+    {26054 /*65E4*/, #%p 0x0854 }, /* flag Gain2Use       : 0 => HIGH (SinCos);         1 => LOW (Resolver) (RW) */
+    {26055 /*65E5*/, #%p 0x0855 }, /* SIN channel as read from ADC (RO) */
+    {26056 /*65E6*/, #%p 0x0856 }, /* COS channel as read from ADC (RO) */
+    {26057 /*65E7*/, #%p 0x0857 }, /* SinCos Level Alarm Threshold (RW) */
+    {26058 /*65E8*/, #%p 0x0858 }, /* SIN^2+COS^2 */
+    {26059 /*65E9*/, #%p 0x0859 }, /* SinCos SIN Gain adjust */
+    {26060 /*65EA*/, #%p 0x085A }, /* SinCos COS Gain adjust */
+    {26061 /*65EB*/, #%p 0x085B }, /* flag: Enable resolver autocalibration */
+    {26062 /*65EC*/, #%p 0x085C }, /* SinCos SIN Offset adjust */
+    {26063 /*65ED*/, #%p 0x085D }, /* SinCos COS Offset adjust */
+    {26064 /*65EE*/, #%p 0x085E }, /* resolver frequency offset */
+
+    {26066 /*65F0*/, #%p 0x0860, }, // flag: Open Loop only (RW) 
+    {26067 /*65F1*/, #%p 0x0861, }, // flag: use dynamic Iq limit (RW)     
+    {26068 /*65F2*/, #%p 0x0862, }, // flag: use dynamic Id limit (RW) 
+    {26069 /*65F3*/, #%p 0x0863, }, // % per la velocita' di rientro al volo (RW) 
+    {26070 /*65F4*/, #%p 0x0864, }, // % per la velocita' di sensorless (RW) 
+    {26071 /*65F5*/, #%p 0x0865, }, // % per la velocita' di soglia_1 (RW) 
+    {26072 /*65F6*/, #%p 0x0866, }, // % per la velocita' di soglia_0 (RW) 
+    {26073 /*65F7*/, #%p 0x0867, }, // % per l'intervento dell'antiglitch (RW) 
+    {26074 /*65F8*/, #%p 0x0868, }, // limite di fault antiglitch (RW) 
+    {26075 /*65F8*/, #%p 0x0869, }, // usa filtro antiglitch (RW) 
+    {26076 /*65F8*/, #%p 0x086A, }, // usa emf speed in full sensorless (RW) 
+    {26077 /*65F8*/, #%p 0x086B, }, // disabilita errori sensorless (RW) 
+    {26078 /*65FA*/, #%p 0x086C, }, // tempo di refresh per il Kt motore stimato (RW) 
+    {26079 /*65FB*/, #%p 0x086D, },
+    {26080 /*65FC*/, #%p 0x086E, },
+
+    {26083 /*6601*/, #%p 0x0871, }, // Stato Sensorless (RO) 
+    {26084 /*6602*/, #%p 0x0872, }, // contatore intervento antiglitch (RO) 
+    {26085 /*6603*/, #%p 0x0873, }, // numero magico (derivato da Kt Motore): se zero => Alarm (RO) 
+    {26086 /*6604*/, #%p 0x0874, }, // velocita' ottenuta come delta di angoli (RO) 
+    {26087 /*6605*/, #%p 0x0875, }, // Kt motore stimato (RO) 
+
+    /* ==== Main Biss Encoder ==== */
+    {26088 /*6606*/, #%p 0x0828 }, /* Biss clock frequency (RW) */
+    {26089 /*6607*/, #%p 0x0829 }, /* Biss CRC error counter (RO) */
+    {26090 /*6609*/, #%p 0x082A },
+    {26091 /*6609*/, #%p 0x082B },
+    {26092 /*660A*/, #%p 0x082C },
+    {26094 /*660C*/, #%p 0x082E },
+    {26095 /*660D*/, #%p 0x082F },
+
+    {26100 /*65F4*/, #%p 0x080A },
+    {26101 /*65F5*/, #%p 0x080B },
+    {26102 /*65F6*/, #%p 0x080C },
+    {26103 /*65F7*/, #%p 0x080D },
+    {26104 /*65F8*/, #%p 0x0941 },
+    {26105 /*65F9*/, #%p 0x0942 },
+#ifdef _HW_DC
+    {26106 /*65FA*/, #%p 0x0943 },
+#endif
+    {26107 /*65FB*/, #%p 0x0944 },
+
+    /* ==== Auxiliary ==== */
+    {26110 /*6610*/, #%p 0x0880 }, /* Auxiliary sensor mechanical turns number (RO) */
+    {26111 /*6611*/, #%p 0x0881 }, /* Auxiliary sensor mechanical angle (RO) */
+    {26112 /*65A2*/, #%p 0x0882 }, /* Auxiliary sensor mechanical Abs position offset HI (RO) */
+    {26113 /*65A3*/, #%p 0x0883 }, /* Auxiliary sensor mechanical Abs position offset LO (RO) */
+    {26114 /*6612*/, #%p 0x0884 }, /* Auxiliary sensor mechanical speed (RO) */
+    {26115 /*6613*/, #%p 0x0885 }, /* Auxiliary sensor mechanical acceleration (RO) */
+    {26116 /*6614*/, #%p 0x0886 }, /* Auxiliary sensor electrical angle (RO) */
+    {26117 /*6615*/, #%p 0x0887 }, /* Abs Pos 32 bit (RO) */
+    {26118 /*6616*/, #%p 0x0888 }, /* Status (RO) */
+
+#ifndef _HW_DC
+    {26120 /*6608*/, #%p 0x0890 }, /* Endat clock frequency (RW) */
+    {26121 /*6609*/, #%p 0x0891 }, /* Endat CRC error counter (RO) */
+    {26122 /*660A*/, #%p 0x0892 }, /* Propagation delay time [nsec] (RO) */
+    {26123 /*660B*/, #%p 0x0893 },
+    {26124 /*660C*/, #%p 0x0894 },
+    {26125 /*660D*/, #%p 0x0895 },
+    {26126 /*660E*/, #%p 0x0896 },
+    {26127 /*660F*/, #%p 0x0897 },
+#endif
+
+    {26130 /*6630*/, #%p 0x08A0 }, /* Incremental encoder line counts (RW) */
+//    {26131 /*6631*/, #%p 0x08A1 }, /* Incremental encoder mechanical offset (RW) */
+    {26132 /*6632*/, #%p 0x08A2 }, /* Incremental encoder poles number (RW) */   
+    {26134 /*6634*/, #%p 0x08A4 }, // 0 => Index Error Enabled; 1 => Index Error Disabled (RW)
+    {26135 /*6635*/, #%p 0x08A5 }, // Index Error Tolerance (RW)
+    {26136 /*6636*/, #%p 0x08A6 }, // Has Index (RW)
+    {26137 /*6637*/, #%p 0x08A7 }, // Incremental encoder Swap Tracks
+    {26138 /*6638*/, #%p 0x08A8 }, // Incremental encoder enable step/dir
+    {26139 /*6639*/, #%p 0x08A9 }, // Incremental encoder enable up/down
+
+    /* ==== Simulated Encoder ==== */
+    {26146 /*6640*/, #%p 0x08B0 }, // Simulated Encoder: Simulated Encoder Index Line Counts
+    {26147 /*6641*/, #%p 0x08B1 }, // Simulated Encoder: index position offset
+    {26148 /*6642*/, #%p 0x08B2 }, // Simulated Encoder: max angle diff before alarm
+    {26149 /*6643*/, #%p 0x08B3 },
+    {26150 /*6644*/, #%p 0x08B4 },
+    {26151 /*6645*/, #%p 0x08B5 },
+    {26152 /*6646*/, #%p 0x08B6 },
+    {26153 /*6647*/, #%p 0x08B7 },
+    {26154 /*6648*/, #%p 0x08B8 },
+
+    /* ==== Hiperface Encoder ==== */
+    {26160         , #%p 0x08C0 }, // Hiperface Encoder
+
+    /* ==== Nikon Encoder ==== */
+    {26200         , #%p 0x08D0 },
+    {26201         , #%p 0x08D1 },
+    {26210         , #%p 0x08D8 },
+    {26211         , #%p 0x08D9 },
+    {26212         , #%p 0x08DA },
+    {26213         , #%p 0x08DB },
+
+    /* ==== Tamagawa Encoder ==== */
+    {26240         , #%p 0x08E0 },
+    {26241         , #%p 0x08E1 },
+    {26250         , #%p 0x08E8 },
+    {26251         , #%p 0x08E9 },
+    {26252         , #%p 0x08EA },
+
+    /* ==== Aux Biss Encoder ==== */
+    {26260         , #%p 0x0898 }, /* Biss clock frequency (RW) */
+    {26261         , #%p 0x0899 }, /* Biss CRC error counter (RO) */
+    {26262         , #%p 0x089A },
+    {26263         , #%p 0x089B },
+    {26264         , #%p 0x089C },
+    {26266         , #%p 0x089E },
+    {26267         , #%p 0x089F },
+
+    /* ==== Electrical Field Orientation Parameters ======== */
+    {26302 /*66BE*/, #%p 0x08F2, },
+    {26303 /*66BF*/, #%p 0x08F3, },
+    {26304 /*66C0*/, #%p 0x08F4, },
+    {26305 /*66C1*/, #%p 0x08F0, },
+    {26306 /*66C2*/, #%p 0x08F1, },
+    {26307 /*66C3*/, #%p 0x08F5, },
+    {26308 /*66C4*/, #%p 0x08F6, },
+    {26309 /*66C5*/, #%p 0x08F7, },
+    {26310         , #%p 0x08F8, },
+    {26311         , #%p 0x08F9, },
+    {26312         , #%p 0x08FA, },
+    {26313         , #%p 0x08FB, },
+    {26314         , #%p 0x08FC, },
+    {26330         , #%p 0x09A0, },
+    {26331         , #%p 0x09A1, },
+    {26332         , #%p 0x09A2, },
+    {26333         , #%p 0x09A3, },
+    {26334         , #%p 0x09A4, },
+    {26335         , #%p 0x09A5, },
+    {26336         , #%p 0x09A6, },
+    {26337         , #%p 0x09A7, },
+    {26338         , #%p 0x09A8, },
+
+    /* ====== Main Abs ====== */
+    {26400 /*65A0*/, #%p 0x0900 }, /* mechanical turns number (RO) */
+    {26401 /*65A1*/, #%p 0x0901 }, /* mechanical angle (RO) */
+    {26402 /*65A2*/, #%p 0x0902 }, /* mechanical Abs position offset HI (RO) */
+    {26403 /*65A3*/, #%p 0x0903 }, /* mechanical Abs position offset LO (RO) */
+    {26404 /*65A4*/, #%p 0x0904 }, /* mechanical speed (RO) */
+    {26405 /*65A5*/, #%p 0x0905 }, /* mechanical acceleration (RO) */
+    {26406 /*65A6*/, #%p 0x0906 }, /* electrical angle (RO) */
+    {26407 /*65A7*/, #%p 0x0907 }, /* Abs Pos 32 bit (RO) */
+    {26408 /*65A8*/, #%p 0x0908 }, /* Status (RO) */
+
+    /* ====== Main Rel ====== */
+    {26410 /*65A0*/, #%p 0x0910 }, /* mechanical turns number (RO) */
+    {26411 /*65A1*/, #%p 0x0911 }, /* mechanical angle (RO) */
+    {26412 /*65A2*/, #%p 0x0912 }, /* mechanical Abs position offset HI (RO) */
+    {26413 /*65A3*/, #%p 0x0913 }, /* mechanical Abs position offset LO (RO) */
+    {26414 /*65A4*/, #%p 0x0914 }, /* mechanical speed (RO) */
+    {26415 /*65A5*/, #%p 0x0915 }, /* mechanical acceleration (RO) */
+    {26416 /*65A6*/, #%p 0x0916 }, /* electrical angle (RO) */
+    {26417 /*65A7*/, #%p 0x0917 }, /* Abs Pos 32 bit (RO) */
+    {26418 /*65A8*/, #%p 0x0918 }, /* Status (RO) */
+
+    /* ######## SpaceSpeed Control Loop ######## */
+    {27000 /*6978*/, #%p 0x0A00 }, /* Control loop configuration bit (RW) */                                                                        
+    {27001 /*6979*/, #%p 0x0A01 }, /* Position: proportional gain value (RW) */                                                  
+    {27002 /*697A*/, #%p 0x0A02 }, /* Speed: reference proportional gain value (RW) */                                            
+    {27003 /*697B*/, #%p 0x0A03 }, /* Speed: feedback  proportional gain value (RW) */                                            
+    {27004 /*697C*/, #%p 0x0A04 }, /* Acceleration: reference proportional gain value (RW) */                                     
+    {27005 /*697D*/, #%p 0x0A05 }, /* Acceleration: feedback  proportional gain value (RW) */                                     
+    {27006 /*697E*/, #%p 0x0A06 }, /* integral gain value (RW) */                                                                 
+    {27007 /*697F*/, #%p 0x0A07 }, /* Position: global gain shift => ONLY shift RIGHT, max +16 (RW) */                            
+    {27008 /*6980*/, #%p 0x0A08 }, /* Acceleration: gains shift => ONLY shift LEFT, max -15 (RW) */                               
+    {27009 /*6981*/, #%p 0x0A09 }, /* gains global shift: max shift left = -8; max shift right = +16 (RW) */                                                           
+    {27012 /*6984*/, #%p 0x0A0C }, /* User: Max Positive Torque limit (RW) */                                                    
+    {27013 /*6985*/, #%p 0x0A0D }, /* User: Max Negative Torque limit (RW) */                                                     
+    {27014         , #%p 0x0A0E },
+    {27015         , #%p 0x0A0F },
+    {27016         , #%p 0x0A10 },
+    {27017         , #%p 0x0A11 },
+    {27018         , #%p 0x0A12 },
+    {27019         , #%p 0x0A13 },
+                                                                                                                             
+        /* ============== Monitor ============= */                                                                               
+        /* -------------- Input  -------------- */
+    {27020 /* */, #%p 0x0818 }, // Mechanical turns number used by control loop (Actual Position) (RO) 
+    {27021 /* */, #%p 0x0819 }, // Mechanical angle to control loop (Actual Position) (RO)                      
+    {27022 /* */, #%p 0x081A }, // Mechanical Abs position offset HI used by control loop (RO)                        
+    {27023 /* */, #%p 0x081B }, // Mechanical Abs position offset LO used by control loop (RO)                        
+    {27024 /* */, #%p 0x081C }, // Mechanical speed used by control loop (Actual Speed) (RO)                       
+    {27025 /* */, #%p 0x081D }, // Mechanical acceleration used by control loop (Actual Acceleration) (RO)                       
+    {27026 /* */, #%p 0x081E }, // Electrical angle used by control loop (Actual Acceleration) (RO)
+    {27027 /* */, #%p 0x081F }, /* Abs Pos 32 bit (RO) */
+    {27028 /* */, #%p 0x080F }, /* Status (RO) */
+                      
+        /* -------------- Output -------------- */
+    {27029 /*6995*/, #%p 0x0A31 }, /* Torque reference to FPGA (1e-4A) (RO) */
+    {27030         , #%p 0x0A32 },
+    {27031         , #%p 0x0A33 },
+
+    {27032         , #%p 0x0A15 },
+    {27033         , #%p 0x0A16 },
+
+    {27034         , #%p 0x0A34 },
+
+    {27040 /* */, #%p 0x0940 }, // Filtered mechanical speed used by control loop (Actual Speed) (RO)                       
+  
+    /* ######## PI DcBus Control Loop ######## */
+    {27050 /*69AA*/, #%p 0x0B00 }, /* DcBusRef (1e-1V) (RW) */
+    {27051 /*69AB*/, #%p 0x0B01 }, /* proportional gain (RW) */
+    {27052 /*69AC*/, #%p 0x0B02 }, /* integral gain (RW) */
+    {27053 /*69AD*/, #%p 0x0B03 }, /* gains global shift: max shift left = -8; max shift right = +16 (RW) */  
+    {27054 /*69AE*/, #%p 0x0B04 }, /* Max Error allowed (RW) */
+    {27055 /*69AF*/, #%p 0x0B05 }, /* Min Error allowed (RW) */
+    {27056 /*69B0*/, #%p 0x0B06 }, /* Limite sulla Max Corrente richiesta al DcBus (RW) */
+    {27057 /*69B1*/, #%p 0x0B07 }, /* Limite sulla Min Corrente richiesta al DcBus (RW) */
+//    {27058 /*69B2*/, #%p 0x0B08 }, /* Limite sulla Max Corrente richiesta all'FPGA (RW) */
+//    {27059 /*69B3*/, #%p 0x0B09 }, /* Limite sulla Min Corrente richiesta all'FPGA (RW) */
+    {27060 /*69B4*/, #%p 0x0B0A }, /* Use only PI part (RW) */
+
+        /* ============== Monitor ============= */                                                                               
+        /* -------------- Output -------------- */
+    {27070 /*69BE*/, #%p 0x0B20 }, /* error measured (RO) */
+    {27071 /*69BF*/, #%p 0x0B21 }, /* DcBus Current (1e-4A) (RO) */
+    {27072 /*69C0*/, #%p 0x0B22 }, /* Current reference to FPGA (1e-4A) (RO) */
+
+
+
+    /* ######## Positioner ######## */
+    {27100 /*69DC*/, #%p 0x0C00 }, /* Profile Velocity (RW) */ 
+    {27101 /*69DD*/, #%p 0x0C01 }, /* Profile Acceleration (RW) */     
+    {27102 /*69DE*/, #%p 0x0C02 }, /* Profile Deceleration (RW) */          
+    {27103 /*69DF*/, #%p 0x0C03 }, /* QuickStop Deceleration (RW) */ 
+    {27104 /*69E0*/, #%p 0x0C04 }, /* End Speed (in modalita' posizionatore) (RW) */
+    {27105 /*69E1*/, #%p 0x0C05 }, /* Max Position Error allowed (RW) */ 
+    {27106 /*69E2*/, #%p 0x0C06 }, /* Threshold to consider speed = zero (RW) */                                     
+    {27107 /*69E3*/, #%p 0x0C07 }, /* Motor Blocked Timeout (RW) */                                     
+    {27108         , #%p 0x0C08 },
+    {27109         , #%p 0x0C09 },
+    {27110         , #%p 0x0C0A },
+    {27111         , #%p 0x0C0B },
+    {27112         , #%p 0x0C0C },
+
+        /* ============== Monitor ============== */
+        /* --------------- Input --------------- */
+    {27118 /*69EE*/, #%p 0x0C17 }, /* TargetVelocity (in modalita velocita') (RW) */
+
+        /* --------------- Output --------------- */
+    {27120 /*69F0*/, #%p 0x0C30 }, /* Flags status modulo sw posizionatore (RO) */
+    {27122 /*69F2*/, #%p 0x0C32 }, /* posizione di riferimento da mandare in anello: turns (RO) */
+    {27123 /*69F3*/, #%p 0x0C33 }, /* posizione di riferimento da mandare in anello: angle (RO) */ 
+    {27124 /*69F4*/, #%p 0x0C34 }, /* velocita' di riferimento da mandare in anello (RO) */
+    {27125 /*69F5*/, #%p 0x0C35 }, /* accelerazione di riferimento da mandare in anello (RO) */
+    {27126 /*69F6*/, #%p 0x0C36 }, /* Position error measured (RO) */
+
+    /* ====== Incremental MAIN Extras ====== */
+    {27300         , #%p 0x0980 },
+    {27301         , #%p 0x0981 },
+    {27302         , #%p 0x0982 },
+    {27303         , #%p 0x0983 },
+    {27304         , #%p 0x0984 },
+    {27305         , #%p 0x0985 },
+    {27306         , #%p 0x0986 },
+    {27307         , #%p 0x0987 },
+
+    /* ====== Incremental AUX Extras ====== */
+    {27320         , #%p 0x0990 },
+    {27321         , #%p 0x0991 },
+    {27322         , #%p 0x0992 },
+    {27323         , #%p 0x0993 },
+    {27324         , #%p 0x0994 },
+    {27325         , #%p 0x0995 },
+    {27326         , #%p 0x0996 },
+    {27327         , #%p 0x0997 },
+
+        /* ######## Motor Handler ######## */
+    {27400 /*6B08*/, #%p 0x0E00 }, // tensione di spegnimento R di frenatura (RW)
+    {27401 /*6B09*/, #%p 0x0E01 }, // tensione di accensiono R di frenatura (RW)
+    {27402 /*6B0A*/, #%p 0x0E02 }, // soglia fault undervoltage (RW)
+    {27403 /*6B0B*/, #%p 0x0E03 }, // soglia fault overvoltage (utente) (RW)
+    {27404 /*6B0C*/, #%p 0x0E04 }, // soglia fault overcurrent (utente) (RW)
+    {27407 /*6B0F*/, #%p 0x0E07 }, // UserModKi (RW)
+    {27408 /*6B10*/, #%p 0x0E08 }, // UserModKp (RW)
+    {27409 /*6B11*/, #%p 0x0E09 }, // Id min (RW)
+    {27410 /*6B12*/, #%p 0x0E0A }, // Id max (RW)
+    {27411 /*6B13*/, #%p 0x0E0B }, // Iq min (RW)
+    {27412 /*6B14*/, #%p 0x0E0C }, // Iq max (RW)
+    {27432 /*6B28*/, #%p 0x0E20 }, // Id feedback (RO)
+    {27433 /*6B29*/, #%p 0x0E21 }, // Iq feedback (RO)
+    {27434 /*6B2A*/, #%p 0x0E22 }, // Iu feedback (RO)
+    {27435 /*6B2B*/, #%p 0x0E23 }, // Iv feedback (RO)
+    {27436 /*6B2C*/, #%p 0x0E24 }, // BackEmf Alpha (RO)
+    {27437 /*6B2D*/, #%p 0x0E25 }, // BackEmf Beta (RO)
+    {27438 /*6B2E*/, #%p 0x0E26 }, // VuEstimated (RO)
+    {27439 /*6B2F*/, #%p 0x0E27 }, // VvEstimated (RO)
+    {27440 /*6B30*/, #%p 0x0E28 }, // DcBusValue (RO)
+    {27441 /*6B31*/, #%p 0x0E29 }, // VMotor (RO)
+    {27442 /*6B32*/, #%p 0x0E2A }, // AtanAngle (RO)
+    {27443 /*6B33*/, #%p 0x0E2B }, // IdRef2Fpga (RO)
+    {27444 /*6B34*/, #%p 0x0E2C }, // IqRef2Fpga (RO)
+    {27445 /*6B35*/, #%p 0x0E2D }, // Iw feedback (RO)
+    {27446 /*6B36*/, #%p 0x0E2E }, // Iq Filtered Ref (RO)
+    {27449 /*6B39*/, #%p 0x0E31 }, // Vac input phases status (RO)
+    {27450 /*6B3A*/, #%p 0x0E2F }, // Vac RS (RO)
+    {27451 /*6B3B*/, #%p 0x0E30 }, // Vac ST (RO)
+    {27452 /*6B3C*/, #%p 0x0E32 }, // Vac TR (RO)
+    {27453 /*6B3D*/, #%p 0x0E33 }, // Vd Out (RO)
+    {27454 /*6B3E*/, #%p 0x0E34 }, // Vq Out (RO)
+    {27464 /*6B48*/, #%p 0x0E40 }, // UsrIdRef (Torque mode) (RW)
+    {27465 /*6B49*/, #%p 0x0E41 }, // UsrIqRef (Torque mode) (RW)
+    {27480 /*6B58*/, #%p 0x0E50 }, // AutoModKp (RO)
+    {27481 /*6B59*/, #%p 0x0E51 }, // AutoModKi (RO)
+    {27482 /*6B5A*/, #%p 0x0E52 },
+    {27483 /*6B5B*/, #%p 0x0E53 },
+    {27484 /*6B5C*/, #%p 0x0E54 },
+    {27485 /*6B5D*/, #%p 0x0E55 },
+    {27489 /*6B61*/, #%p 0x081E }, // Main sensor electrical angle used by FPGA (RO)
+    {27490 /*6B62*/, #%p 0x0E12 }, // user bridge layout (RW)                 
+    {27496         , #%p 0x0E56 },
+    {27497         , #%p 0x0E57 },
+    {27498         , #%p 0x0E58 },
+    {27499         , #%p 0x0E59 },
+    {27500         , #%p 0x0E5A },
+    {27501         , #%p 0x0E5B },
+    {27502         , #%p 0x0E5C },
+    {27503         , #%p 0x0E5D },
+    {27504         , #%p 0x0E5E },
+    {27505         , #%p 0x0E13 },
+    {27506         , #%p 0x0E14 },
+    {27507         , #%p 0x0E15 },
+    {27508         , #%p 0x0E16 },
+    {27509         , #%p 0x0E17 },
+    {27510         , #%p 0x0E18 },
+    {27511         , #%p 0x0E5F },
+    {27512         , #%p 0x0E4F },
+#ifdef _HW_DC
+    {27513         , #%p 0x0E11 },
+    {27514         , #%p 0x0E10 },
+#endif
+    {27515         , #%p 0x0E0F },
+#if CFG_VMOTOR_READ
+    {27516 /*6B7C*/, #%p 0x0E7D }, // Vu Effective (RO)
+    {27517 /*6B7D*/, #%p 0x0E7E }, // Vv Effective (RO)
+    {27518 /*6B7E*/, #%p 0x0E7F }, // Vw Effective (RO)
+#endif
+
+    {27600         , #%p 0x0E60 },
+    {27601         , #%p 0x0E61 },
+    {27602         , #%p 0x0E62 },
+    {27603         , #%p 0x0E63 },
+    {27604         , #%p 0x0E64 },
+    {27610         , #%p 0x0E68 },
+    {27611         , #%p 0x0E69 },
+    {27612         , #%p 0x0E6A },
+    {27613         , #%p 0x0E6B },
+    {27614         , #%p 0x0E6C },
+    {27620         , #%p 0x0E70 },
+    {27621         , #%p 0x0E71 },
+    {27622         , #%p 0x0E72 },
+    {27623         , #%p 0x0E73 },
+    {27624         , #%p 0x0E74 },
+    {27630         , #%p 0x0E78 },
+    {27631         , #%p 0x0E79 },
+    {27632         , #%p 0x0E7A },
+    {27633         , #%p 0x0E7B },
+    {27634         , #%p 0x0E7C },
+
+#ifdef _HW_DC
+    {27648         , #%p 0x0E88 },
+    {27649         , #%p 0x0E89 },
+    {27650         , #%p 0x0E8A },
+    {27651         , #%p 0x0E8B },
+    {27652         , #%p 0x0E8C },
+    {27653         , #%p 0x0E8D },
+#endif
+
+#ifdef _HW_CT
+    {27654         , #%p 0x0E8E },
+#endif
+
+    {27660         , #%p 0x0EA0 },
+    {27661         , #%p 0x0EA1 },
+    {27662         , #%p 0x0EA2 },
+    {27670         , #%p 0x0EA8 },
+    {27671         , #%p 0x0EA9 },
+    {27672         , #%p 0x0EAA },
+    {27673         , #%p 0x0EAB },
+
+        /* ######## Motor Parameters ######## */
+    {27800 /*6C98*/, #%p 0x2000 },  // SerialNumber (RO)
+    {27801 /*6C99*/, #%p 0x2001 },  // ProductionDate (RO)
+    {27802 /*6C9A*/, #%p 0x2002 },  // Model (RO)
+    {27803 /*6C9B*/, #%p 0x2003 },  // Resistance (RW)
+    {27804 /*6C9C*/, #%p 0x2004 },  // Inductance (RW)
+    {27805 /*6C9D*/, #%p 0x2005 },  // KT (RW)
+    {27806 /*6C9E*/, #%p 0x2006 },  // CurrentNominalZeroSpeed (RW)
+    {27807 /*6C9F*/, #%p 0x2007 },  // CurrentNominal (RW)
+    {27808 /*6CA0*/, #%p 0x2008 },  // CurrentPeak (RW)
+    {27809 /*6CA1*/, #%p 0x2009 },  // SpeedNominal (RW)
+    {27810 /*6CA2*/, #%p 0x200A },  // ThermalConstant (RW)
+    {27811 /*6CA3*/, #%p 0x200B },  // StatorInertia (RW)
+    {27812 /*6CA4*/, #%p 0x200C },  // PhaseOffset(RW)
+    {27813 /*6CA5*/, #%p 0x200D },  // Type (RW)
+    {27814 /*6CA6*/, #%p 0x200E },  // PoleNumbers (RW)
+    {27815 /*6CA7*/, #%p 0x200F },  // CoolingTempOn (RW)
+    {27816 /*6CA8*/, #%p 0x2010 },  // CoolingTempOff (RW)
+    {27817 /*6CA9*/, #%p 0x2011 },  // MaximumTemp (RW)
+    {27818 /*6CAA*/, #%p 0x2012 },  // Synchronous or direct inductance (RW)
+
+
+
+    /* ######### Thermal Model ######### */
+    {28100 /*6C98*/, #%p 0x3000 }, /* R Brake Value (RW)     */
+    {28101 /*6C99*/, #%p 0x3001 }, /* R Brake Max Power (RW) */
+    {28104 /*6C9C*/, #%p 0x3002 }, /* Cooling Temp ON (RW)   */
+    {28105 /*6C9D*/, #%p 0x3003 }, /* Cooling Temp OFF (RW)  */ 
+    {28106 /*6C9E*/, #%p 0x3004 }, // motor temp (RW)
+    {28107 /*6C9F*/, #%p 0x3005 }, // R Brake Max Energy (RW)
+    {28108 /*6CA0*/, #%p 0x3006 },
+    {28109 /*6CA1*/, #%p 0x3007 },
+    {28110 /*6CA2*/, #%p 0x3008 },
+
+#ifdef _HW_DC
+    {28130         , #%p 0x3010 },
+    {28131         , #%p 0x3011 },
+    {28132         , #%p 0x3012 },
+    {28133         , #%p 0x3013 },
+#endif
+    {28135         , #%p 0x3018 },
+    {28136         , #%p 0x3019 },
+    {28137         , #%p 0x301A },
+    {28138         , #%p 0x301B },
+
+    // Output values (RO)
+    {28150 /*6C9E*/, #%p 0x3100 }, /* DcBus Average Value        (1e-1 V) */
+    {28151 /*6C9F*/, #%p 0x3101 }, /* Iu Average Value           (1e-4 A) */
+    {28152 /*6CA0*/, #%p 0x3102 }, /* Iv Average Value           (1e-4 A) */
+    {28153 /*6CA1*/, #%p 0x3103 }, /* Iw Average Value           (1e-4 A) */
+    {28154 /*6CA2*/, #%p 0x3104 }, /* Temperature from NTC       (1e-1 C) */
+    {28155 /*6CA3*/, #%p 0x3105 }, /* Commutation Losses Phase U (1e-3 W) */
+    {28156 /*6CA4*/, #%p 0x3106 }, /* Commutation Losses Phase V (1e-3 W) */
+    {28157 /*6CA5*/, #%p 0x3107 }, /* Commutation Losses Phase W (1e-3 W) */
+    {28158 /*6CA6*/, #%p 0x3108 }, /* Conduction Losses Phase U  (1e-3 W) */
+    {28159 /*6CA7*/, #%p 0x3109 }, /* Conduction Losses Phase V  (1e-3 W) */
+    {28160 /*6CA8*/, #%p 0x3110 }, /* Conduction Losses Phase W  (1e-3 W) */
+    {28161 /*6CA9*/, #%p 0x3111 }, /* Total Losses               (1e-3 W) */
+    {28162 /*6C98*/, #%p 0x3112 }, /* Max TJunction for the IGBT (1e-1 C) */
+    {28163 /*6C99*/, #%p 0x3113 }, /* TJunction U (model)        (1e-1 C) */
+    {28164 /*6C9A*/, #%p 0x3114 }, /* TJunction V (model)        (1e-1 C) */
+    {28165 /*6C9B*/, #%p 0x3115 }, /* TJunction W (model)        (1e-1 C) */
+    {28166 /*6C9C*/, #%p 0x3116 }, /* Max TJunction   (model)    (1e-1 C) */
+    {28167 /*6C9D*/, #%p 0x3117 }, /* Power Dissipated by RBrake (1e-3 W) */
+    {28168 /*6C9E*/, #%p 0x3118 }, /* T HeatSink (model)         (1e-1 C) */
+    {28169 /*6C9F*/, #%p 0x3119 }, /* IqLimitMax */
+    {28170 /*6CA0*/, #%p 0x3120 }, /* IqLimitMin */
+    {28171 /*6CA1*/, #%p 0x3121 }, /* IdLimitMax */
+    {28172 /*6CA2*/, #%p 0x3122 }, /* IdLimitMin */
+    {28173 /*6CA3*/, #%p 0x3123 }, /* ThermalModel Duration (1e-3 s) */
+    {28174 /*6CA4*/, #%p 0x3124 }, // Motor temperature (C)
+    {28176 /*6CA6*/, #%p 0x3126 },
+    {28177 /*6CA7*/, #%p 0x3127 },
+    {28178 /*6CA8*/, #%p 0x3128 },
+    {28179 /*6CA9*/, #%p 0x3129 },
+#ifdef _HW_DC
+    {28180 /*6CAA*/, #%p 0x312A },
+    {28181 /*6CAB*/, #%p 0x312B },
+    {28182 /*6CAC*/, #%p 0x312C },
+    {28183 /*6CAD*/, #%p 0x312D },
+    {28184 /*6CAE*/, #%p 0x312E },
+#endif
+#ifdef _HW_CT
+    {28185 /*6CAA*/, #%p 0x312F }, /* T Control Board (C)     */
+    {28186 /*6CAB*/, #%p 0x3130 }, /* T Control Board (1e-1 C) */
+#endif
+#ifdef _HW_CT
+    {28187 /*6CAC*/, #%p 0x4010 }, /* Sensor Accelerometer Data x */
+    {28188 /*6CAD*/, #%p 0x4011 }, /* Sensor Accelerometer Data y */
+    {28189 /*6CAE*/, #%p 0x4012 }, /* Sensor Accelerometer Data x */
+    {28190 /*6CAF*/, #%p 0x4013 }, /* Sensor Temperature          */
+    {28191 /*6CB0*/, #%p 0x4014 }, /* Sensor Humidity             */
+    {28192 /*6CB1*/, #%p 0x4000 }, 
+    {28193 /*6CB2*/, #%p 0x4001 }, 
+    {28194 /*6CB3*/, #%p 0x4002 }, 
+#endif
+
+#ifndef _INFINEON
+// _crs_dbg_
+    {28195 /*6E23*/, #%p 0x3131 }, /* T ZynQ (Celsius) */
+    {28196 /*6E24*/, #%p 0x3132 }, /* T controlboard NTC (Celsius) */
+// _crs_dbg_
+#endif
+    // 28300 to 28354: do not use
+
+    /* ######### DS402 ######### */
+    {29000 /*7148*/, #%p 0x1000 }, // ControlWord (RW)
+    {29001 /*7149*/, #%p 0x1001 }, // StatusWord (RO)
+    {29002 /*7149*/, #%p 0x1020 }, // Tgt Pos HI (RW)
+    {29003 /*7149*/, #%p 0x1021 }, // TGT Pos LO (RW)
+    {29007 /*714F*/, #%p 0x1027 }, // HM Soft Positive Switch input (RW)
+    {29008 /*7150*/, #%p 0x1028 }, // HM Soft Negative Switch input (RW)
+    {29009 /*7151*/, #%p 0x1029 }, // HM Soft Home Switch input (RW)
+
+    {29010 /*7152*/, #%p 0x102A }, // IP Quota monitor (RO)
+
+    {29016 /*7158*/, #%p 0x1010 }, // Mode of Operation (RW)
+    {29017 /*7159*/, #%p 0x1011 }, // Mode of Operation Display (RO)
+
+    {29020 /*715C*/, #%p 0x1030 }, // quickstop option code (RW)
+    {29021 /*715D*/, #%p 0x1031 }, // shutdown option code (RW)
+    {29022 /*715E*/, #%p 0x1032 }, // disable operation option code (RW)
+    {29023 /*715F*/, #%p 0x1033 }, // halt option code (RW)
+    {29024 /*7160*/, #%p 0x1034 }, // fault reaction option code (RW)
+    {29025 /*7161*/, #%p 0x1035 }, // following error window (RW)
+    {29026 /*7162*/, #%p 0x1036 }, // following error timeout (RW)
+    {29027 /*7163*/, #%p 0x1037 }, // target position window (RW)
+    {29028 /*7164*/, #%p 0x1038 }, // target position timeout (RW)
+    {29029 /*7165*/, #%p 0x1039 }, // velocity window (RW)
+    {29030 /*7166*/, #%p 0x103A }, // velocity timeout (RW)
+    {29031 /*7167*/, #%p 0x103B }, // velocity threshold (RW)
+    {29032 /*7168*/, #%p 0x103C }, // velocity threshold timeout (RW)
+    {29033 /*7169*/, #%p 0x1043 }, // IP time period units
+    {29034 /*716A*/, #%p 0x1044 }, // IP time period index
+    {29035 /*716B*/, #%p 0x1046 }, // HM Method
+    {29036 /*716C*/, #%p 0x1047 }, // HM positive switch source
+    {29037 /*716D*/, #%p 0x1048 }, // HM negative switch source
+    {29038 /*716E*/, #%p 0x1049 }, // HM home switch source
+    {29039 /*716F*/, #%p 0x104A }, // HM speed for switch search
+    {29040 /*7170*/, #%p 0x104B }, // HM speed for zero search
+    {29041 /*7171*/, #%p 0x104C }, // HM acceleration
+    {29042 /*7172*/, #%p 0x1050 }, // HM user offset
+    {29043 /*7173*/, #%p 0x1051 }, // HM user offset
+    {29044 /*7174*/, #%p 0x104F }, // CS motor rated torque
+
+    /* ######### CanOpen ######### */
+    {30000 /*7530*/, #%p 0x8000 },
+    {30001 /*7531*/, #%p 0x8001 },
+    {30002 /*7532*/, #%p 0x8002 },
+    {30003 /*7533*/, #%p 0x8003 },
+    {30004 /*7534*/, #%p 0x8004 },
+    {30005 /*7535*/, #%p 0x8005 },
+    {30006 /*7536*/, #%p 0x8006 },
+    {30007 /*7537*/, #%p 0x8007 },
+    {30008 /*7538*/, #%p 0x8008 },
+    {30009 /*7539*/, #%p 0x8009 },
+    {30010 /*753A*/, #%p 0x800B },
+    {30011 /*753B*/, #%p 0x800C },
+    {30012 /*753C*/, #%p 0x800D },
+    {30013 /*753D*/, #%p 0x800E },
+
+    {30100         , #%p 0x80C0 },
+    {30110         , #%p 0x80C1 },
+    {30120         , #%p 0x80C2 },
+    {30130         , #%p 0x80C3 },
+    {30140         , #%p 0x80C4 },
+    {30150         , #%p 0x80C5 },
+    {30160         , #%p 0x80C6 },
+    {30170         , #%p 0x80C7 },
+    {30200         , #%p 0x80D0 },
+    {30210         , #%p 0x80D1 },
+    {30220         , #%p 0x80D2 },
+    {30230         , #%p 0x80D3 },
+    {30240         , #%p 0x80D4 },
+    {30250         , #%p 0x80D5 },
+    {30260         , #%p 0x80D6 },
+    {30270         , #%p 0x80D7 },
+    {30300         , #%p 0x80E0 },
+    {30310         , #%p 0x80E1 },
+    {30320         , #%p 0x80E2 },
+    {30330         , #%p 0x80E3 },
+    {30340         , #%p 0x80E4 },
+    {30350         , #%p 0x80E5 },
+    {30360         , #%p 0x80E6 },
+    {30370         , #%p 0x80E7 },
+    {30400         , #%p 0x80F0 },
+    {30410         , #%p 0x80F1 },
+    {30420         , #%p 0x80F2 },
+    {30430         , #%p 0x80F3 },
+    {30440         , #%p 0x80F4 },
+    {30450         , #%p 0x80F5 },
+    {30460         , #%p 0x80F6 },
+    {30470         , #%p 0x80F7 },
+
+    /* ######### EtherCAT ######### */
+    {30800         , #%p 0x8108 },
+    {30801         , #%p 0x8109 },
+    {30802         , #%p 0x810A },
+
+    {30810         , #%p 0x8180 },
+    {30811         , #%p 0x8181 },
+    {30812         , #%p 0x8182 },
+    {30813         , #%p 0x8183 },
+    {30814         , #%p 0x8184 },
+    {30815         , #%p 0x8185 },
+    {30816         , #%p 0x8186 },
+    {30817         , #%p 0x8187 },
+    {30818         , #%p 0x8188 },
+    {30819         , #%p 0x8189 },
+    {30820         , #%p 0x818A },
+    {30821         , #%p 0x818B },
+    {30822         , #%p 0x818C },
+    {30823         , #%p 0x818D },
+    {30824         , #%p 0x818E },
+    {30825         , #%p 0x811C },
+    {30826         , #%p 0x818F },
+    {30827         , #%p 0x8190 },
+
+    /* ####### EtherPMC ####### */
+#ifdef _HW_DC
+    {30900         , #%p 0x8280 },
+    {30908         , #%p 0x8288 },
+    {30909         , #%p 0x8289 },
+    {30910         , #%p 0x828A },
+    {30920         , #%p 0x8290 },
+    {30921         , #%p 0x8291 },
+    {30922         , #%p 0x8292 },
+    {30923         , #%p 0x8293 },
+    {30924         , #%p 0x8294 },
+#endif
+
+    /* ####### Sync Manager ####### */
+    {31000         , #%p 0x8300 },
+    {31001         , #%p 0x8301 },
+    {31002         , #%p 0x8302 },
+    {31003         , #%p 0x8303 },
+    {31004         , #%p 0x8304 },
+    {31005         , #%p 0x8305 },
+
+    {31010         , #%p 0x8310 },
+    {31011         , #%p 0x8311 },
+    {31012         , #%p 0x8312 },
+    {31013         , #%p 0x8313 },
+    {31014         , #%p 0x8315 },
+
+    /* ####### SS PLC requested memory ####### */
+    {32768         , #%p 0x7C90 },  // array of 16384 words
+
+#ifdef _HW_AXS_CABI35KW
+	/* ============== STGAP4S System Values ============== */
+    {50000 /*    */, #%p 0x4100 }, 
+    {50001 /*    */, #%p 0x4101 }, 
+    {50002 /*    */, #%p 0x4102 }, 
+    {50020 /*    */, #%p 0x4120 }, 
+    {50021 /*    */, #%p 0x4121 }, 
+	/* ============== STGAP4S Configuration Register Params ============== */
+    {50030 /*    */, #%p 0x4130 }, 
+    {50031 /*    */, #%p 0x4131 }, 
+    {50032 /*    */, #%p 0x4132 }, 
+    {50033 /*    */, #%p 0x4133 }, 
+    {50034 /*    */, #%p 0x4134 }, 
+    {50035 /*    */, #%p 0x4135 }, 
+    {50036 /*    */, #%p 0x4136 }, 
+    {50037 /*    */, #%p 0x4137 }, 
+    {50038 /*    */, #%p 0x4138 }, 
+    {50039 /*    */, #%p 0x4139 }, 
+    {50040 /*    */, #%p 0x4140 }, 
+	/* ============== STGAP4S Phase U Status Registers ============== */
+    {50050 /*    */, #%p 0x4150 }, 
+    {50051 /*    */, #%p 0x4151 }, 
+    {50052 /*    */, #%p 0x4152 }, 
+    {50053 /*    */, #%p 0x4153 }, 
+    {50054 /*    */, #%p 0x4154 }, 
+    {50055 /*    */, #%p 0x4155 }, 
+    {50056 /*    */, #%p 0x4156 }, 
+    {50057 /*    */, #%p 0x4157 }, 
+    {50058 /*    */, #%p 0x4158 }, 
+    {50059 /*    */, #%p 0x4159 }, 
+	/* ============== STGAP4S Phase V Status Registers ============== */
+    {50060 /*    */, #%p 0x4160 }, 
+    {50061 /*    */, #%p 0x4161 }, 
+    {50062 /*    */, #%p 0x4162 }, 
+    {50063 /*    */, #%p 0x4163 }, 
+    {50064 /*    */, #%p 0x4164 }, 
+    {50065 /*    */, #%p 0x4165 }, 
+    {50066 /*    */, #%p 0x4166 }, 
+    {50067 /*    */, #%p 0x4167 }, 
+    {50068 /*    */, #%p 0x4168 }, 
+    {50069 /*    */, #%p 0x4169 }, 
+	/* ============== STGAP4S Phase W Status Registers ============== */
+    {50070 /*    */, #%p 0x4170 }, 
+    {50071 /*    */, #%p 0x4171 }, 
+    {50072 /*    */, #%p 0x4172 }, 
+    {50073 /*    */, #%p 0x4173 }, 
+    {50074 /*    */, #%p 0x4174 }, 
+    {50075 /*    */, #%p 0x4175 }, 
+    {50076 /*    */, #%p 0x4176 }, 
+    {50077 /*    */, #%p 0x4177 }, 
+    {50078 /*    */, #%p 0x4178 }, 
+    {50079 /*    */, #%p 0x4179 }, 
+	/* ============== STGAP4S System Values ============== */
+    {50080 /*    */, #%p 0x4180 }, 
+	/* ============== STGAP4S Configuration Register Values ============== */
+    {50090 /*    */, #%p 0x4190 }, 
+    {50091 /*    */, #%p 0x4191 }, 
+    {50092 /*    */, #%p 0x4192 }, 
+    {50093 /*    */, #%p 0x4193 }, 
+    {50094 /*    */, #%p 0x4194 }, 
+    {50095 /*    */, #%p 0x4195 }, 
+    {50096 /*    */, #%p 0x4196 }, 
+    {50097 /*    */, #%p 0x4197 }, 
+    {50098 /*    */, #%p 0x4198 }, 
+    {50099 /*    */, #%p 0x4199 }, 
+    {50100 /*    */, #%p 0x4200 }, 
+#endif
+
+};
+
+const UWORD uwModBusParamCount=sizeof(hpsModBusParamTable)/sizeof(MODBUSCOMDB_ENTRY);
+
+//****************************************************************************
+// Coils table def
+// #%n psCommonParamTable
+
+const MODBUSCOMDB_ENTRY hpsModBusCoilsTable[]=
+{
+    /* ####### User digital I/O ############## */
+    {16384         , #%p 0x7E00 },
+    {16416         , #%p 0x7E01 },
+
+    /* ####### SS PLC requested memory ####### */
+    {32768         , #%p 0x7C90 },
+};
+
+const UWORD uwModBusCoilsCount=sizeof(hpsModBusCoilsTable)/sizeof(MODBUSCOMDB_ENTRY);

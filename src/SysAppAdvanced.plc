@@ -1,0 +1,121 @@
+(*
+        AxX:    Advanced parameters
+        Rel:    1.13/2.3
+ *)
+
+VAR_GLOBAL CONSTANT
+
+    (* ------------------------------------------------------ *)
+    {G: "Thermal Model"}
+
+    cstThModelDisableBiQuadKey  : UINT := 16#DEAD;
+
+    cstPStageAdvSwitchFreq2kHz  : USINT := 1;
+    cstPStageAdvSwitchFreq4kHz  : USINT := 2;
+    cstPStageAdvSwitchFreq8kHz  : USINT := 3;
+    cstPStageAdvSwitchFreq16kHz : USINT := 4;
+    cstPStageAdvSwitchFreq32kHz : USINT := 5;
+    cstPStageAdvSwitchFreq64kHz : USINT := 6;
+
+    (* ------------------------------------------------------ *)
+    {G: "IDChip"}
+    cstHwDataCodeCB  : UINT := 246;
+    cstHwDataCodeEM  : UINT := 247;
+    cstHwDataCodeEA  : UINT := 248;
+    cstHwDataCodeIO  : UINT := 249;
+    cstHwDataCodeBP  : UINT := 250;
+    cstHwDataCodePSU : UINT := 251;
+                
+END_VAR
+
+VAR_GLOBAL
+
+	{G:"Power Stage"}
+
+    plcPStageAdvDisable2StepsAuto       AT %MX427.0  : BOOL; { DE:"" }
+    plcPStageAdvEnable2Steps            AT %MX427.1  : BOOL; { DE:"" }
+    plcPStageAdvSelect2StepsLowOnly     AT %MX427.2  : BOOL; { DE:"" }
+    plcPStageAdvSelect2StepsFloat       AT %MX427.3  : BOOL; { DE:"" }
+    plcPStageAdvDtCompCurrentSign       AT %MX427.4  : BOOL; { DE:"" }
+    plcPStageAdvEnableDirectDrive       AT %MX427.5  : BOOL; { DE:"" }
+    plcPStageAdvEnableTransfMod         AT %MX427.6  : BOOL; { DE:"" }
+    plcPStageAdvDisableAutoFrequency    AT %MX427.7  : BOOL; { DE:"" }
+    plcPStageAdvUserVdcBusSet           AT %MX427.8  : BOOL; { DE:"" }
+    plcPStageAdvSelEnOutEnable          AT %MX427.9  : BOOL; { DE:"" }
+    plcPStageAdvSelectStraight          AT %MX427.10 : BOOL; { DE:"" }
+    plcPStageAdvEnablePhaseShift        AT %MX427.11 : BOOL; { DE:"" }
+    plcPStageAdvEnMultiBrgImmCurr       AT %MX427.12 : BOOL; { DE:"" }
+    plcPStageAdvDisableOnChange         AT %MX427.13 : BOOL; { DE:"" }
+    plcPStageAdvEnableCustomCurrScale   AT %MX427.14 : BOOL; { DE:"" }
+    plcPStageAdvDisableOCPwmout         AT %MX427.15 : BOOL; { DE:"" }
+    plcPStageAdvDtCompSet               AT %MW427.16 : UINT; { DE:"" }
+    plcPStageAdvPwmDeadTime             AT %MW427.18 : UINT; { DE:"" }
+    plcPStageAdvPwmHoldTime             AT %MW427.20 : UINT; { DE:"" }
+    plcPStageAdvPwmBlankTime            AT %MW427.22 : UINT; { DE:"" }
+    plcPStageAdvTransfModValue          AT %MW427.24 : UINT; { DE:"" }
+    plcPStageAdvSelEnOutMask            AT %MW427.26 : UINT; { DE:"" }
+    plcPStageAdvSelSwitchFrequency      AT %MB427.28 : USINT;{ DE:"" }
+    plcPStageAdvCurrPropDelay           AT %MB427.40 : UINT; { DE:"nsec" }
+    plcPStageAdvVoltPropDelay           AT %MB427.42 : UINT; { DE:"nsec" }
+    plcPStageAdvVdcBusSet               AT %MB427.44 : INT;  { DE:"" }
+    plcPStageAdvPwmOffsetV              AT %MB427.46 : INT;  { DE:"" }
+    plcPStageAdvPwmOffsetW              AT %MB427.48 : INT;  { DE:"" }
+    plcPStageAdvCurrNSamples            AT %MB427.50 : INT;  { DE:"" }
+    plcPStageAdvOvCurrCntLimit          AT %MB427.52 : UINT; { DE:"" }
+
+    plcPStageAdvEnableChargerMode       AT %MX427.54: BOOL; { DE:"" }
+    plcPStageAdvTransfModValue_V        AT %MW427.56: UINT; { DE:"" }
+    plcPStageAdvTransfModValue_W        AT %MW427.58: UINT; { DE:"" }
+
+    wksPStageAdvIuScale                 AT %MB429.0  : INT; { DE:"value 1000 = gain 1.0" }
+    wksPStageAdvIvScale                 AT %MB429.2  : INT; { DE:"value 1000 = gain 1.0" }
+    wksPStageAdvIwScale                 AT %MB429.4  : INT; { DE:"value 1000 = gain 1.0" }
+
+    (* ------------------------------------------------------ *)
+    {G:"Torque Loop"} 
+
+    varILoopAdvMeasIuMin                AT %MB170.0 : INT;  { DE:"FPGA internal measure units (16bit)" }
+    varILoopAdvMeasIuMax                AT %MB170.2 : INT;  { DE:"FPGA internal measure units (16bit)" }
+    varILoopAdvMeasIvMin                AT %MB170.4 : INT;  { DE:"FPGA internal measure units (16bit)" }
+    varILoopAdvMeasIvMax                AT %MB170.6 : INT;  { DE:"FPGA internal measure units (16bit)" }
+    varILoopAdvMeasIwMin                AT %MB170.8 : INT;  { DE:"FPGA internal measure units (16bit)" }
+    varILoopAdvMeasIwMax                AT %MB170.10: INT;  { DE:"FPGA internal measure units (16bit)" }
+
+    wksILoopAdvOffsetIq                 AT %MX427.36: DINT; { DE:"" }
+
+    (* ------------------------------------------------------ *)
+    {G:"System"}
+
+    wksSysFpgaCustom                    AT %MW201.0 : ARRAY[ 0..511 ] OF UINT;  { IO:"FPGA Custom App Registers" }
+
+    (* ------------------------------------------------------ *)
+    {G:"Unit Measure"}
+
+    varUMRatioIpk                       AT %MB220.0 : REAL; { DE:"Ratio conversion for I peak (Iu, Iv, Iw)" }
+    varUMRatioIrms                      AT %MB220.4 : REAL; { DE:"Ratio conversion for I rms (Id, Iq)" }
+    varUMRatioVDCpk                     AT %MB220.8 : REAL; { DE:"Ratio conversion for VDC peak (Vdc bus)" }
+    varUMRatioVACpk                     AT %MB220.12: REAL; { DE:"Ratio conversion for VAC peak (Vu, Vv, Vw)" }
+    varUMRatioVACrms                    AT %MB220.16: REAL; { DE:"Ratio conversion for VAC rms (Vd, Vq)" }
+    varUMRatioVACLinePk                 AT %MB220.20: REAL; { DE:"Ratio conversion for VAC Line peak (Vr, Vs, Vt" }
+END_VAR
+
+FUNCTION sysPStageAdjustCurrOffset : INT
+
+{ DE:"Adjust current offsets by adding the stated ones" }
+
+    VAR_INPUT
+        IuDelta : DINT; {DE:"" }
+        IvDelta : DINT; {DE:"" }
+        IwDelta : DINT; {DE:"" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysHwProductRev : UINT
+    VAR_INPUT
+        datacode : UINT; { DE:"" }
+    END_VAR
+    {CODE:EMBEDDED}
+END_FUNCTION

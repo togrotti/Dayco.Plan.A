@@ -1,0 +1,63 @@
+/****************************************************************************/
+/* Project: Ax-Zynq Control Board                                           */
+/*                                                                          */
+/* Copyright © 2021, Ningbo Physis Technology Co.,Ltd. All Rights Reserved. */
+/*                                                                          */
+/* File        : SysAppZYNQ.lin                                             */
+/* Author      : Hu Xiaokai                                                 */
+/*                                                                          */
+/* Description : Linker command file for System Application                 */
+/*                                                                          */
+/****************************************************************************/
+
+/* NB: keep updated MemoryLayout.c */
+
+#define BOOTBLOCK_CODE_START    (XPS_QSPI_LINEAR_BASEADDR+0x000000)
+#define BOOTBLOCK_CODE_SIZE     (0x350000)
+
+#define SYSAPP_CODE_START       (XPS_QSPI_LINEAR_BASEADDR+0x350000)
+#define SYSAPP_CODE_SIZE        (0x450000)
+
+#define PLC_PRJ_CODE_START      (XPS_QSPI_LINEAR_BASEADDR+0x800000) /* also define PLCCODE in CLASSES defs */
+#define PLC_PRJ_CODE_SIZE       (0x50000)
+
+#define RESPARAM_BLK0_START     (XPS_QSPI_LINEAR_BASEADDR+0xC00000)
+#define RESPARAM_BLK0_SIZE      (0x00100)
+#define RESPARAM_BLK1_START     (XPS_QSPI_LINEAR_BASEADDR+0xC00100)
+#define RESPARAM_BLK1_SIZE      (0x00100)
+
+#define SYSLOG_CLK_BLK0_START   (XPS_QSPI_LINEAR_BASEADDR+0xC10000)
+#define SYSLOG_CLK_BLK0_SIZE    (0x10000)
+#define SYSLOG_CLK_BLK1_START   (XPS_QSPI_LINEAR_BASEADDR+0xC20000)
+#define SYSLOG_CLK_BLK1_SIZE    (0x10000)
+#define SYSLOG_CLK_BLK2_START   (XPS_QSPI_LINEAR_BASEADDR+0xC30000)
+#define SYSLOG_CLK_BLK2_SIZE    (0x10000)
+
+#define PARAMSTOR_BLK0_START    (XPS_QSPI_LINEAR_BASEADDR+0xC40000)
+#define PARAMSTOR_BLK0_SIZE     (0x10000)
+#define PARAMSTOR_BLK1_START    (XPS_QSPI_LINEAR_BASEADDR+0xC50000)
+#define PARAMSTOR_BLK1_SIZE     (0x10000)
+
+#define SYSLOG_ALRM_BLK0_START  (XPS_QSPI_LINEAR_BASEADDR+0xC60000)
+#define SYSLOG_ALRM_BLK0_SIZE   (0x10000)
+#define SYSLOG_ALRM_BLK1_START  (XPS_QSPI_LINEAR_BASEADDR+0xC70000)
+#define SYSLOG_ALRM_BLK1_SIZE   (0x10000)
+
+#define ACTIVATIONKEYS_START    (XPS_QSPI_LINEAR_BASEADDR+0xC80000)
+#define ACTIVATIONKEYS_SIZE     (0x10000)
+
+#define BOOTBLOCKPARAM_START    (XPS_QSPI_LINEAR_BASEADDR+0xC90000)
+#define BOOTBLOCKPARAM_SIZE     (0x10000)
+
+/* #define PLC_LK_CODE_START       (XPS_QSPI_LINEAR_BASEADDR+0xCC0000)  also define PLCCODE in CLASSES defs */
+#define PLC_LK_CODE_START       (XPS_QSPI_LINEAR_BASEADDR+0xCD0000) /* also define PLCCODE in CLASSES defs */
+#define PLC_LK_CODE_SIZE        (0x20000)
+
+#define PLCD_LK_CODE_START      (XPS_QSPI_LINEAR_BASEADDR+0xCB0000) /* also define PLCDCODE in CLASSES defs, check *CODE classes overlapping */
+#define PLCD_LK_CODE_SIZE       (0x1C000)
+
+#define DIGITALSCOPE_LOG_START  (XPS_QSPI_LINEAR_BASEADDR+0xCF0000)
+#define DIGITALSCOPE_LOG_SIZE   (0x10000)
+
+#define RD_HMI_APP_START        (XPS_QSPI_LINEAR_BASEADDR+0xD50000)
+#define RD_HMI_APP_SIZE         (0x50000)

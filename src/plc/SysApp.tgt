@@ -1,0 +1,2136 @@
+(*
+        AxX:    target variables definition file
+        Rel:    1.14
+*)
+
+
+RESOURCE AxXRT3 ON ARM9
+
+    TASK Fast( INTERVAL := t#125us, PRIORITY := 0 );
+    TASK Slow( INTERVAL := t#0us, PRIORITY := 1 );
+    TASK Background( INTERVAL := t#0us, PRIORITY := 2 );
+    TASK OnDriveHook( INTERVAL := t#125us, PRIORITY := 3 );
+    TASK PreBoot( INTERVAL := t#0us, PRIORITY := 4 );
+    TASK Boot( INTERVAL := t#0us, PRIORITY := 5 );
+    TASK System( INTERVAL := t#0us, PRIORITY := 6 ); {HIDDEN:ON}
+    TASK OnDSPHook( INTERVAL := t#125us, PRIORITY := 7 );
+
+END_RESOURCE
+
+VAR_GLOBAL CONSTANT
+
+    (* ------------------------------------------------------ *)
+    {G:"Plc"}
+
+    cstPlcTaskCfgAuto : USINT := 0;
+    cstPlcTaskCfgOff : USINT := 1;
+    cstPlcTaskCfgPlc : USINT := 2;
+
+    (* ------------------------------------------------------ *)
+    {G:"System"}
+
+    cstSysTimer100ns : USINT := 1;
+    cstSysTimer125us : USINT := 2;
+    cstSysTimer1ms : USINT := 3;
+
+    cstSysEmcyStopFatal : UINT := 1;
+    cstSysEmcyStopNonFatal : UINT := 2;
+
+    cstSysCoreSpeedComp : USINT := 0;
+    cstSysCoreSpeedPerf : USINT := 1;
+
+    (* ------------------------------------------------------ *)
+    {G:"Encoders"}
+
+    cstEndatSelMain : UINT := 0;
+    cstEndatSelAux : UINT := 1;
+
+    cstEndatErrMaskTimeout : UDINT := 16#80000000;
+    cstEndatErrMaskCRCError : UDINT := 16#40000000;
+    cstEndatErrMaskNoModule : UDINT := 16#01000000;
+
+    cstEncStatusRelativeValid : USINT := 16#01;
+    cstEncStatusElecAngleValid : USINT := 16#02;
+    cstEncStatusFatalFaultValid : USINT := 16#04;
+    cstEncStatusNonFatalFaultValid : USINT := 16#08;
+    cstEncStatusAbsoluteValid : USINT := 16#10;
+    cstEncStatusAbsoluteWaiting : USINT := 16#20;
+    cstEncStatusEfsReady : USINT := 16#40;
+    cstEncStatusSnapshotValid : USINT := 16#80;
+
+    cstEncTypeNull : UINT := 0;
+    cstEncTypeAbsHall : UINT := 1;
+    cstEncTypeAbsAnalog : UINT := 3;
+    cstEncTypeAbsEndat : UINT := 4;
+    cstEncTypeRelBackEMF : UINT := 5;
+    cstEncTypeRelIncremental : UINT := 6;
+    cstEncTypeRelIncrSimulation : UINT := 8;
+    cstEncTypeB1AbsEndat : UINT := 10;
+    cstEncTypeAbsHiperface : UINT := 11;
+    cstEncTypeAbsNikon : UINT := 12;
+    cstEncTypeAbsTamagawa : UINT := 13;
+
+    cstEncEfsTypeDisabled : USINT := 0;
+    cstEncEfsTypeIdRamp : USINT := 1;
+    cstEncEfsTypeIdRampAndPosLoop : USINT := 2;
+    cstEncEfsTypeIdRampAndLocalPI : USINT := 3;
+
+    cstEncOptEnSinCosHw : UINT := 1; {HIDDEN:ON}
+    cstEncOptSetupVEncoder : UINT := 2; {HIDDEN:ON}
+
+    (* ------------------------------------------------------ *)  
+    {G:"Torque Loop"}
+    
+    cstILoopFiltSize : UINT := 4;
+
+    cstILoopFiltSysEnable : UDINT := 16#FFFFFFFF;
+    
+    cstILoopFiltTypeNone : USINT := 0;
+    cstILoopFiltTypeLowPass : USINT := 1;
+    cstILoopFiltTypeNotch : USINT := 2;
+    cstILoopFiltTypeBiQuad : USINT := 3;
+
+    (* ------------------------------------------------------ *)  
+    {G:"Power Stage"} 
+
+    cstPStageBridgeLayoutUVW : UINT := 0;
+    cstPStageBridgeLayoutUWV : UINT := 1;
+    cstPStageBridgeLayoutVUW : UINT := 2;
+    cstPStageBridgeLayoutWUV : UINT := 3;
+    cstPStageBridgeLayoutVWU : UINT := 4;
+    cstPStageBridgeLayoutWVU : UINT := 5;
+
+    cstPStageOptDisableBrakeDrive : UINT := 1;
+    cstPStageOptBackEMFDataEnable : UINT := 2;
+    cstPStageOptBackEMFATanEnable : UINT := 3;
+    cstPStageOptEnEnergyProtection : UINT := 4;
+    cstPStageOptDisEnergyProtection : UINT := 5;
+    cstPStageOptSetOverCurrentLimit : UINT := 6; { HIDDEN:ON }
+    cstPStageOptSetPWMModulation : UINT := 7; { HIDDEN:ON }
+    cstPStageOptForcePWMLowFrequency : UINT := 8; { HIDDEN:ON }
+    cstPStageOptSetPlcIqFilters : UINT := 9;
+    cstPStageOptForceBrakeOn : UINT := 10; { HIDDEN:ON }
+    cstPStageOptEnableBrakeDrive : UINT := 11; { HIDDEN:ON }
+    cstPStageOptSetOvervoltageToOutShort : UINT := 12; { HIDDEN:ON }
+
+    cstPStageOPWMModEnable2Steps : UINT := 16#0020; { HIDDEN:ON }
+    cstPStageOPWMMod2StepsFloat : UINT := 16#4000; { HIDDEN:ON }
+    cstPStageOPWMMod2StepsOnly : UINT := 16#8000; { HIDDEN:ON }
+
+    cstPStageVacNoError : USINT := 0;
+    cstPStageVacFailPhaseR : USINT := 1;
+    cstPStageVacFailPhaseS : USINT := 2;
+    cstPStageVacFailPhaseT : USINT := 3;
+
+    (* ------------------------------------------------------ *) 
+    {G:"Device Control"}
+
+    cstDevCtrlModeOfOpProfilePosition : USINT := 1;
+    cstDevCtrlModeOfOpProfileVelocity : USINT := 3;
+    cstDevCtrlModeOfOpHoming : USINT := 6;
+    cstDevCtrlModeOfOpInterpolatedPosition : USINT := 7;
+    cstDevCtrlModeOfOpCyclicSyncVelocity : USINT := 9;
+    cstDevCtrlModeOfOpCyclicSyncTorque : USINT := 10;
+    cstDevCtrlModeOfOpTorqueMode : USINT := 128;
+
+    cstDevCtrlOptCodePowerOff : UINT := 0;
+    cstDevCtrlOptCodeSlowDown : UINT := 1;
+    cstDevCtrlOptCodeQuickStop : UINT := 2;
+    cstDevCtrlOptCodeSlowDownAndStay : UINT := 5;
+    cstDevCtrlOptCodeQuickStopAndStay : UINT := 6;
+
+    cstDevCtrlSwitchSelOff : USINT := 255;
+    cstDevCtrlSwitchSelSoft : USINT := 254;
+    cstDevCtrlSwitchSelInvert : USINT := 128;
+    cstDevCtrlSwitchSelInMask : USINT := 127;
+
+    (* ------------------------------------------------------ *)
+    {G:"CANOpen"} 
+
+    cstCanOpenNMTCStart : USINT := 1;
+    cstCanOpenNMTCStop : USINT := 2;
+    cstCanOpenNMTCEnterPreoperational : USINT := 128;
+    cstCanOpenNMTCResetNode : USINT := 129;
+    cstCanOpenNMTCResetCommunication : USINT := 130;
+
+    cstCanOpenNMTSBootup : USINT := 0;
+    cstCanOpenNMTSStopped : USINT := 4;
+    cstCanOpenNMTSPreoperational : USINT := 127;
+    cstCanOpenNMTSOperational : USINT := 5;
+
+    (* ------------------------------------------------------ *)
+    {G:"CAN"} 
+    cstCanNode0 : UINT := 0;
+    cstCanNode1 : UINT := 1;
+
+    cstCanDrvRun : UINT := 16#0001;
+    cstCanDrvErrPasv : UINT := 16#0002;
+    cstCanDrvBusOff : UINT := 16#0004;
+    cstCanDrvHwOverrun : UINT := 16#0008;
+
+    cstCanBaudRate10Kbps : INT := 8;
+    cstCanBaudRate20Kbps : INT := 7;
+    cstCanBaudRate50Kbps : INT := 6;
+    cstCanBaudRate100Kbps : INT := 5;
+    cstCanBaudRate125Kbps : INT := 4;
+    cstCanBaudRate250Kbps : INT := 3;
+    cstCanBaudRate500Kbps : INT := 2;
+    cstCanBaudRate800Kbps : INT := 1;
+    cstCanBaudRate1000Kbps : INT := 0;
+
+    cstCanIDExt : UDINT := 16#40000000;
+    cstCanIDIDE : UDINT := 16#20000000;
+
+END_VAR
+
+VAR_GLOBAL
+
+    (* ------------------------------------------------------ *)  
+    {G:"Globals"} 
+    parMotorData AT %MB205.0 : PAR_MOTORDATA; { DE:"Motor Specifications" }
+
+    (* ------------------------------------------------------ *)
+    {G:"Encoders"}
+    parEncMgr AT %MB16.0 : PAR_ENCMGR; { DE:"Encoder manager" }
+    varEncEPlate AT %MB227.0 : PAR_MOTORDATA; { DE:"last valid eplate read, if zero filled then invalid" }
+
+    varEncMgrRequireIRefHook AT %MX17.0 : BOOL; { DE:"Encoder manager current hook active" }
+
+    parEncEfs AT %MB18.0 : PAR_EFS; {DE:"Encoder electrical field auto-seek" }
+    varEncEfsOut AT %MB159.0 : OUT_EFS; {DE:"Encoder electrical field monitoring" }
+
+    varEncFbMechLo AT %MB10.0 : UDINT; { DE:"" }
+    varEncFbMechHi AT %MB10.4 : DINT; { DE:"" }
+    varEncFbMechSpeed AT %MB10.8 : DINT; { DE:"" }
+    varEncFbMechAccel AT %MB10.12 : DINT; { DE:"" }
+    varEncFbElecAngle AT %MB10.16 : UINT; { DE:"" }
+    varEncFbMechAbsPosOffsetLo AT %MB10.20 : UDINT; { DE:"" }
+    varEncFbMechAbsPosOffsetHi AT %MB10.24 : DINT; { DE:"" }   
+    varEncFbStatus AT %MB10.28 : USINT; { DE:"" }   
+    varEncFbDeltaElecAngle AT %MB10.30 : UINT; { DE:"" }
+    varEncFbElecSpeed AT %MB10.32 : UINT; { DE:"" }
+    varEncFbMechFilteredSpeed AT %MB157.0 : DINT; { DE:"" }
+
+    varEncMainMechLo AT %MB11.0 : UDINT; { DE:"" }
+    varEncMainMechHi AT %MB11.4 : DINT; { DE:"" }
+    varEncMainMechSpeed AT %MB11.8 : DINT; { DE:"" }
+    varEncMainMechAccel AT %MB11.12 : DINT; { DE:"" }
+    varEncMainElecAngle AT %MB11.16 : UINT; { DE:"" }
+    varEncMainMechAbsPosOffsetLo AT %MB11.20 : UDINT; { DE:"" }
+    varEncMainMechAbsPosOffsetHi AT %MB11.24 : DINT; { DE:"" }   
+    varEncMainStatus AT %MB11.28 : USINT; { DE:"" }   
+    varEncMainDeltaElecAngle AT %MB11.30 : UINT; { DE:"" }
+    varEncMainElecSpeed AT %MB11.32 : UINT; { DE:"" }
+
+    varEncAuxMechLo AT %MB12.0 : UDINT; { DE:"" }
+    varEncAuxMechHi AT %MB12.4 : DINT; { DE:"" }
+    varEncAuxMechSpeed AT %MB12.8 : DINT; { DE:"" }
+    varEncAuxMechAccel AT %MB12.12 : DINT; { DE:"" }
+    varEncAuxElecAngle AT %MB12.16 : UINT; { DE:"" }
+    varEncAuxMechAbsPosOffsetLo AT %MB12.20 : UDINT; { DE:"" }
+    varEncAuxMechAbsPosOffsetHi AT %MB12.24 : DINT; { DE:"" }   
+    varEncAuxStatus AT %MB12.28 : USINT; { DE:"" }   
+    varEncAuxDeltaElecAngle AT %MB12.30 : UINT; { DE:"" }
+    varEncAuxElecSpeed AT %MB12.32 : UINT; { DE:"" }
+
+    varEncAbsMechLo AT %MB13.0 : UDINT; { DE:"" }
+    varEncAbsMechHi AT %MB13.4 : DINT; { DE:"" }
+    varEncAbsMechSpeed AT %MB13.8 : DINT; { DE:"" }
+    varEncAbsMechAccel AT %MB13.12 : DINT; { DE:"" }
+    varEncAbsElecAngle AT %MB13.16 : UINT; { DE:"" }
+    varEncAbsMechAbsPosOffsetLo AT %MB13.20 : UDINT; { DE:"" }
+    varEncAbsMechAbsPosOffsetHi AT %MB13.24 : DINT; { DE:"" }   
+    varEncAbsStatus AT %MB13.28 : USINT; { DE:"" }   
+    varEncAbsDeltaElecAngle AT %MB13.30 : UINT; { DE:"" }
+    varEncAbsElecSpeed AT %MB13.32 : UINT; { DE:"" }
+
+    varEncRelMechLo AT %MB14.0 : UDINT; { DE:"" }
+    varEncRelMechHi AT %MB14.4 : DINT; { DE:"" }
+    varEncRelMechSpeed AT %MB14.8 : DINT; { DE:"" }
+    varEncRelMechAccel AT %MB14.12 : DINT; { DE:"" }
+    varEncRelElecAngle AT %MB14.16 : UINT; { DE:"" }
+    varEncRelMechAbsPosOffsetLo AT %MB14.20 : UDINT; { DE:"" }
+    varEncRelMechAbsPosOffsetHi AT %MB14.24 : DINT; { DE:"" }   
+    varEncRelStatus AT %MB14.28 : USINT; { DE:"" }   
+    varEncRelDeltaElecAngle AT %MB14.30 : UINT; { DE:"" }
+    varEncRelElecSpeed AT %MB14.32 : UINT; { DE:"" }
+
+    plcEncSimSetMechLo AT %MB15.0 : UDINT; { DE:"" }
+    plcEncSimSetMechHi AT %MB15.4 : DINT; { DE:"" }
+    plcEncSimSetMechSpeed AT %MB15.8 : DINT; { DE:"" }
+    plcEncSimSetMechAccel AT %MB15.12 : DINT; { DE:"" }
+    plcEncSimSetElecAngle AT %MB15.16 : UINT; { DE:"" }
+    plcEncSimSetMechAbsPosOffsetLo AT %MB15.20 : UDINT; { DE:"" }
+    plcEncSimSetMechAbsPosOffsetHi AT %MB15.24 : DINT; { DE:"" }   
+    plcEncSimSetStatus AT %MB15.28 : USINT; { DE:"" }   
+    plcEncSimSetDeltaElecAngle AT %MB15.30 : UINT; { DE:"" }
+    plcEncSimSetElecSpeed AT %MB15.32 : UINT; { DE:"" }
+
+    plcEncFbSetMechLo AT %MB19.0 : UDINT; { DE:"" }
+    plcEncFbSetMechHi AT %MB19.4 : DINT; { DE:"" }
+    plcEncFbSetMechSpeed AT %MB19.8 : DINT; { DE:"" }
+    plcEncFbSetMechAccel AT %MB19.12 : DINT; { DE:"" }
+    plcEncFbSetElecAngle AT %MB19.16 : UINT; { DE:"" }
+    plcEncFbSetMechAbsPosOffsetLo AT %MB19.20 : UDINT; { DE:"" }
+    plcEncFbSetMechAbsPosOffsetHi AT %MB19.24 : DINT; { DE:"" }   
+    plcEncFbSetStatus AT %MB19.28 : USINT; { DE:"" }   
+    plcEncFbSetDeltaElecAngle AT %MB19.30 : UINT; { DE:"" }
+    plcEncFbSetElecSpeed AT %MB19.32 : UINT; { DE:"" }
+    plcEncFbSetMechFilteredSpeed AT %MB410.0 : DINT; { DE:"" }
+
+    varEncAnChannelSin AT %MB152.0 : INT; { DE:"Encoder Absolute Sin Channel Reading" }
+    varEncAnChannelCos AT %MB152.2 : INT; { DE:"Encoder Absolute Cos Channel Reading" }
+    varEncAnChannelLevels AT %MB152.4 : UDINT; { DE:"Encoder Absolute Sin^2+Cos^2 Reading" }
+
+    varEncIncMainCounter AT %MB150.0 : UDINT; { DE:"Main incremental track counter reading" }
+    varEncIncMainIndexCapture AT %MB150.4 : UDINT; { DE:"Main incremental track index capture" }
+    varEncIncMainChannelSin AT %MB150.8 : INT; { DE:"Main incremental sin channel reading" }
+    varEncIncMainChannelCos AT %MB150.10 : INT; { DE:"Main incremental cos channel reading" }
+    varEncIncMainChannelLevels AT %MB150.12 : UDINT; { DE:"Main incremental Sin^2+Cos^2 reading" }
+    varEncIncMainIndexCapCounter AT %MB150.16 : USINT; { DE:"Main incremental track index capture counter" }
+
+    varEncIncAuxCounter AT %MB151.0 : UDINT; { DE:"Aux incremental track counter reading" }
+    varEncIncAuxIndexCapture AT %MB151.4 : UDINT; { DE:"Aux incremental track index capture" }
+    varEncIncAuxIndexCapCounter AT %MB151.16 : USINT; { DE:"Aux incremental track index capture counter" }
+
+    varEncMEndatCrcErrors AT %MB154.0 : UINT; { DE:"Main endat overall CRC error counter" }
+    varEncMEndatPropDelay AT %MB154.2 : UINT; { DE:"Main endat data propagation delay [nsec]" }
+    varEncMEndatMaxClockFreq AT %MB154.4 : UINT; { DE:"Main endat Maximum clock frequency allowed [kHz]" }
+    varEncMEndatProtocolVer AT %MB154.6 : USINT; { DE:"Main endat protocol version" }
+    varEncMEndatStepPerRevBits AT %MB154.7 : USINT; { DE:"Main endat No. of bits of revolution resolution" }
+    varEncMEndatRevNumBits AT %MB154.8 : USINT; { DE:"Main endat No. of bits for revolution counting" }
+
+    varEncAEndatCrcErrors AT %MB155.0 : UINT; { DE:"Aux endat overall CRC error counter" }
+    varEncAEndatPropDelay AT %MB155.2 : UINT; { DE:"Aux endat data propagation delay [nsec]" }
+    varEncAEndatMaxClockFreq AT %MB155.4 : UINT; { DE:"Aux endat Maximum clock frequency allowed [kHz]" }
+    varEncAEndatProtocolVer AT %MB155.6 : USINT; { DE:"Aux endat protocol version" }
+    varEncAEndatStepPerRevBits AT %MB155.7 : USINT; { DE:"Aux endat No. of bits of revolution resolution" }
+    varEncAEndatRevNumBits AT %MB155.8 : USINT; { DE:"Aux endat No. of bits for revolution counting" }
+
+    varEncMNikonBaudrate AT %MB413.0 : USINT; { DE:"Nikon encoder communication baudrate" }
+    varEncMNikonBatteryLine AT %MB413.1 : USINT; { DE:"Nikon encoder battery line" }
+    varEncMNikonStepPerRevBits AT %MB413.2 : USINT; { DE:"Nikon encoder No. of bits of revolution resolution" }
+    varEncMNikonRevNumBits AT %MB413.3 : USINT; { DE:"Nikon encoder No. of bits for revolution counting" }
+
+    varEncMTamagawaRevNumBits AT %MB415.0 : USINT; { DE:"Tamagawa encoder No. of bits for revolution counting" }
+    varEncMTamagawaStepPerRevBits AT %MB415.1 : USINT; { DE:"Tamagawa encoder No. of bits of revolution resolution" }
+    varEncMTamagawaBaudrate AT %MB415.2 : USINT; { DE:"Tamagawa encoder communication baudrate" }
+
+    varEncSimMechLo AT %MB158.4 : UDINT; { DE:"" }
+    varEncSimMechHi AT %MB158.8 : DINT; { DE:"" }
+
+    parEncMEndat AT %MB401.0 : PAR_ENDAT; { DE:"Main endat parameters" }
+    parEncAEndat AT %MB402.0 : PAR_ENDAT; { DE:"Aux endat parameters" }
+    parEncAn AT %MB403.0 : PAR_SINCOS; { DE:"Absolute analogues traces parameters" }
+    parEncHall AT %MB404.0 : PAR_HALL; { DE:"Absolute Hall sensors traces parameters" }
+    parEncMInc AT %MB405.0 : PAR_INC; { DE:"Main Incremental traces" }
+    parEncAInc AT %MB406.0 : PAR_INC; { DE:"Aux Incremental traces" }
+    parEncSimInc AT %MB408.0 : PAR_SIMINC; { DE:"Incremental Simulation" }
+    parEncHiperface AT %MB411.0 : PAR_HIPFC; { DE:"Hiperface parameters" }
+    parEncMNikon AT %MB412.0 : PAR_NIKON; { DE:"Nikon encoder parameters" }
+    parEncMTamagawa AT %MB414.0 : PAR_TAMAGAWA; { DE:"Tamagawa encoder parameters" }
+    
+    (* ------------------------------------------------------ *)  
+    {G:"Torque Loop"} 
+
+    parILoop AT %MB21.0 : PAR_MOTHLR; { DE:"Torque loop and power stage" }  
+
+    parILoop_ILoopKi AT %MB621.12 : REAL; { DE:"Modulator Ki" }
+    parILoop_ILoopKp AT %MB621.16 : REAL; { DE:"Modulator Kp" }
+    parILoop_IqLimitMax AT %MB621.24 : DINT; { DE:"Quadrature Current Limit Max" }
+    parILoop_IqLimitMin AT %MB621.28 : DINT; { DE:"Quadrature Current Limit Min" }
+    parILoop_IdLimitMax AT %MB621.32 : DINT; { DE:"Direct Current Limit Max" }
+    parILoop_IdLimitMin AT %MB621.36 : DINT; { DE:"Direct Current Limit Min" }
+    
+    varILoopIdFb AT %MB20.0 : DINT; { DE:"" }
+    varILoopIqFb AT %MB20.4 : DINT; { DE:"" }
+    varILoopIuFb AT %MB20.8 : DINT; { DE:"" }
+    varILoopIvFb AT %MB20.12 : DINT; { DE:"" }
+    varILoopIwFb AT %MB20.96 : DINT; { DE:"" }
+    varILoopIqLimMax AT %MB20.44 : DINT; { DE:"" }
+    varILoopIqLimMin AT %MB20.48 : DINT; { DE:"" }
+    varILoopIdLimMax AT %MB20.52 : DINT; { DE:"" }
+    varILoopIdLimMin AT %MB20.56 : DINT; { DE:"" }
+    varILoopIdRef AT %MB20.60: DINT; { DE:"" }   
+    varILoopIqRef AT %MB20.64: DINT; { DE:"" }
+    varILoopVdOut AT %MB20.80: INT; { DE:"" }
+    varILoopVqOut AT %MB20.82: INT; { DE:"" }
+    varILoopVuOut AT %MB20.84: INT; { DE:"" }
+    varILoopVvOut AT %MB20.86: INT; { DE:"" }
+    varILoopAutoILoopKi AT %MB20.88  : REAL; { DE:"" }
+    varILoopAutoILoopKp AT %MB20.92  : REAL; { DE:"" }
+    varILoopIqFiltRef AT %MB20.120: DINT; { DE:"" }
+
+    varILoopIuOffsetDev AT %MB20.106 : INT; { DE:"Offset deviation from theoretical value for Iu [1/1000]" }
+    varILoopIvOffsetDev AT %MB20.108 : INT; { DE:"Offset deviation from theoretical value for Iv [1/1000]" }
+    varILoopIwOffsetDev AT %MB20.110 : INT; { DE:"Offset deviation from theoretical value for Iw [1/1000]" }
+
+    varILoopIuPkMaxOffsetDev AT %MB20.124 : INT; { HIDDEN:ON }
+    varILoopIvPkMaxOffsetDev AT %MB20.126 : INT; { HIDDEN:ON }
+    varILoopIwPkMaxOffsetDev AT %MB20.128 : INT; { HIDDEN:ON }
+    varILoopIuPkMinOffsetDev AT %MB20.130 : INT; { HIDDEN:ON }
+    varILoopIvPkMinOffsetDev AT %MB20.132 : INT; { HIDDEN:ON }
+    varILoopIwPkMinOffsetDev AT %MB20.134 : INT; { HIDDEN:ON }
+
+    varILoopDSPParKi AT %MB20.142 : INT; { HIDDEN:ON }
+    varILoopDSPParKp AT %MB20.144 : INT; { HIDDEN:ON }
+    varILoopDSPParOutShift AT %MB20.146 : INT; { HIDDEN:ON }
+    varILoopDSPParOutLimit AT %MB20.148 : UINT; { HIDDEN:ON }
+
+    varILoopDSPOutId AT %MB20.150 : INT; { HIDDEN:ON }
+    varILoopDSPOutIq AT %MB20.152 : INT; { HIDDEN:ON }
+    varILoopDSPOutESin AT %MB20.154 : INT; { HIDDEN:ON }
+    varILoopDSPOutECos AT %MB20.156 : INT; { HIDDEN:ON }
+
+    wksIdRef AT %MB22.0 : DINT; { DE:"" }
+    wksIqRef AT %MB22.4 : DINT; { DE:"" }    
+
+    wksDynamicIdLimMax AT %MB420.0 : DINT; { DE:"" }
+    wksDynamicIdLimMin AT %MB420.4 : DINT; { DE:"" }
+    wksDynamicIqLimMax AT %MB421.0 : DINT; { DE:"" }
+    wksDynamicIqLimMin AT %MB421.4 : DINT; { DE:"" }
+
+    plcILoopIdRef AT %MB23.0 : DINT; { DE:"" }
+    plcILoopIqRef AT %MB23.4 : DINT; { DE:"" }
+    plcILoopElecAngle AT %MB24.0 : UINT; { DE: "" } 
+    plcILoopIqLimMax AT %MB28.0 : DINT; { DE:"" }
+    plcILoopIqLimMin AT %MB28.4 : DINT; { DE:"" }
+    plcILoopIdLimMax AT %MB28.8 : DINT; { DE:"" }
+    plcILoopIdLimMin AT %MB28.12 : DINT; { DE:"" }
+    plcILoopMechFilteredSpeed AT %MB426.0 : DINT; { DE:"" }
+    plcILoopMechFilteredElecSpeed AT %MB428.0 : INT; { DE:"" }
+
+    parILFWeak AT %MB422.0 : PAR_DFLX; { DE:"Field weakening" }  
+
+    varILFWeakIqLimMax AT %MB423.4 : DINT; { DE:"" }
+    varILFWeakIqLimMin AT %MB423.8 : DINT; { DE:"" }
+    varILFWeakKneeSpeed AT %MB423.12 : DINT; { DE:"" }
+    varILFWeakShortCurrent AT %MB423.16 : DINT; { DE:"" }
+    varILFWeakMaxSpeed AT %MB423.20 : DINT; { HIDDEN:ON }
+    varILFWeakDirectInductance AT %MB423.24 : REAL; { HIDDEN:ON }
+    varILFWeakIqLimLst AT %MB423.28 : ARRAY[ 0..8 ] OF REAL; { HIDDEN:ON }
+
+    varILFWeakActive AT %MX424.0 : BOOL; { DE:"" }                              
+    varILFWeakMaxSpeedReachable AT %MX424.1 : BOOL; { DE:"" }                              
+
+    (* ------------------------------------------------------ *)  
+    {G:"Power Stage"} 
+    
+    parPStage AT %MB21.0 : PAR_MOTHLR; { DE:"Torque loop and power stage" }  
+
+    parPStage_EnableFieldWeakening AT %MX425.1 : BOOL; { DE:"Enable field weakening" }  
+    parPStage_DisableMotorPhasesCheck AT %MX425.4 : BOOL; { DE:"Disable runtime motor phases connection check" }  
+    parPStage_DisablePOST AT %MX425.5 : BOOL; { DE:"Disable power stage self-test at startup" }  
+    parPStage_ForcePOST AT %MX425.6 : BOOL; { DE:"Force successfully completion of power stage self-test at startup" }  
+    parPStage_DisableACMgm AT %MX425.7 : BOOL; { DE:"Disable power stage AC monitoring" }
+    parPStage_EnableFldWeakFiltIQ AT %MX425.8 : BOOL; { DE:"Use filtered Iq reference for field weakening" }
+
+    varPStageEmfAlpha AT %MB20.16 : INT; { DE:"" }
+    varPStageEmfBeta AT %MB20.18 : INT; { DE:"" }
+    varPStageEmfSqRoot AT %MB20.20 : UINT; { DE:"" }
+    varPStageEmfAngle AT %MB20.22 : INT; { DE:"" }
+    varPStageVdcBus AT %MB20.28 : INT; { DE:"" } 
+    varPStageVoltageEnabled AT %MX26.0: BOOL; { DE:"" }     
+    varPStageFullyActive AT %MX26.1: BOOL; { DE:"" }     
+    varPStageReferenceEnabled AT %MX26.2: BOOL; { DE:"" }
+    varPStageBackEMFDataValid AT %MX26.3: BOOL; { DE:"" }
+    varPStageVacDataValid AT %MX26.4: BOOL; { DE:"" }    
+    varPStageOutShortActive AT %MX26.7: BOOL; { DE:"" }     
+    varPStageStoActiveHi AT %MX26.8: BOOL; { DE:"" }    
+    varPStageStoActiveLo AT %MX26.9: BOOL; { DE:"" }     
+    varPStageOverVoltageThreshold AT %MB20.40 : INT; { DE:"" } 
+    varPStageVBrakeLow AT %MB20.100 : INT; { DE:"" } 
+    varPStageVBrakeHigh AT %MB20.102 : INT; { DE:"" } 
+    varPStageOverCurrentThreshold AT %MB20.32 : DINT; { DE:"" }
+    varPStageSwitchingFrequency AT %MB20.118 : USINT; { DE:"" }
+    varPStageVacRS AT %MB20.136 : INT; { DE:"" } 
+    varPStageVacST AT %MB20.138 : INT; { DE:"" } 
+    varPStageVacTR AT %MB20.140 : INT; { DE:"" } 
+    varPStageVacStatus AT %MB20.119 : USINT; { DE:"" }
+    varPStageDSPLoad AT %MB20.114 : USINT; { DE:"" }
+    varPStageDSPCompatLevel AT %MB20.116 : UINT; { DE:"DSP code compatibility level" }
+    varPStagePOSTResultEx AT %MB20.198 : UINT; { HIDDEN:ON }
+    varPStageVEffectiveU AT %MB20.200 : INT; { DE:"" }
+    varPStageVEffectiveV AT %MB20.202 : INT; { DE:"" } 
+    varPStageVEffectiveW AT %MB20.204 : INT; { DE:"" }  
+
+    plcPStagePowerEnable AT %MX29.0: BOOL; { DE:"" }     
+    plcPStageReferenceEnable AT %MX29.1: BOOL; { DE:"" }     
+    plcPStageDisableBrakeDrive AT %MX29.2: BOOL; { DE:"" }     
+    plcPStageBackEMFDataEnable AT %MX29.3: BOOL; { DE:"" }     
+    plcPStageBackEMFATanEnable AT %MX29.4: BOOL; { DE:"" }     
+  
+    (* ------------------------------------------------------ *)
+    {G:"Space Speed Control Loop"}    
+
+    parSSCntrLp AT %MB36.0 : PAR_SSCNTRLP; { DE:"Space Speed control loop" } 
+
+    parSSCntrLp_PosKp AT %MB636.0 : INT; { DE:"Position: proportional gain value" }
+    parSSCntrLp_SpdKpRef AT %MB636.2 : INT; { DE:"Speed: reference proportional gain value" }
+    parSSCntrLp_SpdKpFbk AT %MB636.4 : INT; { DE:"Speed: feedback  proportional gain value" }
+    parSSCntrLp_AccKpRef AT %MB636.6 : INT; { DE:"Acceleration: reference proportional gain value" }
+    parSSCntrLp_AccKpFbk AT %MB636.8 : INT; { DE:"Acceleration: feedback  proportional gain value" }
+    parSSCntrLp_Ki AT %MB636.10 : INT; { DE:"Integral gain" }    
+    parSSCntrLp_PosGainShift AT %MB636.12 : UINT; { DE:"Position: global gain shift => ONLY shift RIGHT, max 16" }
+    parSSCntrLp_AccGainShift AT %MB636.14 : UINT; { DE:"Acceleration: gains shift => ONLY shift LEFT, max 15" }
+    parSSCntrLp_GlobalGainShift AT %MB636.16 : INT; { DE:"Gains global shift: max shift left -8, max shift right +16" }    
+    parSSCntrLp_fKi AT %MB636.24 : REAL; { DE:"Integral gain" }    
+    parSSCntrLp_fPosKp AT %MB636.28 : REAL; { DE:"Position gain [Arms/rad]" }
+    parSSCntrLp_fSpdKpRef AT %MB636.32 : REAL; { DE:"Speed reference gain [Arms/(rad/s)]" }
+    parSSCntrLp_fSpdKpFbk AT %MB636.36 : REAL; { DE:"Speed feedback gain [Arms/(rad/s)]" }
+    parSSCntrLp_fAccKpRef AT %MB636.40 : REAL; { DE:"Acceleration reference gain [Arms/(rad/s^2)]" }
+    parSSCntrLp_fAccKpFbk AT %MB636.44 : REAL; { DE:"Acceleration feedback gain [Arms/(rad/s^2)]" }
+    parSSCntrLp_ILimitMax AT %MB636.48 : DINT; { DE:"User: Max Torque limit" }
+    parSSCntrLp_ILimitMin AT %MB636.52 : DINT; { DE:"User: Min Torque limit" }
+
+    varSSCntrLpIdRef AT %MB30.0 : DINT; { DE:"" }
+    varSSCntrLpIqRef AT %MB30.4 : DINT; { DE:"" }
+    varSSCntrLpAutoErrMaxLo AT %MB30.8 : UDINT; { DE:"Auto calc position error limit, positive limit" }
+    varSSCntrLpAutoErrMaxHi AT %MB30.12 : DINT; { DE:"Auto calc position error limit, positive limit" }
+    varSSCntrLpAutoErrMinLo AT %MB30.16 : UDINT; { DE:"Auto calc position error limit, negative limit" }
+    varSSCntrLpAutoErrMinHi AT %MB30.20 : DINT; { DE:"Auto calc position error limit, negative limit" }
+    varSSCntrLpFiltAccRef AT %MB30.24 : DINT; { DE:"Filtered Reference Acceleration [rad/s^2]" }
+
+    varSSCntrLpIqLimMax AT %MB32.0 : DINT; { DE:"" }
+    varSSCntrLpIqLimMin AT %MB32.4 : DINT; { DE:"" }
+    
+    varSSCntrLpRefMechLo AT %MB33.0 : UDINT; { DE:"" }
+    varSSCntrLpRefMechHi AT %MB33.4 : DINT; { DE:"" }
+    varSSCntrLpRefMechSpeed AT %MB33.8 : DINT; { DE:"" }
+    varSSCntrLpRefMechAccel AT %MB33.12 : DINT; { DE:"" }
+
+    plcSSCntrLpRefMechLo AT %MB34.0 : UDINT; { DE:"" }
+    plcSSCntrLpRefMechHi AT %MB34.4 : DINT; { DE:"" }
+    plcSSCntrLpRefMechSpeed AT %MB34.8 : DINT; { DE:"" }
+    plcSSCntrLpRefMechAccel AT %MB34.12 : DINT; { DE:"" }
+    plcSSCntrLpEnableIntegralGain AT %MX35.6 : BOOL; { DE:"" }
+
+    (* ------------------------------------------------------ *)  
+    {G:"Positioner"}
+    
+    parPositioner AT %MB41.0 : PAR_POSITIONER; { DE:"Positioner and ramp generator" }  
+
+    parPositioner_EndVelocity AT %MB641.0 : DINT; { DE:"End Velocity" }
+    parPositioner_ProfileVel AT %MB641.4 : DINT; { DE:"Profile Velocity" }
+    parPositioner_ProfileAcc AT %MB641.8 : DINT; { DE:"Profile Acceleration" }
+    parPositioner_ProfileDec AT %MB641.12 : DINT; { DE:"Profile Deceleration" }
+    parPositioner_QuickStopDec AT %MB641.16 : DINT; { DE:"QuickStop Deceleration" }
+    parPositioner_PositionErrorMaxLo AT %MB641.20 : UDINT; { DE:"Max Position Error allowed" }
+    parPositioner_PositionErrorMaxHi AT %MB641.24 : DINT; { DE:"Max Position Error allowed" }
+    parPositioner_ZeroSpeedThreshold AT %MB641.28 : DINT; { DE:"Threshold below which motor is considered standstill" }
+    parPositioner_MotorBlockedTimeout AT %MB641.32 : INT; { DE:"Time-out for motor blocked alarm [msec]" }
+
+    varPosRGTgtPosReached AT %MX44.3 : BOOL; { DE:"" }
+    varPosRGExecRamp AT %MX44.5 : BOOL; { DE:"" }
+    varPosRGSRampEnabled AT %MX44.6 : BOOL; { DE:"" }
+
+    varPosRGDemandPosLo AT %MB40.8 : UDINT; { DE:"" }
+    varPosRGDemandPosHi AT %MB40.12 : DINT; { DE:"" }
+    varPosRGDemandSpeed AT %MB40.16 : DINT; { DE:"" }
+    varPosRGDemandAccel AT %MB40.20 : DINT; { DE:"" }  
+    varPosRGPosErrorLo  AT %MB40.24 : UDINT; { DE:"" }
+    varPosRGPosErrorHi  AT %MB40.28 : DINT; { DE:"" }
+
+    varPosRGLocDemandPosLo AT %MB37.0 : UDINT; { DE:"" }
+    varPosRGLocDemandPosHi AT %MB37.4 : DINT; { DE:"" }
+    varPosRGLocDemandSpeed AT %MB37.8 : DINT; { DE:"" }
+    varPosRGLocDemandAccel AT %MB37.12 : DINT; { DE:"" }  
+
+    wksTargetSpeed      AT %MB42.16 : DINT; { DE:"" } 
+
+    plcPosRGQuickStop        AT %MX45.0 : BOOL; { DE:"" }
+    plcPosRGVelocity         AT %MX45.1 : BOOL; { DE:"" }
+    plcPosRGPosition         AT %MX45.2 : BOOL; { DE:"" }
+    plcPosRGNewTarget        AT %MX45.3 : BOOL; { DE:"" }
+    plcPosRGEnablePositioner AT %MX45.4 : BOOL; { DE:"" }
+    plcPosRGEnableInterpolation AT %MX45.5 : BOOL; { DE:"" }
+    plcPosRGEnableLocalRamps AT %MX45.6 : BOOL; { DE:"" }
+    plcPosRGEnableDirectSpeed AT %MX45.7 : BOOL; { DE:"" }
+
+    plcPosRGTargetPosLo      AT %MB43.8 : UDINT; { DE:"" }
+    plcPosRGTargetPosHi      AT %MB43.12 : DINT; { DE:"" }
+    plcPosRGTargetSpeed      AT %MB43.16 : DINT; { DE:"" } 
+    plcPosRGQuickStopDec     AT %MB43.20 : DINT; { DE:""}
+    plcPosRGIPScaling        AT %MB43.24 : DINT; { DE:""}
+    plcPosRGLocalAcc         AT %MB43.28 : DINT; { DE:""}
+    plcPosRGLocalDec         AT %MB43.32 : DINT; { DE:""}
+    plcPosRGLocalSpeed       AT %MB43.36 : DINT; { DE:""}
+
+    wksPosRGEnableRampSat    AT %MX46.0 : BOOL; { DE:"" }
+    wksPosRGRampFastChange   AT %MX46.1 : BOOL; { DE:"Acc/Dec ramp updated in realtime task" }
+    
+    (* ------------------------------------------------------ *) 
+    {G:"Device Control"}
+
+    parDevCtrl AT %MB51.0 : PAR_DEVCTRL; { DE:"Device Control" }
+
+    varDevCtrlQuickStop AT %MX54.0 : BOOL; { DE:"" }
+    varDevCtrlVelocity AT %MX54.1 : BOOL; { DE:"" }
+    varDevCtrlPosition AT %MX54.2 : BOOL; { DE:"" }
+    varDevCtrlNewTargetPosition AT %MX54.3 : BOOL; { DE:"" }
+    varDevCtrlPositionerEnabled AT %MX54.4 : BOOL; { DE:"" }
+    varDevCtrlApplicationEnabled AT %MX54.5 : BOOL; { DE:"" }
+    varDevCtrlSSEnableIntegralGain AT %MX54.6 : BOOL; { DE:"" }
+    varDevCtrlEnableInterpolation AT %MX54.7 : BOOL; { DE:"" }
+    varDevCtrlEnableLocalRamps AT %MX54.8 : BOOL; { DE:"" }
+    varDevCtrlEnableDirectSpeed AT %MX54.9 : BOOL; { DE:"" }
+
+    varDevCtrlPStagePowerEnabled AT %MX55.0: BOOL; { DE:"" }     
+    varDevCtrlPStageReferenceEnabled AT %MX55.1: BOOL; { DE:"" }     
+    varDevCtrlPStageDisableBrakeDrive AT %MX55.2: BOOL; { DE:"" }     
+    varDevCtrlPStageBackEMFDataEnable AT %MX55.3: BOOL; { DE:"" }     
+    varDevCtrlPStageBackEMFATanEnable AT %MX55.3: BOOL; { DE:"" }     
+
+    varStatusWord AT %MB50.10 : UINT; { DE:"" }
+    varModeOfOperationDisplay AT %MB50.12 : USINT; { DE:"" }
+    varIPQuotaMonitor AT %MB50.20 : DINT; { DE:"" }
+    varDevCtrlUserOffsetLo AT %MB50.24 : UDINT; { DE:"" }
+    varDevCtrlUserOffsetHi AT %MB50.30 : DINT; { DE:"" }
+    varDevCtrlRatioCurr2Torque AT %MB50.32 : DINT; { DE:"" }
+    varDevCtrlRatioTorque2Curr AT %MB50.36 : DINT; { DE:"" }
+
+    wksControlWord AT %MB53.0 : UINT; { DE:"" } 
+    wksTargetPosLo AT %MB53.4 : UDINT; { DE:"" }
+    wksTargetPosHi AT %MB53.8 : DINT; { DE:"" }    
+    wksIPQuotaLo AT %MB53.12 : UDINT; { DE:"" }
+    wksIPQuotaHi AT %MB53.16 : DINT; { DE:"" }    
+    wksHMSoftPositiveSwitch AT %MB53.20 : SINT; { DE:"" }    
+    wksHMSoftNegativeSwitch AT %MB53.21 : SINT; { DE:"" }    
+    wksHMSoftHomeSwitch AT %MB53.22 : SINT; { DE:"" }    
+    wksTargetTorque AT %MB53.24 : INT; { DE:"" }    
+
+    plcDevCtrlControlWord AT %MB52.0 : UINT; { DE:"" } 
+    plcDevCtrlTargetPosLo AT %MB52.4 : UDINT; { DE:"" }
+    plcDevCtrlTargetPosHi AT %MB52.5 : DINT; { DE:"" }    
+    plcDevCtrlIPQuotaLo AT %MB52.12 : UDINT; { DE:"" }
+    plcDevCtrlIPQuotaHi AT %MB52.16 : DINT; { DE:"" }    
+    plcDevCtrlHMSoftPositiveSwitch AT %MB52.20 : SINT; { DE:"" }    
+    plcDevCtrlHMSoftNegativeSwitch AT %MB52.21 : SINT; { DE:"" }    
+    plcDevCtrlHMSoftHomeSwitch AT %MB52.22 : SINT; { DE:"" }    
+    plcDevCtrlTargetTorque AT %MB52.24 : INT; { DE:"" }    
+    
+    (* ------------------------------------------------------ *)
+    {G: "Thermal Model"}
+    
+    parThermalModel AT %MB72.0 : PAR_THERMALMODEL; { DE:"Thermal Model" }
+
+    varThModelIdLimMax AT %MB70.0 : DINT; { DE:"" }
+    varThModelIdLimMin AT %MB70.4 : DINT; { DE:"" }
+    varThModelIqLimMax AT %MB70.8 : DINT; { DE:"" }
+    varThModelIqLimMin AT %MB70.12 : DINT; { DE:"" }
+
+    varThModelTNtc AT %MB70.104 : REAL ; { DE:"°C" }
+    varThModelTjMax AT %MB70.108 : REAL ; { DE:"°C" }
+    varThModelRBrakePower AT %MB70.76 : DINT ; { DE:"[1/10 W]" }
+    varThModelTHeatSink AT %MB70.112 : REAL ; { DE:"°C" }  
+    varThModelTMotor AT %MB70.84 : REAL ; { DE:"°C" }   
+    varThModelBrakeResistorValue AT %MB70.100 : UINT ; { DE:"[1/10 Ohm]" }   
+    varThModelBrakeResistorPower AT %MB70.102 : UINT ; { DE:"[1/10 W]" }   
+    varThModelBrakeResistorEnergy AT %MB70.116 : UDINT ; { DE:"[J]" }   
+    varThModelRBrakeEnergy AT %MB70.120 : UDINT ; { DE:"[J]" }   
+ 
+    (* ------------------------------------------------------ *)   
+    {G:"PI DcBus"}     
+
+    parDcBusCntrl AT %MB62.0 : PAR_DCBUSCNTRL; { DE:"PI DC bus controller" } 
+
+    varDcBusCntrlError AT %MB60.0 : INT; { DE:"" } 
+    varDcBusCntrlDcBusIdRef AT %MB60.4 : DINT; { DE:"" } 
+    varDcBusCntrlDcBusIqRef AT %MB60.8 : DINT; { DE:"" } 
+    varDcBusCntrlMotorIdRef AT %MB60.12 : DINT; { DE:"" } 
+    varDcBusCntrlMotorIqRef AT %MB60.16 : DINT; { DE:"" }   
+    varDcBusCntrlVratio AT %MB60.20 : DINT; { DE:"" }
+
+    plcDcBusCntrlDcBusRef AT %MB61.0 : INT; { DE:"" }
+    plcDcBusCntrlDcBusFb AT %MB61.2 : INT ; { DE:"" } 
+    plcDcBusCntrlVoltage AT %MB61.4 : INT; { DE:"" }        
+    plcDcBusCntrlVoltageValid AT %MB61.6 : UINT ; { DE:"" }  
+    
+    (* ------------------------------------------------------ *)    
+    {G: "IO Measurements"}
+
+    varIOMeasSPowerBoardType AT %MB160.0 : INT; { DE:"" }
+    varIOMeasS24Vaux AT %MB160.2 : INT; { DE:"" }
+    varIOMeasS15Vinp AT %MB160.4 : INT; { DE:"" }
+    varIOMeasSVENCout AT %MB160.6 : INT; { DE:"" }
+    varIOMeasS3V3out AT %MB160.8 : INT; { DE:"" }
+    varIOMeasS2V5out AT %MB160.10 : INT; { DE:"" }
+    varIOMeasS1V2out AT %MB160.12 : INT; { DE:"" }
+    varIOMeasSBoardTemp AT %MB160.14 : INT; { DE:"" }
+    varIOMeasSBridgeTemp AT %MB160.16 : INT; { DE:"" }
+    varIOMeasSMotorTemp AT %MB160.18 : INT; { DE:"" }
+    varIOMeasAllValid AT %MB160.20 : UINT; { DE:"" }
+    
+    (* ------------------------------------------------------ *)
+    {G:"User Parameters"}	
+
+    usrParamInt         AT %MW1040.0 : ARRAY[ 0..639 ] OF INT;  { IO:"Usr Param" }
+    usrParamBool        AT %MX1041.0 : ARRAY[ 0..127 ] OF BOOL; { IO:"Usr Param BOOL" }
+
+    usrNoImgParamInt    AT %MW1030.0 : ARRAY[ 0..639 ] OF INT;  { IO:"Usr Param no img" }
+    usrNoImgParamBool   AT %MX1031.0 : ARRAY[ 0..127 ] OF BOOL; { IO:"Usr Param no img BOOL" }
+
+    (* ------------------------------------------------------ *)
+    {G:"User Works"}
+
+    usrNoImgWorksInt    AT %MW1010.0 : ARRAY[ 0..671 ] OF INT;  { IO:"Usr Work no img" }
+    usrNoImgWorksBool   AT %MX1011.0 : ARRAY[ 0..127 ] OF BOOL; { IO:"Usr Work no img BOOL" }
+
+    usrWorksInt         AT %MW1020.0 : ARRAY[ 0..671 ] OF INT;  { IO:"Usr Work" }
+    usrWorksBool        AT %MX1021.0 : ARRAY[ 0..127 ] OF BOOL; { IO:"Usr Work BOOL" }
+
+    (* ------------------------------------------------------ *)
+    {G:"Physical Digital/Analog Input/Output"}
+
+    varIODigInputs  AT %IX130.0 : ARRAY[ 0..15 ] OF BOOL; { IO:"Digital inputs" }
+    wksIODigOutputs AT %QX131.0 : ARRAY[ 0..9 ] OF BOOL; { IO:"Digital outputs" }
+    varIOAnaInputs  AT %IW132.0 : ARRAY[ 0..6 ] OF INT; { IO:"Analog inputs" }
+    wksIOAnaOutputs AT %QW133.0 : ARRAY[ 0..5 ] OF INT; { IO:"Analog outputs" }
+
+    varIODigInput0  AT %IX130.0 : BOOL; { DE:"Digital input 0" }
+    varIODigInput1  AT %IX130.1 : BOOL; { DE:"Digital input 1" }
+    varIODigInput2  AT %IX130.2 : BOOL; { DE:"Digital input 2" }
+    varIODigInput3  AT %IX130.3 : BOOL; { DE:"Digital input 3" }
+    varIODigInput4  AT %IX130.4 : BOOL; { DE:"Digital input 4" }
+    varIODigInput5  AT %IX130.5 : BOOL; { DE:"Digital input 5" }
+    varIODigInput6  AT %IX130.6 : BOOL; { DE:"Digital input 6" }
+    varIODigInput7  AT %IX130.7 : BOOL; { DE:"Digital input 7" }
+    varIODigInput8  AT %IX130.8 : BOOL; { DE:"Digital input 8" }
+    varIODigInput9  AT %IX130.9 : BOOL; { DE:"Digital input 9" }
+    varIODigInput10  AT %IX130.10 : BOOL; { DE:"Digital input 10" }
+    varIODigInput11  AT %IX130.11 : BOOL; { DE:"Digital input 11" }
+    varIODigInput12  AT %IX130.12 : BOOL; { DE:"Digital input 12" }
+    varIODigInput13  AT %IX130.13 : BOOL; { DE:"Digital input 13" }
+    varIODigInput14  AT %IX130.14 : BOOL; { DE:"Digital input 14" }
+    varIODigInput15  AT %IX130.15 : BOOL; { DE:"Digital input 15" }
+
+    wksIODigOutput0 AT %QX131.0 : BOOL; { DE:"Digital output 0" }
+    wksIODigOutput1 AT %QX131.1 : BOOL; { DE:"Digital output 1" }
+    wksIODigOutput2 AT %QX131.2 : BOOL; { DE:"Digital output 2" }
+    wksIODigOutput3 AT %QX131.3 : BOOL; { DE:"Digital output 3" }
+    wksIODigOutput4 AT %QX131.4 : BOOL; { DE:"Digital output 4" }
+    wksIODigOutput5 AT %QX131.5 : BOOL; { DE:"Digital output 5" }
+    wksIODigOutput6 AT %QX131.6 : BOOL; { DE:"Digital output 6" }
+    wksIODigOutput7 AT %QX131.7 : BOOL; { DE:"Digital output 7" }
+    wksIODigOutput8 AT %QX131.8 : BOOL; { DE:"Digital output 8" }
+    wksIODigOutput9 AT %QX131.9 : BOOL; { DE:"Digital output 9" }
+
+    varIOAnaInput0  AT %IW132.0 : INT; { DE:"Analog input 0" }
+    varIOAnaInput1  AT %IW132.1 : INT; { DE:"Analog input 1" }
+    varIOAnaInput2  AT %IW132.2 : INT; { DE:"Analog input 2" }
+    varIOAnaInput3  AT %IW132.3 : INT; { DE:"Analog input 3" }
+    varIOAnaInput4  AT %IW132.4 : INT; { DE:"Analog input 4" }
+    varIOAnaInput5  AT %IW132.5 : INT; { DE:"Analog input 5" }
+    varIOAnaInput6  AT %IW132.6 : INT; { DE:"Analog input 6" }
+
+    wksIOAnaOutput0 AT %QW133.0 : INT; { DE:"Analog output 0" }
+    wksIOAnaOutput1 AT %QW133.1 : INT; { DE:"Analog output 1" }
+    wksIOAnaOutput2 AT %QW133.2 : INT; { DE:"Analog output 2" }
+    wksIOAnaOutput3 AT %QW133.3 : INT; { DE:"Analog output 3" }
+    wksIOAnaOutput4 AT %QW133.4 : INT; { DE:"Analog output 4" }
+    wksIOAnaOutput5 AT %QW133.5 : INT; { DE:"Analog output 5" }
+
+    wksIOAnaInEnableSE AT %MX134.0 : BOOL; { DE:"Enable analog inputs to be read as single ended rather than differential" }
+    wksIOAnaIn01LowGain AT %MX134.1 : BOOL; { DE:"Set low gain for analog inputs 0 and 1" }
+    wksIOAnaIn23LowGain AT %MX134.2 : BOOL; { DE:"Set low gain for analog inputs 2 and 3" }
+    wksIODisableIOExpBrd AT %MX134.3 : BOOL; { DE:"Disable IO Expansion board handling" }
+
+    varIOHwDetSEAvailable AT %MX135.0 : BOOL; { DE:"" }
+    varIOHwDetLowGAvailable AT %MX135.1 : BOOL; { DE:"" }
+    varIOHwDetIOExpAvailable AT %MX135.2 : BOOL; { DE:"" }
+    varIOHwAnaIn01LowGainEnabled AT %MX135.3 : BOOL; { DE:"" }
+    varIOHwAnaIn23LowGainEnabled AT %MX135.4 : BOOL; { DE:"" }
+
+    (* ------------------------------------------------------ *)
+    {G:"System"}
+
+    wksSysReset             AT %MX200.16: BOOL; { DE:"Trigger system reset" }
+    wksSysSaveParameters    AT %MX200.17: BOOL; { DE:"Trigger parameters storage in non-volatile memory" }
+    wksSysRestoreParameters AT %MX200.30: BOOL; { DE:"Trigger parameters restore default parameters (reset required)" }
+    varSysAlarms            AT %MD202.0 : UDINT;  { DE:"Active alarm mask" }
+    varSysAlarmSubCode      AT %MD203.0 : UDINT;  { DE:"Last alarm subcode" }
+    varSysFirmwareInfo      AT %MB204.0 : VAR_FIRMWAREINFO; { DE:"" }
+    varSysLifeTime          AT %MB206.0 : UDINT; { DE:"[sec] Overall power-on time of the drive" }
+    varSysTimerSlow         AT %MB207.0 : UINT; { DE:"[msec] Overflow 1msec timer" }
+    varSysTimerRT           AT %MB229.0 : UINT; { DE:"[125usec] Overflow 125usec tick realtime timer" }
+    varSysWarnings          AT %MD210.0 : UDINT;  { DE:"Active warning mask" }
+    varSysBootErrorCode     AT %MW211.0 : UINT;  { DE:"Bootup error code (if not zero)" }
+    varSysWrongParCode      AT %MW212.0 : UINT;  { DE:"Wrong value parameter code" }
+    varSysMaxRTExecTime     AT %MW213.0 : UINT;  { DE:"Session Max RealTime task exec time [1/10 usec]" }
+    varSysAvgRTExecTime     AT %MW214.0 : UINT;  { DE:"Session Average RealTime task exec time [1/10 usec]" }
+    varSysAssemblySN        AT %MB228.0 : UDINT; { DE:"Drive Assembly Serial Number" }
+    parSysCoreSpeed         AT %MB232.0 : USINT; { DE:"CPU Speed Selection" }
+    varSysCoreFrequency     AT %MB233.0 : UINT; { DE:"CPU frequency [MHz]" }
+    wksSysCOEIdentity       AT %MB235.0 : VAR_COEIDENTITY;
+
+    (* ------------------------------------------------------ *)
+    {G:"System Status Flags"}
+
+    varSysStatBooting              AT %MX208.0 : BOOL; { DE:"" }
+    varSysStatResetting            AT %MX208.1 : BOOL; { DE:"" }
+    varSysStatPowerSoftStarting    AT %MX208.2 : BOOL; { DE:"" }
+    varSysStatPowerZeroElFldSeek   AT %MX208.3 : BOOL; { DE:"" }
+    varSysStatPowerEnabled         AT %MX208.4 : BOOL; { DE:"" }
+    varSysStatFault                AT %MX208.5 : BOOL; { DE:"" }
+    varSysStatFaultReaction        AT %MX208.6 : BOOL; { DE:"" }
+    varSysStatProgramFlashWriting  AT %MX208.7 : BOOL; { DE:"" }
+    varSysStatParametersSaving     AT %MX208.8 : BOOL; { DE:"" }
+    varSysStatTaskReconfig         AT %MX208.9 : BOOL; { DE:"" }
+    varSysStatLockedByBootError    AT %MX208.10 : BOOL; { DE:"" }
+    varSysStatDisableOverTimeCheck AT %MX208.11 : BOOL; { DE:"" }
+    varSysStatSysLogFlush          AT %MX208.12 : BOOL; { DE:"" }
+    varSysStatFieldbusSyncing      AT %MX208.13 : BOOL; { DE:"" }
+    varSysStatPlcRunning           AT %MX208.16 : BOOL; { DE:"" }
+    varSysStatPlcImgSlowIn         AT %MX208.17 : BOOL; { DE:"" }
+    varSysStatPlcImgSlowOut        AT %MX208.18 : BOOL; { DE:"" }
+    varSysStatPlcImgBackgroundIn   AT %MX208.19 : BOOL; { DE:"" }
+    varSysStatPlcImgBackgroundOut  AT %MX208.20 : BOOL; { DE:"" }
+    varSysStatAlarmsReset          AT %MX208.21 : BOOL; { DE:"" }
+    varSysStatPdoMgrLockConfig     AT %MX208.22 : BOOL; { DE:"" }
+    varSysStatPlcRunSlow           AT %MX208.24 : BOOL; { DE:"" }
+    varSysStatPlcRunBackground     AT %MX208.25 : BOOL; { DE:"" }
+
+    (* ------------------------------------------------------ *)
+    {G:"Plc"}
+
+    wksPlcSlowTaskCopyOutImmediate    AT %MX1000.0 : BOOL; { DE:"Copy output data of slow task immediately at the end of execution time" }
+    wksPlcPwrDisOnOverTime            AT %MX1000.1 : BOOL; { DE:"If enabled, in case of task overtime all power outputs are immediately set in safe state" }
+    wksPlcEnableSysHMIDownload        AT %MX1000.2 : BOOL; { HIDDEN:ON}
+    wksPlcSlowTaskPeriod              AT %MB1001.0 : UINT; { DE:"Slow task execution period [msec]" }
+    varPlcSlowTaskExecutionTime       AT %MB1002.0 : UINT; { DE:"Slow task execution time monitoring [1/10 msec]" }
+    wksPlcTaskCfg                     AT %MB1003.0 : DRVTSKCTRL_PLC_CONFIG; { DE:"Tasks configuration parameters" }
+
+    (* ------------------------------------------------------ *)
+    {G:"Modbus"}
+    parSerialDisModbusOverCAN         AT %MX350.1: BOOL; { DE:"Disable modbus over CAN (free aux CAN port)" }
+
+    (* ------------------------------------------------------ *)
+    {G:"CANOpen"} 
+    varCANOpenNMTStatus AT %MB300.0 : USINT; { DE:"NMT State machine actual status" }
+    parCANOpen AT %MB303.0 : PAR_CANOPEN; { DE: "CANOpen parameters" }
+    varCANOpenRxPdoCnt AT %MW304.0 : ARRAY[ 0..7 ] OF UINT; { DE:"Rx PDO received COB counter" }
+
+    (* ------------------------------------------------------ *)
+    {G:"CAN"} 
+    parCAN AT %MB301.0 : PAR_CAN; { DE: "Can bus parameters" }
+    varCanDrvStatusNode0 AT %MB302.0 : UINT; { DE:"CAN driver line 0 actual status" }
+    varCanDrvStatusNode1 AT %MB302.2 : UINT; { DE:"CAN driver line 1 actual status" }
+
+    (* ------------------------------------------------------ *)
+    {G:"EtherCAT"} 
+    parECAT                       AT %MB800.0 : PAR_ECAT; { DE: "EtherCAT parameters" }
+    varECATDgInInvFrameCnt        AT %MB806.0 : USINT; { DE: "Input port invalid frame counter" }
+    varECATDgInRxErrCnt           AT %MB806.1 : USINT; { DE: "Input port RX error counter" }
+    varECATDgInForwardedRxErrCnt  AT %MB806.2 : USINT; { DE: "Input port forwarded RX error counter" }
+    varECATDgInLostLinkCnt        AT %MB806.3 : USINT; { DE: "Input port lost link counter" }
+    varECATDgOutInvFrameCnt       AT %MB806.4 : USINT; { DE: "Output port invalid frame counter" }
+    varECATDgOutRxErrCnt          AT %MB806.5 : USINT; { DE: "Output port RX error counter" }
+    varECATDgOutForwardedRxErrCnt AT %MB806.6 : USINT; { DE: "Output port forwarded RX error counter" }
+    varECATDgOutLostLinkCnt       AT %MB806.7 : USINT; { DE: "Output port lost link counter" }
+    varECATDgProcUnitErrCnt       AT %MB806.8 : USINT; { DE: "Processing unit error counter" }
+    varECATDgPDIErrCnt            AT %MB806.9 : USINT; { DE: "PDI error counter" }
+    varECATDgInLinkDetect         AT %MX807.0 : BOOL; { DE: "Input port link detect status" }
+    varECATDgOutLinkDetect        AT %MX807.1 : BOOL; { DE: "Output port link detect status" }
+    varECATDgInCommEst            AT %MX807.2 : BOOL; { DE: "Input port communication established status" }
+    varECATDgOutCommEst           AT %MX807.3 : BOOL; { DE: "Output port communication established status" }
+    varECATDgALStatus             AT %MB806.14 : USINT; { DE: "State machine" }
+    varECATDgALStatusCode         AT %MB806.16 : USINT; { DE: "Status code indication" }
+    varECATDgOutMissingCnt        AT %MB806.18 : USINT; { DE: "Output missing counter" }
+    varECATDgALSyncType           AT %MB805.0 : UINT; { DE: "Synchronization Type" }
+
+    (* ------------------------------------------------------ *)
+    {G:"Sync Manager"} 
+    parSyncMgr                        AT %MB218.0  : PAR_SYNCMGR; { DE:"Sync manager parameters" }
+    varSyncMgr_SyncTime               AT %MB219.0  : UDINT; { DE:"[nsec] sync time period" }
+    varSyncMgr_SyncMax                AT %MB219.4  : UDINT; { DE:"[nsec] max sync time period" }
+    varSyncMgr_SyncMin                AT %MB219.8  : UDINT; { DE:"[nsec] min sync time period" }
+    varSyncMgr_Correction             AT %MB219.12 : INT;   { DE:"Istantaneous value used for correction" }
+    varSyncMgr_Valid                  AT %MB219.14 : SINT;  { DE:"Sync valid and system synchronized" }
+    varSyncMgr_LastSamplePoint        AT %MB219.16 : DINT;  { DE:"Last fieldbus sample point, averaged" }
+    varSyncMgr_InstSyncTime           AT %MB219.20 : DINT;  { DE:"Instantaneous sync time period" }
+ 
+END_VAR
+
+
+    (************************)
+    (*                      *)
+    (*      STRUCTURES      *)
+    (*                      *)
+    (************************)
+
+TYPE
+    SQWRD : STRUCT
+        lo : UDINT; { DE:"" } (*  0->3 *)
+        hi : DINT; { DE:"" }  (*  4->7 *)
+    END_STRUCT;
+    
+    UQWRD : STRUCT
+        lo : UDINT; { DE:"" } (*  0->3 *)
+        hi : UDINT; { DE:"" } (*  4->7 *)
+    END_STRUCT;             
+
+    GLB_KINEMATIC_DATA : STRUCT
+        Postn : SQWRD; { DE:"" } (*  0->7  *)
+        Speed : DINT; { DE:"" }  (*  8->11 *)
+        Accel : DINT; { DE:"" }  (* 12->15 *)
+    END_STRUCT;
+
+    MH_DRIVE_LIMIT : STRUCT
+        OverCurrent : DINT; { DE:"" }  (*  0->3 *)
+        CurrentLimit : DINT; { DE:"" } (*  4->7 *)
+        OverVoltage : INT; { DE:"" }   (*  8->9 *)
+    END_STRUCT;
+
+    GLB_TORQUE_LIMIT : STRUCT 
+        Max : DINT; { DE:"" } (* 0->3 *)
+        Min : DINT; { DE:"" } (* 4->7 *)
+    END_STRUCT;        
+
+    (* ------------------------------------------------------ *)
+    PAR_MH_FLAGS : STRUCT
+        Dummy0 : BOOL; { DE:"" }
+        EnableDeflux : BOOL; { DE:"" }
+    END_STRUCT;
+    
+    PAR_MH_FILTPARS : STRUCT
+        Type: USINT;            { DE:"Filter type selector" }
+        Dummy0: USINT;          { DE:"" }
+        MainFrequency : REAL;   { DE:"Frequency main, filter dependant" }
+        MainDampFactor : REAL;  { DE:"Damping factor main, filter dependant" }
+        SecFrequency : REAL;    { DE:"Frequency secondary, filter dependant" }
+        SecDampFactor : REAL;   { DE:"Damping factor secondary, filter dependant" }
+    END_STRUCT;
+
+    PAR_MOTHLR : STRUCT
+        VBrakeLow : INT; { DE:"" }
+        VBrakeHigh : INT; { DE:"" }
+        UnderVoltageThreshold : INT; { DE:"" }
+        OverVoltageThreshold : INT; { DE:"" }
+        OverCurrentThreshold : DINT; { DE:"" }    
+        ILoopKi : REAL; { DE:"" }
+        ILoopKp : REAL; { DE:"" }
+        Dummy0 : DINT; { DE:"" }
+        IqLimit : GLB_TORQUE_LIMIT; { DE:"" }
+        IdLimit : GLB_TORQUE_LIMIT; { DE:"" }
+        Flags : PAR_MH_FLAGS; { DE:"" }
+        BridgeLayout : UINT; { DE:"" }
+        IqFiltPars : ARRAY [0..3] OF PAR_MH_FILTPARS; { DE:"" }
+        VacMinDistortionAllowed : UINT; { DE:"[%]" }
+    END_STRUCT;
+        
+    GLB_IREF : STRUCT
+        IdRef : DINT; { DE:"" } (*  0->3 *)
+        IqRef : DINT; { DE:"" } (*  4->7 *)
+    END_STRUCT;  
+    
+    PAR_MH_FILTCONST : STRUCT
+        a0: INT;    { DE:"" }
+        a1: INT;    { DE:"" }
+        a2: INT;    { DE:"" }
+        b1: INT;    { DE:"" }
+        b2: INT;    { DE:"" }
+    END_STRUCT;
+
+    PAR_DFLX : STRUCT
+        MaxSpeed : DINT; { DE:"" }
+        VoltageMargin : UINT; { DE:"" }
+        FixVdcBus : INT; { DE:"" }
+    END_STRUCT;
+        
+    (* ------------------------------------------------------ *)
+    SS_PAR_FLAGS : STRUCT
+        UseDifferentKp : BOOL; { DE:"" }
+        AccRefFiltEnable : BOOL; { DE:"" }
+    END_STRUCT;      
+    
+    PAR_SSCNTRLP : STRUCT
+        PosKp : INT; { DE:"" }
+        SpdKpRef : INT; { DE:"" }
+        SpdKpFbk : INT; { DE:"" }
+        AccKpRef : INT; { DE:"" }
+        AccKpFbk : INT; { DE:"" }
+        Ki : INT; { DE:"" }    
+        PosGainShift : UINT; { DE:"" }
+        AccGainShift : UINT; { DE:"" }
+        GlobalGainShift : INT; { DE:"" }    
+        Flags : SS_PAR_FLAGS; { DE:"" }
+        fKi : REAL; { DE:"Integral gain" }    
+        fPosKp : REAL; { DE:"Position gain [Arms/rad]" }
+        fSpdKpRef : REAL; { DE:"Speed reference gain [Arms/(rad/s)]" }
+        fSpdKpFbk : REAL; { DE:"Speed feedback gain [Arms/(rad/s)]" }
+        fAccKpRef : REAL; { DE:"Acceleration reference gain [Arms/(rad/s^2)]" }
+        fAccKpFbk : REAL; { DE:"Acceleration feedback gain [Arms/(rad/s^2)]" }
+        ILimit : GLB_TORQUE_LIMIT; { DE:"" }
+        AccRefKFilt : INT; { DE:"" }    
+    END_STRUCT;
+    
+    (* ------------------------------------------------------ *)
+    POSNT_PAR_FLAGS : STRUCT
+        SRampEnable : BOOL; { DE:"" }
+    END_STRUCT;      
+    
+    PAR_POSITIONER : STRUCT
+        EndVelocity : DINT; { DE:"" }
+        ProfileVel : DINT; { DE:"" }
+        ProfileAcc : DINT; { DE:"" }
+        ProfileDec : DINT; { DE:"" }
+        QuickStopDec : DINT; { DE:"" }
+        PositionErrorMaxLo : UDINT; { DE:"" }
+        PositionErrorMaxHi : DINT; { DE:"" }
+        ZeroSpeedThreshold : DINT; { DE:"" }
+        MotorBlockedTimeout : INT; { DE:"" }
+        Flags : POSNT_PAR_FLAGS; { DE:"" }
+        SRampK1 : INT; { DE:"" }
+        SRampK2 : INT; { DE:"" }
+        Dummy : DINT; { DE:"" }
+        SRampErrorMaxLo : UDINT; { DE:"" }
+        SRampErrorMaxHi : DINT; { DE:"" }
+    END_STRUCT;
+        
+    (* ------------------------------------------------------ *)
+    PAR_DEVCTRL : STRUCT      
+        ModeOfOperation : USINT; { DE:"" }
+        Dummy : USINT; { DE:"" }
+        QuickStopOptCode : INT; { DE:"" }
+        ShutdownOptCode  : INT; { DE:"" }
+        DisableOperationOptCode : INT; { DE:"" }
+        HaltOptCode : INT; { DE:"" }
+        FaultReactionOptCode : INT; { DE:"" }
+        FollowingErrWindowLo : UDINT; { DE:"" } 
+        FollowingErrWindowHi : DINT; { DE:"" } 
+        FollowingErrTimeout  : INT; { DE:"" }
+        TargetPosWindowLo    : UDINT; { DE:"" } 
+        TargetPosWindowHi    : DINT; { DE:"" } 
+        TargetPosTimeout     : INT; { DE:"" }
+        VelocityWindow       : DINT; { DE:"" }
+        VelocityTimeout      : INT; { DE:"" }
+        VelocityThresholdWindow : DINT; { DE:"" }
+        VelocityThresholdTimeout : INT; { DE:"" }
+        IPTimeUnits          : USINT; { DE:"" }
+        IPTimeIndex          : SINT; { DE:"" }
+        HMSpeedSwitch        : DINT; { DE:"" }
+        HMSpeedZero          : DINT; { DE:"" }
+        HMSpeedAcc           : DINT; { DE:"" }
+        HMMethod             : USINT; { DE:"" }
+        HMPositiveSwitchSrc  : USINT; { DE:"" } 
+        HMNegativeSwitchSrc  : USINT; { DE:"" }
+        HMHomeSwitchSrc      : USINT; { DE:"" }
+        HomeOffsetLo         : UDINT; { DE:"" } 
+        HomeOffsetHi         : DINT; { DE:"" }
+        RatedTorque          : DINT; { DE:"" }
+    END_STRUCT;
+    
+    (* ------------------------------------------------------ *)
+    PAR_DCBUSCNTRL_FLAGS : STRUCT
+        OnlyPI : BOOL; { DE:"" }
+    END_STRUCT;    
+
+    PAR_DCBUSCNTRL : STRUCT
+        Flags : PAR_DCBUSCNTRL_FLAGS; { DE:"" }
+        GlobalShift : INT; { DE:"" }
+        Kp : INT; { DE:"" }
+        Ki : INT; { DE:"" }
+        ErrMax : INT; { DE:"" }
+        ErrMin : INT; { DE:"" }
+        DcBusIq : GLB_TORQUE_LIMIT; { DE:"" }
+        (* Dummy : GLB_TORQUE_LIMIT; { DE:"" } *)
+    END_STRUCT;       
+
+    (* ------------------------------------------------------ *)
+    PAR_THERMALMODEL_FLAGS : STRUCT
+        DisFltReactOnLimit : BOOL; { DE:"Disable fault reaction on current derating" }
+        NoBrakeDisableOnFlt : BOOL; { DE:"No brake drive disable on overpower" }
+        NoFatalOnBrakeFlt : BOOL; { DE:"No fatal fault on brake overpower" }
+    END_STRUCT;
+
+    PAR_THERMALMODEL : STRUCT
+        BrakeResistorValue : UINT ; { DE:"" } 
+        BrakeResistorPower : UINT ; { DE:"" }
+        CoolingTempOn : UINT ; { DE:"" }
+        CoolingTempOff : UINT ; { DE:"" }   
+        MotorOverTemp: INT ; { DE:"" }
+        BrakeResistorEnergy : UDINT ; { DE:"[J]" }
+        MotorMaxDeltaT: INT ; { DE: "[1/10 °C]" }
+        Flags : PAR_THERMALMODEL_FLAGS; { DE:"" }
+        KTYCoeff : ARRAY[ 0..3 ] OF REAL;
+    END_STRUCT;
+    
+    (* ------------------------------------------------------ *)    
+    VAR_FIRMWAREINFO : STRUCT
+        ApplicatType : INT ; { DE:"" }
+        VersionMajor : INT ; { DE:"" }
+        VersionMinor : INT ; { DE:"" }
+        Dummy        : DINT ; { DE:"" }
+        BuildNumber  : INT ; { DE:"" }
+    END_STRUCT ;
+
+    (* ------------------------------------------------------ *)    
+    VAR_COEIDENTITY : STRUCT
+        DeviceType   : UDINT ; { DE:"" }
+        VendorID     : UDINT ; { DE:"" }
+        ProductCode  : UDINT ; { DE:"" }
+        Revision     : UDINT ; { DE:"" }
+        SerialNumber : UDINT ; { DE:"" }
+    END_STRUCT ;
+
+    (* ------------------------------------------------------ *)    
+    PAR_MOTORDATA : STRUCT
+        SerialNumber : UDINT; { DE:"motor s/n" }
+        ProductionDate : UDINT; { DE:"production date (YYYYMMDD)" }
+        Model : UDINT; { DE:"motor model" }
+        Resistance : REAL; { DE:"[Ohm]" }
+        Inductance : REAL; { DE:"[mH]" }
+        KT : REAL; { DE:"[Nm/Arms]" }
+        CurrentNominalZeroSpeed : REAL; { DE:"nominal at zero speed [Arms]" }
+        CurrentNominal : REAL; { DE:"nominal at nominal speed [Arms]" }
+        CurrentPeak : REAL; { DE:"peak current [Arms]" }
+        SpeedNominal : REAL; { DE:"nominal speed [rad/sec]" }
+        ThermalConstant : UINT; { DE:"thermal constant [sec]" }
+        StatorInertia : REAL; { DE:"stator inertia [kg * m^2]" }
+        PhaseOffset : UINT; { DE:"electrical phase offset [0:65535=0:359 electrical °]" }
+        Type : UDINT; { DE:"motor type" }
+        PoleNumbers : UINT; { DE:"poles number" }
+        CoolingTempOn : REAL; { DE:"start cooling at (if available) [°C]" }
+        CoolingTempOff : REAL; { DE:"stop cooling at (if available) [°C]" }
+        MaximumTemp : REAL; { DE:"maximum coil temperature [°C]" }
+        DirectInductance : REAL; { DE:"synchronous or direct inductance [mH]" }
+    END_STRUCT ;
+
+    (* ------------------------------------------------------ *)
+
+    PAR_ENCMGR_FLAGS : STRUCT
+        CntrlLoopPosMain : BOOL; { DE:"send position-information to the control loop from main encoder (take from aux if disabled)" }
+        CntrlLoopSpeedMain : BOOL; { DE:"send speed-information to the control loop from main encoder (take from aux if disabled)" }
+        CntrlLoopAccelMain : BOOL; { DE:"send acceleration-information to the control loop from main encoder (take from aux if disabled)" }
+        CntrlLoopElecAngleMain : BOOL; { DE:"send electrical angle-information to the control loop from main encoder (take from aux if disabled)" }
+        DisableIfRelFail : BOOL; { DE:"disable power if relative fail, otherwise (default) switch to absolute and emit NONFATAL fault" }
+        DisableEPlate : BOOL; { DE:"disable electronic plate reading at startup" }
+        RestoreEPlate : BOOL; { DE:"restore original electronic plate parameters at next reset" }
+        DisableAbsAfterValid : BOOL; { DE:"disable absolute track processing after valid position" }
+        ForceMainAbsPos : BOOL; { DE:"force using main abs track position in place of relative" }
+        ForceMainAbsSpd : BOOL; { DE:"force using main abs track speed in place of relative" }
+        ForceMainAbsAcc : BOOL; { DE:"force using main abs track acceleration in place of relative" }
+        ForceMainAbsElecAngle : BOOL; { DE:"force using main abs track electrical angle in place of relative" }
+        SpeedFilter : BOOL; { DE:"enable speed filtering" }
+    END_STRUCT;
+
+    PAR_ENCMGR : STRUCT
+        Flags : PAR_ENCMGR_FLAGS; { DE:"" }
+        PowerVoltage: UINT; { DE:"Encoder Supply Voltage [12.5mV/step]" }
+        MainAbsSelection: UINT; { DE:"select the main absolute encoder" }
+        AuxSelection: UINT; { DE:"select the auxiliary encoder" }
+        Dummy : SQWRD; { DE:"" }
+        PowerStartupDelay : UINT; { DE:"delay after applying supply voltage [msec]" }
+        MainRelSelection: UINT; { DE:"select the main relative encoder" }
+        MaxAbsRelDiff: UINT; { DE:"max angle diff between Abs and Rel tracks for redundancy control [0:65535=0:359°]" }
+        B1PowerVoltage: UINT; { DE:"Power Bridge Encoder Supply Voltage [12.5mV/step]" }
+        ElecAngleFeedForwardTime: INT; { DE:"Electrical Angle feed forward time [usec]" }
+        MaxSpeed: DINT; { DE:"Maximum allowed motor speed" }
+        SimSelection: UINT; { DE:"select the simulation encoder" }
+    END_STRUCT;
+
+    PAR_EFS_FLAGS : STRUCT
+        Force : BOOL; { DE:"force procedure also if cstEncStatusElecAngleValid" }
+    END_STRUCT;
+
+    PAR_EFS : STRUCT
+        ProcType : USINT; { DE:"procedure type" }
+        Dummy : USINT; { DE:"" }
+        IdRampCurrent : UINT; { DE:"current max for IdRamp procedure [0:1000=0:parMotorData.CurrentPeak]" }
+        IdRampTime : UINT; { DE:"time for Id ramp [msec]" }
+        Flags : PAR_EFS_FLAGS; { DE:"" }
+        SpeedThreshold : DINT; { DE:"wait for speed below this threshold before starting procedure" }
+        ElecAngleFeed : DINT; { DE:"electrical angle feed ratio from space control loop output [1/65536 %]" }
+        IdSteadyTime : UINT; { DE:"time to keep Id steady after ramping [msec]" }
+        PiKi : INT; { DE:"Integral gain" }
+        PiKp : INT; { DE:"Position gain" }
+        PiErrMax : INT; { DE:"Max limitation error" }
+        PiGlobalShift : INT; { DE:"Gain shift multiplier" }
+        PiOutValLimit : DINT; { DE:"Output limitation" }
+    END_STRUCT;
+
+    OUT_EFS : STRUCT
+        Quality : UINT; { DE:"PI Quality (16384 = 90 elec deg)" }
+        PIErr : INT; { DE:"PI Error" }
+        PiOutVal : DINT; { DE:"PI Output" } 
+        PiCorrection : INT; { DE:"PI Error Correction" }
+        PiStatus : UINT; { DE:"PI Procedure Step" }
+        PiElecAngleCorrection : UINT; { DE:"PI Elec Angle Correction" }
+        PiAutoKi : INT; { DE:"PI Automatic Ki Gain" }
+        PiAutoKp : INT; { DE:"PI Automatic Kp Gain" }
+        PiAutoShift : INT; { DE:"PI Automatic Shift" }
+    END_STRUCT;
+
+    PAR_ENDAT_FLAGS : STRUCT
+        Dummy : BOOL; { DE:"" }
+        DisableAlarmFlag : BOOL; { DE:"ignore endat alarm flag" }
+    END_STRUCT;
+
+    PAR_ENDAT : STRUCT
+        Flags : PAR_ENDAT_FLAGS; { DE:"" }
+        ClockFreq : UINT; { DE:"Clock frequency selector [kHz]" }
+        MTurnStartPos : UDINT; { DE:"At reset, if multiturn position is equal or above this number, then abspos became negative" }
+    END_STRUCT;
+
+    PAR_HIPFC : STRUCT
+        MTurnStartPos : UDINT; { DE:"At reset, if multiturn position is equal or above this number, then abspos became negative" }
+    END_STRUCT;
+
+    PAR_NIKON_FLAGS : STRUCT { DE:"nikon flags" }
+        DisableAlarmFlag : BOOL; { DE:"Ignore alarm flag" }
+        DisableMTData : BOOL; { DE:"Disable multi-turn data" }
+    END_STRUCT;
+
+    PAR_NIKON : STRUCT
+        Flags : PAR_NIKON_FLAGS; { DE:"" }
+        MTurnStartPos : UDINT; { DE:"At reset, if multiturn position is equal or above this number, then abspos became negative" }
+    END_STRUCT;
+
+    PAR_TAMAGAWA_FLAGS : STRUCT
+        DisableAlarmFlag : BOOL; { DE:"Ignore alarm flag" }
+    END_STRUCT;
+
+    PAR_TAMAGAWA : STRUCT
+        Flags : PAR_TAMAGAWA_FLAGS; { DE:"" }
+        MTurnStartPos : UDINT; { DE:"At reset, if multiturn position is equal or above this number, then abspos became negative" }
+    END_STRUCT;
+
+    PAR_SINCOS_FLAGS : STRUCT
+        ReverseSignal: BOOL; { DE:"If enabled, Angle = 360?- arctan(Sin/Cos), otherwise  Angle = arctan(Sin/Cos)" }
+        AnalogGain: BOOL; { DE:"High for SinCos, low for resolver" }
+        Dummy: BOOL; { DE:"" }
+        AutoCalibration: BOOL; { DE:"Enable runtime automatic calibration of the analog channels" }
+    END_STRUCT;
+
+    PAR_SINCOS : STRUCT
+        Flags : PAR_SINCOS_FLAGS; { DE:"" }
+        PoleCounts : UINT; { DE:"Encoder number of poles" }
+        Dummy : UDINT; { DE:"" }
+        AnalogAlarmThreshold : UINT; { DE:"SinCos Level Alarm threshold" }
+        GainSin : INT; { DE:"Analog input Sin gain (value 1000 = gain 1.0, 0 = no adjust)" }
+        GainCos : INT; { DE:"Analog input Cos gain (value 1000 = gain 1.0, 0 = no adjust)" }
+        OffsetSin : INT; { DE:"Analog input Sin offset (10000 = pos full scale, 0 = no adjust, -10000 = neg full scale)" }
+        OffsetCos : INT; { DE:"Analog input Cos offset (10000 = pos full scale, 0 = no adjust, -10000 = neg full scale)" }
+        FrequencyOffset : UINT; { DE:"Adjust excitation frequency generator offset [1/10 usec]" }
+    END_STRUCT;
+
+    PAR_HALL_FLAGS : STRUCT
+        Enable4Wire: BOOL; { DE:"4 wire type enable" }
+    END_STRUCT;
+
+    PAR_HALL : STRUCT
+        Flags : PAR_HALL_FLAGS; { DE:"" }
+        PoleCounts : UINT; { DE:"Encoder number of poles (zero takes motor poles number)" }
+    END_STRUCT;
+
+    PAR_INC_FLAGS : STRUCT
+        EnableAnalogInterp : BOOL; { DE:"Enable incremental analog tracks interpolation" }
+        DisableIndexError : BOOL; { DE:"Disable Index Error" }
+        DisableAnalogError : BOOL; { DE:"Disable Analog Tracks Levels Error" }
+        EnableIndexTrack : BOOL; { DE:"Enable Index Track" }
+        SwapTracks : BOOL; { DE:"Swap input tracks A and B" }
+        EnableStepDir : BOOL; { DE:"Enable step pulse (track A) and direction (track B) mode" }
+        EnableUpDown : BOOL; { DE:"Enable up pulse (track A) and down pulse (track B) mode" }
+        DisableFactoryCalibration : BOOL; { DE:"Service reserved" }
+        DisableIndexForElecAngle : BOOL; { DE:"Disable offset from index track for electrical angle adjustment" }
+        DisableIndexForMechPos : BOOL; { DE:"Disable offset from index track for mechanical position adjustment" }
+        DisableIndexTrackSync : BOOL; { DE:"Disable index synchronization with track A and B" }
+        DisableDigitalInterp : BOOL; { DE:"Disable period meter digital interpolation" }
+        DisableFilterWDTError : BOOL; { DE:"Disable filter watchdog error on digital tracks" }
+        CaptureAllIndexes : BOOL; { DE:"Enable capturing of all indexes, unregarding index tolerance" }
+    END_STRUCT;
+
+    PAR_INC : STRUCT
+        Flags : PAR_INC_FLAGS; { DE:"" }
+        Dummy : UINT ; { DE:"" }
+        LineCounts : UDINT ; { DE:"Encoder line counts per turn" }
+        AnalogAlarmThreshold : UINT ; { DE:"Analog Tracks Level Alarm Threshold" }
+        IndexErrorTolerance : UINT ; { DE:"Index Error tolerance" }
+        MaxFrequency : UINT ; { DE:"[kHz] Maximum encoder frequency" }
+        GainSin : INT; { DE:"Analog input Sin gain (value 1000 = gain 1.0, 0 = no adjust)" }
+        GainCos : INT; { DE:"Analog input Cos gain (value 1000 = gain 1.0, 0 = no adjust)" }
+        OffsetSin : INT; { DE:"Analog input Sin offset (10000 = pos full scale, 0 = no adjust, -10000 = neg full scale)" }
+        OffsetCos : INT; { DE:"Analog input Cos offset (10000 = pos full scale, 0 = no adjust, -10000 = neg full scale)" }
+        InterpSwitchFrequency : UINT ; { DE:"[kHz] Frequency above which interpolation switch from analog to digital" }
+    END_STRUCT;
+
+    PAR_SIMINC_FLAGS : STRUCT
+        EnableFastSimulation : BOOL; { DE:"Enable fast incremental simulation" }
+        BlindAuxSim : BOOL; { DE:"Blind AuxSim when ElecAngle not valid" }
+    END_STRUCT;
+
+    PAR_SIMINC : STRUCT
+        IndexLineCounts : UDINT ; { DE:"Simulated Encoder Index Line Counts" }
+        IndexOffset : UDINT ; { DE:"Simulated Encoder Index Position Offset" }
+        MaxPosErrTolerance : UINT ; { DE:"Simulated Encoder Max Tolerance" }
+        LineCounts : UDINT ; { DE:"Encoder line counts per turn" }
+        MaxFrequency : UINT ; { DE:"[kHz] Maximum encoder frequency" }
+        Flags : PAR_SIMINC_FLAGS; { DE:"" }
+    END_STRUCT;
+
+    (* ------------------------------------------------------ *)
+    PAR_CAN_FLAGS : STRUCT
+        ReSyncEnable : BOOL; { DE:"Enable pwm synchronization with fieldbus" }
+        SyncEvOnPeriodicCob : BOOL; { DE:"Enable CANOpen SYNC event from system periodic COB sending" }
+        DelayedTxPDO : BOOL; { DE:"Enable one realtime task delayed Tx PDO processing" }
+        DisableNmtResetNode : BOOL; { DE:"Disable NMT command: Reset Node" }
+    END_STRUCT;    
+
+    PAR_CAN : STRUCT
+        CanController                 : INT; { DE:"Can controller selection" }
+        DisableCanAlarmMask           : UDINT; { DE:"Can Alarms Disable Mask" }
+        Flags                         : PAR_CAN_FLAGS; { DE:"" }
+    END_STRUCT;
+
+    PAR_CANOPEN : STRUCT
+        Dummy1 : USINT ; { DE:"" }
+        LssNodeId : USINT ; { DE:"Node ID" }
+        LssTimingIndex : USINT ; { DE:"Baudrate" }
+        Dummy2 : USINT ; { DE:"" }
+        tSyncCob : UDINT ; { DE:"COB-ID used by SYNC COB" }
+        EmcyCOB : UDINT ; { DE:"COB-ID used by Emergency COB" }
+        EmcyInhibitTime : UINT ; { DE:"[100usec] Emergency COB Inhibit Time" }
+        GuardTime : UINT ; { DE:"[ms] Guard Time" }
+        HeartbeatTime : UINT ; { DE:"[ms] Heartbeat" }
+        LifeTimeFactor : USINT ; { DE:"Life Time Factor" }
+        Dummy3 : USINT ; { DE:"" }
+        CommCyclePeriod : UDINT ; { DE:"[usec] Communication Cycle Period" }
+    END_STRUCT;
+
+    CANDRV_COB_FLAGS : STRUCT
+        RxCob : BOOL; { DE:"New COB received" }
+        OverRun : BOOL; { DE:"Rx overrun, previous data lost" }
+        RTR : BOOL; { DE:"RTR RX cob" }
+        RxHiPriority : BOOL; { DE:"High priority rx cob" }
+        TxCob : BOOL; { DE:"Tx COB sent" }
+        Dummy : BOOL; { DE:"" }
+        Inhibited : BOOL; { DE:"Tx COB inhibited" }
+    END_STRUCT;
+
+    CANDRV_COB : STRUCT
+        Flags                         : CANDRV_COB_FLAGS; { DE:"" }
+        CobID                         : UDINT; { DE:"COB ID" }
+        Length                        : UINT; { DE:"Data length in bytes" }
+        Data                          : ARRAY [0..7] OF USINT; { DE:"Data" }
+        Inhibit                       : UINT; { DE:"Inhibit time [100us] if Tx COB, timestamp if Rx COB" }
+        Dummy                         : UDINT; { DE:"" }
+    END_STRUCT;
+
+    (* ------------------------------------------------------ *)
+    PAR_ECAT_FLAGS : STRUCT
+        EnableModule : BOOL; { DE:"Enable EtherCAT module (reset required)" }
+        ReSyncEnable : BOOL; { DE:"Enable pwm synchronization with fieldbus" }
+        DelayedTxPDO : BOOL; { DE:"Enable one realtime task delayed Inputs processing" }
+        DisableAlarms : BOOL; { DE:"Disable EMCY action and fault signaling" }
+    END_STRUCT;    
+
+    PAR_ECAT : STRUCT
+        Flags                         : PAR_ECAT_FLAGS; { DE:"" }
+        CfgStationAlias               : UINT; { DE:"Configured station alias" }
+    END_STRUCT;
+
+    (* ------------------------------------------------------ *)
+    DRVTSKCTRL_PLC_CONFIG : STRUCT
+        ubRtHookPosition                : USINT; { DE:"" }
+        ubModActiveFrontEnd             : USINT; { DE:"" }
+        ubModPiDcBusCntrlLp32bit        : USINT; { DE:"" }
+        ubPositioner                    : USINT; { DE:"" }
+        ubSpaceSpeedCntrLp              : USINT; { DE:"" }
+        ubThermalModel                  : USINT; { DE:"" }
+        ubMotorHandler                  : USINT; { DE:"" }
+        ubMotionController              : USINT; { DE:"" }
+        ubActiveFrontEndController      : USINT; { DE:"" }
+        ubEncoderManager                : USINT; { DE:"" }
+        ubEncFeedBackSelection          : USINT; { DE:"" }
+    END_STRUCT;
+
+    PAR_SYNCMGR : STRUCT
+        TSFilter          : UINT;     { DE:"K filter for timestamp (0=no filter)" }
+        ReSyncDelta       : DINT;     { DE:"[nsec] time shift for sync point" }
+        FiltKp            : INT;      { DE:"Kp PLL" }
+        FiltKd            : INT;      { DE:"Kd PLL" }
+        PeakNDiscard      : UINT;     { DE:"number of consecutive discardable sample" }
+        PeakThreshold     : UDINT;    { DE:"threshold for peak detection" }
+    END_STRUCT;
+    
+    PAR_SSGAINS : STRUCT
+        fKi : REAL; { DE:"Integral gain" }    
+        fPosKp : REAL; { DE:"Position gain [Arms/rad]" }
+        fSpdKpRef : REAL; { DE:"Speed reference gain [Arms/(rad/s)]" }
+        fSpdKpFbk : REAL; { DE:"Speed feedback gain [Arms/(rad/s)]" }
+        fAccKpRef : REAL; { DE:"Acceleration reference gain [Arms/(rad/s^2)]" }
+        fAccKpFbk : REAL; { DE:"Acceleration feedback gain [Arms/(rad/s^2)]" }
+    END_STRUCT;
+    
+    PAR_SSINTGAINS : STRUCT
+        PosKp : INT; { DE:"" }
+        SpdKpRef : INT; { DE:"" }
+        SpdKpFbk : INT; { DE:"" }
+        AccKpRef : INT; { DE:"" }
+        AccKpFbk : INT; { DE:"" }
+        Ki : INT; { DE:"" }    
+        PosGainShift : UINT; { DE:"" }
+        AccGainShift : UINT; { DE:"" }
+        GlobalGainShift : INT; { DE:"" }
+        ILimMax : SQWRD; { DE:"" }   
+        ILimMin : SQWRD; { DE:"" }   
+    END_STRUCT;
+
+END_TYPE
+
+    (************************)
+    (*                      *)
+    (*      FUNCTIONS       *)
+    (*                      *)
+    (************************)
+
+FUNCTION Sin16 : INT
+
+{ DE:"SIN function with 16 bit integers" }
+
+    VAR_INPUT
+        angle : UINT; { DE:"Angle 2pi = 2^16" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION Cos16 : INT
+
+{ DE:"COS function with 16 bit integers" }
+
+    VAR_INPUT
+        angle : UINT; { DE:"Angle 2pi = 2^16" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION ATan16 : INT
+
+{ DE:"ATAN function with 16 bit integers, given SIN and COS values" }
+
+    VAR_INPUT
+        sin : UINT; { DE:"SIN value" }
+        cos : UINT; { DE:"COS value" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysPostAlarm : BOOL
+{HIDDEN:ON}
+{ DE:"Post Alarm to syslog management" }
+
+    VAR_INPUT
+        alarmmask : UDINT; { DE:"Alarm mask" }
+        alarmsubcode : UDINT; { DE:"Alarm subcode" }
+        store : SINT; {DE:"If selected alarm is stored in the alarm history" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysPostUserAlarm : BOOL
+{ DE:"Post user alarm to syslog management" }
+
+    VAR_INPUT
+        useralarmcode : UDINT; { DE:"User alarm code" }
+        store : SINT; {DE:"If selected alarm is stored in the alarm history" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysExecEmergencyStop : BOOL
+{ DE:"Execute an emergency stop through fault reaction" }
+
+    VAR_INPUT
+        option : UINT; { DE:"Option code for fatal or non-fatal fault reaction" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysClearAlarms : BOOL
+
+{ DE:"Clear all system alarms" }
+
+    VAR_INPUT
+        flag : SINT; {DE:"TRUE to clear alarms" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysPStageCurrentCalibration : INT
+
+{ DE:"Begin and monitor power stage currents reading offsets" }
+
+    VAR_INPUT
+        reqsample : UINT; {DE:"Number of samples required for calibration, zero for process monitoring" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysEndatSetCommandMode : UDINT
+
+{ DE:"Enter/exit Endat encoder command mode" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+        setcommandmode : BOOL; {DE:"true if command mode requested, false to restore normal behaviour" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysEndatReadParameter : UDINT
+
+{ DE:"Read parameter from Endat encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+        memoryarea : USINT; {DE:"memory area selection" }
+        address : USINT; {DE:"parameter address" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysEndatWriteParameter : UDINT
+
+{ DE:"Write parameter to Endat encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+        memoryarea : USINT; {DE:"memory area selection" }
+        address : USINT; {DE:"parameter address" }
+        data : UINT; {DE:"data to be written" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCANOpenNMTSetState : BOOL
+
+{ DE:"Set NMT Status of CanOpen module" }
+
+    VAR_INPUT
+        status : USINT; {DE:"transition requested" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION mDINTScale : DINT
+
+{ DE:"Scale 32bit input value with fractional integer value (65536=1.0)" }
+
+    VAR_INPUT
+        value : DINT; {DE:"input value"}
+        scale : DINT; {DE:"Q16 signed 32bit scale"}
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION mQINTScale : BOOL
+
+{ DE:"Scale 64bit input value with fractional integer value (65536=1.0)" }
+
+    VAR_INPUT
+        value : @SQWRD; {DE:"input/output value"}
+        scale : DINT; {DE:"Q16 signed 32bit scale"}
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION mQINTAdd : BOOL
+
+{ DE:"64bit sum" }
+
+    VAR_INPUT
+        value : @SQWRD; {DE:"input/output value"}
+        lo : UDINT; {DE:"lo 32bit"}
+        hi : DINT; {DE:"hi 32bit"}
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION mQINTSub : BOOL
+
+{ DE:"64bit subtraction" }
+
+    VAR_INPUT
+        value : @SQWRD; {DE:"input/output value"}
+        lo : UDINT; {DE:"lo 32bit"}
+        hi : DINT; {DE:"hi 32bit"}
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION mINTScaleOffset : INT
+
+{ DE:"Offset and scale 16bit input value with fractional integer value (8192=1.0)" }
+
+    VAR_INPUT
+        value : INT; {DE:"input value"}
+        offset : INT; {DE:"offset value"}
+        scale : INT; {DE:"Q13 signed 16bit scale"}
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysPStageOptionInterface : BOOL
+
+{ DE:"Power Stage Option Interface" }
+
+    VAR_INPUT
+        option : UINT; {DE:"Option Code" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysPStageOptionInterfaceEx : BOOL
+
+{ DE:"Power Stage Option Interface" }
+
+    VAR_INPUT
+        option : UINT; {DE:"Option Code" }
+        value  : UDINT;{DE:"Option Value" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysSetRTTaskPeriod : BOOL
+
+{ DE:"Set realtime task period" }
+
+    VAR_INPUT
+        period : UINT; {DE:"Time period, 10000 equal to 125usec, allowed +/-2.5%" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCanSetSpeed : BOOL
+
+{ DE:"Setup baudrate" }
+
+    VAR_INPUT
+        node : UINT; {DE:"Can node selection" }
+        baudrate : INT; {DE:"Baudrate selection index" } 
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCanExtAddRxCob : BOOL
+
+{ DE:"Add RX cob for rx event support" }
+
+    VAR_INPUT
+        node : UINT; {DE:"Can node selection" }
+        rxcob : @CANDRV_COB; {DE:"Rx COB buffer" }
+        mask : UDINT; {DE:"Acceptance mask, 16#3FFFFFFF for single ID acceptance" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCanExtDeleteRxCob : BOOL
+
+{ DE:"Delete RX cob from rx event support" }
+
+    VAR_INPUT
+        node : UINT; {DE:"Can node selection" }
+        rxcob : @CANDRV_COB; {DE:"Rx COB buffer" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCanExtRequestRxCob : BOOL
+
+{ DE:"Send a RTR for the specific Rx COB" }
+
+    VAR_INPUT
+        node : UINT; {DE:"Can node selection" }
+        rxcob : @CANDRV_COB; {DE:"Rx COB buffer" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCanRun : BOOL
+
+{ DE:"Node enable" }
+
+    VAR_INPUT
+        node : UINT; {DE:"Can node selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCanStop : BOOL
+
+{ DE:"Node disable" }
+
+    VAR_INPUT
+        node : UINT; {DE:"Can node selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCanIsRunning : BOOL
+
+{ DE:"Node enable status" }
+
+    VAR_INPUT
+        node : UINT; {DE:"Can node selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCanExtSendCob : BOOL
+
+{ DE:"Send cob and/or update data info if inhibited" }
+
+    VAR_INPUT
+        node : UINT; {DE:"Can node selection" }
+        txcob : @CANDRV_COB; {DE:"Tx COB buffer" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysCanExtSetPeriodicCob : BOOL
+{ DE:"Set periodic (automatic) high priority sending of zero-length COB for CAN synchronization" }
+
+    VAR_INPUT
+        node : UINT; {DE:"Can node selection" }
+        cobid : UDINT; { DE:"COB ID" }
+        period : UDINT; {DE:"Time period [usec]" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysPlcSetAppParDatabase : USINT
+	{ HIDDEN:ON }
+	{ DE:"Set application database table" }
+	VAR_INPUT
+		ptr   : UDINT;    { DE:"Physical address" }
+		el    : UDINT;    { DE:"Number of record" }
+	END_VAR
+	
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysEncMgrOptionInterface: BOOL
+	{ HIDDEN:ON }
+	{ DE:"Setup specific PLC options" }
+	VAR_INPUT
+		option: UINT;     { DE:"Option selector" }
+		value : UDINT;    { DE:"Value" }
+	END_VAR
+	
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysTimeProfilerBegin: UINT
+	{ DE:"Execution time profiler function" }
+	VAR_INPUT
+		timersel: USINT;    { DE:"Timer resolution selector" }
+	END_VAR
+	
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysTimeProfilerEnd: UINT
+	{ DE:"Execution time profiler function" }
+	VAR_INPUT
+		timersel: USINT;    { DE:"Timer resolution selector" }
+        startvalue: UINT;   { DE:"Start value, returned by sysTimeProfilerBegin" }
+	END_VAR
+	
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysILoopFilterConstsCalc: BOOL
+    { DE:"Calculate filter constants for lo-pass, notch and biquad" }
+    VAR_INPUT
+        pars: @PAR_MH_FILTPARS;         { DE:"Filter parameters" }
+        constants: @PAR_MH_FILTCONST;   { DE:"Destination array of constants" }
+    END_VAR
+
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysILoopFilterIqSet: BOOL
+    { DE:"Setup filter constants for selected filter" }
+    VAR_INPUT
+        filter: USINT;                  { DE:"Filter selector" }
+        constants: @PAR_MH_FILTCONST;   { DE:"Source array of constants" }
+    END_VAR
+
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysMemBlockReserve: BOOL
+    {HIDDEN:ON}
+    { DE:"Request memory area from Softscope buffer" }
+    VAR_INPUT
+        size: UDINT;                    { DE:"Number of bytes to be allocated" }
+    END_VAR
+
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysMemBlockSave: BOOL
+    {HIDDEN:ON}
+    { DE:"Memory from Softscope buffer save to flash" }
+    VAR_INPUT
+        dummy : SINT;
+    END_VAR
+
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysMemBlockRestore: BOOL
+    {HIDDEN:ON}
+    { DE:"Memory from Softscope buffer restore from flash" }
+    VAR_INPUT
+        dummy : SINT;
+    END_VAR
+
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysAlarmsSetDisMask: BOOL
+    {HIDDEN:ON}
+    { DE:"" }
+    VAR_INPUT
+        alarmmask : UDINT; { DE:"" }
+        key : UINT; { DE:"" }
+    END_VAR
+
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysThModelOptionInterface: BOOL
+	{ HIDDEN:ON }
+	{ DE:"Setup specific PLC options" }
+	VAR_INPUT
+		option: UINT;     { DE:"Option selector" }
+		value : UDINT;    { DE:"Value" }
+	END_VAR
+	
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysDevCtrlOptionInterface: BOOL
+	{ HIDDEN:ON }
+	{ DE:"Setup specific PLC options" }
+	VAR_INPUT
+		option: UINT;     { DE:"Option selector" }
+		value : UDINT;    { DE:"Value" }
+	END_VAR
+	
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysHipfcSetPosition: UINT
+	{ HIDDEN:ON }
+	{ DE:"Hiperface encoder position set" }
+	VAR_INPUT
+		key : UINT;     { DE:"" }
+        pos : @SQWRD;   { DE:"" }
+	END_VAR
+	
+	{CODE:EMBEDDED}
+	
+END_FUNCTION
+
+FUNCTION sysEndatResetEncoder : UDINT
+    { HIDDEN:ON }
+    { DE:"Send reset to Endat encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysEndatResetActiveAlarms : UDINT
+    { HIDDEN:ON }
+    { DE:"Clear all active alarms and warnings of the Endat encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysILoopDSPLoad : BOOL
+    { HIDDEN:ON }
+
+    VAR_INPUT
+        ad : @USINT; {DE:"" }
+        sz : UINT; {DE:"" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysILoopDSPDBLoad : BOOL
+    { HIDDEN:ON }
+
+    VAR_INPUT
+        ad : @USINT; {DE:"" }
+        sz : UINT; {DE:"" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysILoopDSPHalt : BOOL
+    { HIDDEN:ON }
+
+    VAR_INPUT
+        dummy : SINT;
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysILoopDSPResume : BOOL
+    { HIDDEN:ON }
+
+    VAR_INPUT
+        dummy : SINT;
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION RootOfSquareSum16 : INT
+{ DE:"swOut16 = SQRT(swX16^2 + swY16^2). TO get RMS value, multiply for 0.60725293500890546440666072887872" }
+
+    VAR_INPUT
+        swX : INT; { DE:"X signed 16bit value" }
+        swY : INT; { DE:"Y signed 16bit value" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION mInterp1D : INT
+    VAR_INPUT
+        data : @SINT; {DE:"" }
+        linsize : UINT; {DE:"# of bits that define # of interpolated point as 2^x" }
+        val0 : INT; {DE:"" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION mInterp2D : INT
+    VAR_INPUT
+        data : @SINT; {DE:"" }
+        linsize : UINT; {DE:"# of bits that define # of interpolated point as 2^x" }
+        val0 : INT; {DE:"" }
+        val1 : INT; {DE:"" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION mInterp3D : INT
+    VAR_INPUT
+        data : @SINT; {DE:"" }
+        linsize : UINT; {DE:"# of bits that define # of interpolated point as 2^x" }
+        val0 : INT; {DE:"" }
+        val1 : INT; {DE:"" }
+        val2 : INT; {DE:"" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysNikonResetActiveAlarms : UDINT
+    { HIDDEN:OFF }
+    { DE:"Clear all active alarms and warnings of the Nikon encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysNikonSetZeroPosition : UDINT
+    { HIDDEN:OFF }
+    { DE:"Set single turn zero position of the Nikon encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysNikonSetCommandMode : UDINT
+
+{ DE:"Enter/exit Nikon encoder command mode" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+        setcommandmode : BOOL; {DE:"true if command mode requested, false to restore normal behaviour" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysNikonMTurnClear : UDINT
+    { HIDDEN:OFF }
+    { DE:"Clear multi-turn data of the Nikon encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+    
+FUNCTION sysTamagawaResetActiveAlarms : UDINT
+    { HIDDEN:OFF }
+    { DE:"Clear all active alarms and warnings of the Tamagawa encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysTamagawaSetZeroPosition : UDINT
+    { HIDDEN:OFF }
+    { DE:"Set single turn zero position of the Tamagawa encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysTamagawaSetCommandMode : UDINT
+
+{ DE:"Enter/exit Tamagawa encoder command mode" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+        setcommandmode : BOOL; {DE:"true if command mode requested, false to restore normal behaviour" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysTamagawaMTurnClear : UDINT
+    { HIDDEN:OFF }
+    { DE:"Clear multi-turn data of the Tamagawa encoder" }
+
+    VAR_INPUT
+        channel : UINT; {DE:"channel selection" }
+    END_VAR
+
+    {CODE:EMBEDDED}
+
+END_FUNCTION
+
+FUNCTION sysSSComputeGains : BOOL
+    VAR_INPUT
+        rgains : @PAR_SSGAINS; { DE:"" }
+        igains : @PAR_SSINTGAINS; { DE:"" }
+    END_VAR
+    {CODE:EMBEDDED}
+END_FUNCTION
+
+FUNCTION sysSSSelectGains : BOOL
+    VAR_INPUT
+        selgains : @PAR_SSINTGAINS; { DE:"" }
+    END_VAR
+    {CODE:EMBEDDED}
+END_FUNCTION

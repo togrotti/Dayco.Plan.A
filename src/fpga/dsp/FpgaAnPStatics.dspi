@@ -1,0 +1,33 @@
+//********************************************
+// FpgaAnPStatics.dspi
+// Rev 1
+//********************************************
+// Fixed-address analog address bus of
+// data used by FPGA internal pheriperals
+// values must be adapted according to HDL
+// static definitions
+// VDC_A is also used as start TAG
+//********************************************
+
+[INPUT]  IFB_IU         0x00
+[INPUT]  IFB_IV         0x01
+[INPUT]  IFB_IW         0x02
+[INPUT]  IFB_AU         0x03
+[INPUT]  IFB_AV         0x04
+[INPUT]  IFB_AW         0x05
+[INPUT]  VDC_A          0x06
+[INPUT]  MINC_SIN       0x07
+[INPUT]  MINC_COS       0x08
+
+[INPUT]  IFB_BR2_AU     0x1A
+[INPUT]  IFB_BR2_AV     0x1B
+[INPUT]  IFB_BR2_AW     0x1C
+[INPUT]  IFB_BR1_AU     0x1D
+[INPUT]  IFB_BR1_AV     0x1E
+[INPUT]  IFB_BR1_AW     0x1F
+[INPUT]  IFB_BR2_IU     0x20
+[INPUT]  IFB_BR2_IV     0x21
+[INPUT]  IFB_BR2_IW     0x22
+[INPUT]  IFB_BR1_IU     0x23
+[INPUT]  IFB_BR1_IV     0x24
+[INPUT]  IFB_BR1_IW     0x25

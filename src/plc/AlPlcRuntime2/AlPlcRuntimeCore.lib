@@ -1,0 +1,3188 @@
+/*------------------------------------------------------------------------------
+**
+**	Copyright:	AXEL s.r.l. 2011
+**
+**	PLCIECRUN.C:	Runtime driver for LogicLab
+**
+**-----------------------------------------------------------------------------
+**
+**	IMPORTANT:
+**	THIS MODULE SHOULDN'T BE MODIFIED BY THE CUSTOMER
+**
+**------------------------------------------------------------------------------*/
+#pragma GCC optimize (2)
+
+#include "AlPlcRuntimeCore.h"
+
+/*	Runtime Version		*/
+#define ALPLC_RUNTIME_BUILD		"1.6.1"
+
+/* Default values for run-time configuration switches */
+#ifndef PLC_S_RUNTIME_STATUS
+#define PLC_S_RUNTIME_STATUS	0
+#endif	/* ! defined( PLC_S_RUNTIME_STATUS ) */
+
+/*	PLC with relative code/data management	*/
+#define PLC_CONF_RELOCATABLE	( PLC_S_DATA_RELAT | PLC_S_CODE_RELAT | PLC_S_DBACC_INDIR | PLC_S_FNACC_INDIR )
+
+/*	PLC run-time plug-ins support  */
+#define PLC_CONF_PLUG_INS		( PLC_S_REAL_PLUGIN | \
+									PLC_S_STRING_PLUGIN | \
+									PLC_S_MATH_PLUGIN )
+
+/*	Runtime that requires new command-response mechanism */
+#define PLC_CONF_ALCAP_V1		( PLC_S_HOTSWAP | \
+									PLC_S_SYNCPATCH | \
+									PLC_S_BREAKPTS | \
+									PLC_S_RUNTIME_CTRL | \
+									PLC_S_RUNTIME_STATUS | \
+									PLC_S_SOURCE_CODE | \
+									PLC_S_SOURCE_CODE_AREA | \
+									PLC_CONF_RELOCATABLE | \
+									PLC_CONF_PLUG_INS )
+
+/*	Format target info */
+#include "AlPlcInfo.h"
+
+/*	Set XML info stream */
+#if defined( PLC_RUNTIME_CONF ) 
+#include <stdio.h>
+
+static char_t m_xml_info_stream[ 1024 ];
+#else
+static const char_t m_xml_info_stream[] = ALPLCINFO_XML_INFO_STREAM;
+#endif	/* defined( PLC_RUNTIME_CONF ) */
+
+#if ! defined ( STATIC_VAR_ADDRESS )
+#define STATIC_VAR_ADDRESS		PLC_ATTR_CODE uint32_t
+#endif
+
+/*	Runtime configuration check */
+#include "AlPlcConfCheck.h"
+
+#if ( PLC_CONF_PLUG_INS == 1 )
+
+/*	PLC run-time system (i.e., not user) plug-ins */
+/*#define PLC_PLUG_IN_TIME		0*//* (Reserved for future extensions) */
+#define PLC_PLUG_IN_REAL		1
+#define PLC_PLUG_IN_STRING		2
+#define PLC_PLUG_IN_MATH		3
+
+#if ( PLC_S_REAL_PLUGIN == 1 )
+/* PLC run-time plug-in for the management of basic operations on IEC 61131-3 floating-point types */
+#include "AlPlcReal.h"
+#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) */
+
+#if ( PLC_S_STRING_PLUGIN == 1 )
+/* PLC run-time plug-in for the management of IEC 61131-3 character strings */
+#include "AlPlcString.h"
+#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) */
+
+#if ( PLC_S_MATH_PLUGIN == 1 )
+/* PLC run-time plug-in for the management of advanced mathematical operations */
+#include "AlPlcMath.h"
+#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) */
+
+#endif	/* ( PLC_CONF_PLUG_IN == 1 ) */
+
+/***************    INTERNAL DEFINITIONS   **************************************/
+
+#if ! defined ( PLC_BITDATA_UNITS )
+#define PLC_BITDATA_UNITS PLC_BITDATA_SIZE
+#endif
+
+/*	Basic configuration switches */
+#define PLCRT_SWITCHES          TRG_EXTPLC | TRG_EXTFEATURES | TRG_DOWNLREQ | \
+								( TRG_FLOATSUPPORT * PLC_S_FLOATSUPPORT ) | \
+								( TRG_HOTSWAP * PLC_S_HOTSWAP ) | \
+								( TRG_NODOWNLAREA * PLC_S_NODOWNLAREA ) | \
+								( TRG_DEBUGAREA * PLC_S_DEBUGAREA ) | \
+								( TRG_CHECKSUM * PLC_S_CHECKSUM ) | \
+								( TRG_FIXEDTASKS * PLC_S_FIXEDTASKS ) | \
+								( TRG_INFOHEADER * PLC_S_INFOHEADER ) | \
+								( TRG_INITHANDLES * PLC_S_INITHANDLES ) | \
+								( TRG_CHECKARRAYS * PLC_S_CHECKARRAYS ) | \
+								( TRG_CHECKSTACK * PLC_S_CHECKSTACK ) | \
+								( TRG_CHECKSTACKCALL * PLC_S_CHECKSTACKCALL ) | \
+								( TRG_TRACEAREA * PLC_S_TRACEAREA ) | \
+								( TRG_SYNCPATCH * PLC_S_SYNCPATCH ) | \
+								( TRG_AUXDATAAREA * PLC_S_AUXDATAAREA ) | \
+								( TRG_TRACECALLS * PLC_S_TRACECALLS ) | \
+								( TRG_CHECKPOINTERS * PLC_S_CHECKPOINTERS ) | \
+								( TRG_BREAKPTS * PLC_S_BREAKPTS ) | \
+								( TRG_FORCEIO * PLC_S_FORCEIO ) | \
+								( TRG_TIME_PLUGIN * PLC_S_TIME_PLUGIN ) | \
+								( TRG_REAL_PLUGIN * PLC_S_REAL_PLUGIN ) | \
+								( TRG_STRING_PLUGIN * PLC_S_STRING_PLUGIN ) | \
+								( TRG_MATH_PLUGIN * PLC_S_MATH_PLUGIN )
+
+/*	Extended configuration switches */
+#define PLCRT_EXT_SWITCHES      TRG_RTV2 | \
+								( TRG_DYN_LINK_SUPPORT * PLC_S_DYN_LINK_SUPPORT ) | \
+								( TRG_DBACC_PATCH * PLC_S_DBACC_PATCH ) | \
+								( TRG_DBACC_INDIR * PLC_S_DBACC_INDIR ) | \
+								( TRG_FNACC_PATCH * PLC_S_FNACC_PATCH ) | \
+								( TRG_FNACC_INDIR * PLC_S_FNACC_INDIR ) | \
+								( TRG_DATA_RELAT * PLC_S_DATA_RELAT ) | \
+								( TRG_CODE_RELAT * PLC_S_CODE_RELAT ) | \
+								( TRG_TASK_SETTINGS * PLC_S_TASK_SETTINGS ) | \
+								( TRG_RUNTIME_CTRL * PLC_S_RUNTIME_CTRL ) | \
+								( TRG_SOURCE_CODE * PLC_S_SOURCE_CODE_AREA ) | \
+								( TRG_EMBED_SOURCE_CODE * PLC_S_SOURCE_CODE ) | \
+								( TRG_RUNTIME_STATUS * PLC_S_RUNTIME_STATUS )
+
+#if ( PLC_CONF_PLUG_INS == 1 )
+/* Active PLC run-time plug-ins mask */
+#define PLCRT_ACTIVE_PLUGINS	( PLC_S_REAL_PLUGIN << PLC_PLUG_IN_REAL ) | \
+								( PLC_S_STRING_PLUGIN << PLC_PLUG_IN_STRING ) | \
+								( PLC_S_MATH_PLUGIN << PLC_PLUG_IN_MATH )
+
+#if ( PLC_S_FNACC_INDIR == 1 ||  PLC_S_DBACC_INDIR == 1 )
+
+static const uint32_t m_totalDataBlocks = PLC_NUM_DB
+											#if ( PLC_S_REAL_PLUGIN == 1 )
+											+ PLC_NUM_DB_REAL_PLUGIN
+											#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) */
+											#if ( PLC_S_STRING_PLUGIN == 1 )
+											+ PLC_NUM_DB_STRING_PLUGIN
+											#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) */
+											#if ( PLC_S_MATH_PLUGIN == 1 )
+											+ PLC_NUM_DB_MATH_PLUGIN
+											#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) */
+											;
+
+static const uint32_t m_totalEmbeddedBlocks = PLC_NUM_FUNCTS
+												#if ( PLC_S_REAL_PLUGIN == 1 )
+												+ PLC_NUM_FUNCTS_REAL_PLUGIN
+												#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) */
+												#if ( PLC_S_STRING_PLUGIN == 1 )
+												+ PLC_NUM_FUNCTS_STRING_PLUGIN
+												#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) */
+												#if ( PLC_S_MATH_PLUGIN == 1 )
+												+ PLC_NUM_FUNCTS_MATH_PLUGIN
+												#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) */
+												;
+#endif	/*	( PLC_S_FNACC_INDIR == 1 ||  PLC_S_DBACC_INDIR == 1 ) */
+
+#endif	/* ( PLC_CONF_PLUG_IN == 1 ) */
+
+#if ( PLC_CONF_ALCAP_V1 == 1 )
+/* AlCAPv1 uses the same communication register as the command parameter and the command response */
+#define PLC_R_COMMAND_PARAM	PLC_R_COMMAND_RESPONSE
+#endif	/* ( PLC_CONF_ALCAP_V1 == 1 ) */
+
+/*  Commands to the PLC run-time issued by LogicLab and run-time responses (ACK/NACK) */
+
+/* ACK/NACK */
+#define PLC_ACK_CODE   		0x0000
+#define PLC_NACK_CODE   	0x00FF
+
+/* Basic commands */
+#define PLC_RELOAD_CODE     0x0055
+#define PLC_DOWNLREQ_CODE	0x00BB
+#define PLC_INITDW_CODE     0x00CC
+
+#if PLC_CONF_ALCAP_V1 == 1
+
+#define READ_BY_VALUE_MASK						0x8000
+#define READ_BY_VALUE( command )				( ( command ) | READ_BY_VALUE_MASK )
+#define IS_PLC_C_READ_T( command )				( ( ( command ) & 0x4000 ) != 0 )
+#define GET_PLC_C_READ_T_OBJECT( command )		( ( command ) & 0xFF00 )
+#define GET_PLC_C_READ_T_ID( command )			( ( command ) & 0x00FF )
+
+/*	Command responses	*/
+#define COMMAND_OK								0x00000000
+#define COMMAND_ERROR							0x00000001
+
+/* Feature-specific (configuration switch-enabled) commands */
+
+#if ( PLC_S_RUNTIME_CTRL == 1 )
+
+/*	PLC run-time control by LogicLab (from 0x100 to 0x1FF)	*/
+#define PLC_C_STOP									0x0100
+#define PLC_C_START									0x0101
+
+#endif	/* PLC_S_RUNTIME_CTRL == 1 */
+
+#if ( PLC_S_RUNTIME_CTRL == 1 ) || ( PLC_S_RUNTIME_STATUS == 1 )
+
+#define PLC_C_GET_V_STATUS_OK						0x0102
+#define PLC_C_GET_V_STATUS_OK_BY_VALUE				READ_BY_VALUE( PLC_C_GET_V_STATUS_OK )
+#define PLC_C_GET_V_ERROR_CODE						0x0103
+#define PLC_C_GET_V_ERROR_CODE_BY_VALUE				READ_BY_VALUE( PLC_C_GET_V_ERROR_CODE )
+#define PLC_C_GET_V_RUNTIME_RUNNING_STATE			0x0104
+#define PLC_C_GET_V_RUNTIME_RUNNING_STATE_BY_VALUE	READ_BY_VALUE( PLC_C_GET_V_RUNTIME_RUNNING_STATE )
+
+#endif	/* ( PLC_S_RUNTIME_CTRL == 1 ) || ( PLC_S_RUNTIME_STATUS == 1 ) */
+
+#if ( PLC_S_HOTSWAP == 1 )
+/* Swap code area, in order to receive a pre-compiled PLC application targeting that area */
+#define PLC_C_SWAP_CODE_AREA					0x0110
+#endif	/* ( PLC_S_HOTSWAP == 1 ) */
+
+/*	Support to LogicLab debuggers in case of relocatable data (from 0x200 to 0x2FF) 	*/
+#if ( PLC_CONF_RELOCATABLE == 1 )
+#define PLC_C_GET_DYNAMIC_ADDRESSES				0x0200
+#endif	/* PLC_CONF_RELOCATABLE == 1 */
+
+/*	Support for source code management */
+#if ( PLC_S_SOURCE_CODE == 1 ) || ( PLC_S_SOURCE_CODE_AREA == 1 )
+#if ( PLC_S_SOURCE_CODE_AREA == 1 )
+#define PLC_C_GET_SOURCE_ADDRESS				0x0300
+#define PLC_C_GET_SOURCE_SIZE					0x0301
+#define PLC_C_NOTIFY_SOURCE_CODE_SIZE			0x0305
+#endif	/* PLC_S_SOURCE_CODE_AREA == 1 */
+#define PLC_C_GET_SOURCE_ID						0x0302
+#define PLC_C_END_SOURCE_DOWNL					0x0303
+#define PLC_C_INIT_SOURCE_DOWNL					0x0304
+#endif	/* PLC_S_SOURCE_CODE == 1 || PLC_S_SOURCE_CODE_AREA == 1 */
+
+/* Support for PLC run-time plug-ins (from 0x400 to 0x4FF) */
+#if ( PLC_CONF_PLUG_INS == 1 )
+
+#define PLC_C_GET_ACTIVE_PLUG_INS				0x0400
+#define PLC_C_GET_NTH_PLUG_IN_DB_NUM			0x0480
+#define PLC_C_GET_NTH_PLUG_IN_DB_TAB			0x04A0
+#define PLC_C_GET_NTH_PLUG_IN_FUN_NUM			0x04C0
+#define PLC_C_GET_NTH_PLUG_IN_FUN_TAB			0x04E0
+
+#if ( PLC_S_REAL_PLUGIN == 1 )
+#define PLC_C_GET_REAL_PLUG_IN_DB_NUM			PLC_C_GET_NTH_PLUG_IN_DB_NUM + PLC_PLUG_IN_REAL
+#define PLC_C_GET_REAL_PLUG_IN_DB_TAB			PLC_C_GET_NTH_PLUG_IN_DB_TAB + PLC_PLUG_IN_REAL
+#define PLC_C_GET_REAL_PLUG_IN_FUN_NUM			PLC_C_GET_NTH_PLUG_IN_FUN_NUM + PLC_PLUG_IN_REAL
+#define PLC_C_GET_REAL_PLUG_IN_FUN_TAB			PLC_C_GET_NTH_PLUG_IN_FUN_TAB + PLC_PLUG_IN_REAL
+#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) */
+
+#if ( PLC_S_STRING_PLUGIN == 1 )
+#define PLC_C_GET_STRING_PLUG_IN_DB_NUM			PLC_C_GET_NTH_PLUG_IN_DB_NUM + PLC_PLUG_IN_STRING
+#define PLC_C_GET_STRING_PLUG_IN_DB_TAB			PLC_C_GET_NTH_PLUG_IN_DB_TAB + PLC_PLUG_IN_STRING
+#define PLC_C_GET_STRING_PLUG_IN_FUN_NUM		PLC_C_GET_NTH_PLUG_IN_FUN_NUM + PLC_PLUG_IN_STRING
+#define PLC_C_GET_STRING_PLUG_IN_FUN_TAB		PLC_C_GET_NTH_PLUG_IN_FUN_TAB + PLC_PLUG_IN_STRING
+#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) */
+
+#if ( PLC_S_MATH_PLUGIN == 1 )
+#define PLC_C_GET_MATH_PLUG_IN_DB_NUM			PLC_C_GET_NTH_PLUG_IN_DB_NUM + PLC_PLUG_IN_MATH
+#define PLC_C_GET_MATH_PLUG_IN_DB_TAB			PLC_C_GET_NTH_PLUG_IN_DB_TAB + PLC_PLUG_IN_MATH
+#define PLC_C_GET_MATH_PLUG_IN_FUN_NUM			PLC_C_GET_NTH_PLUG_IN_FUN_NUM + PLC_PLUG_IN_MATH
+#define PLC_C_GET_MATH_PLUG_IN_FUN_TAB			PLC_C_GET_NTH_PLUG_IN_FUN_TAB + PLC_PLUG_IN_MATH
+#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) */
+
+#endif	/* ( PLC_CONF_PLUG_IN == 1 ) */
+
+/* Task feature-specific (task configuration switch-enabled) commands */
+#if ( PLC_S_RUNTIME_CTRL == 1 )
+#define PLC_C_READ_T_READY						READ_BY_VALUE( 0x4000 )
+#define PLC_C_READ_T_EXEC_PERIOD				0x4100
+#define PLC_C_READ_T_EXEC_PERIOD_BY_VALUE		READ_BY_VALUE( PLC_C_READ_T_EXEC_PERIOD )
+#define PLC_C_READ_T_EXEC_TIME					0x4200
+#define PLC_C_READ_T_EXEC_TIME_BY_VALUE			READ_BY_VALUE( PLC_C_READ_T_EXEC_TIME )
+#define PLC_C_READ_T_EXEC_COUNT					0x4300
+#define PLC_C_READ_T_EXEC_COUNT_BY_VALUE		READ_BY_VALUE( PLC_C_READ_T_EXEC_COUNT )
+#define PLC_C_READ_T_EXEC_STATUS				0x4400
+#define PLC_C_READ_T_EXEC_STATUS_BY_VALUE		READ_BY_VALUE( PLC_C_READ_T_EXEC_STATUS )
+#endif	/* PLC_S_RUNTIME_CTRL == 1 */
+
+#if PLC_S_SYNCPATCH == 1
+/* Synchronous patch download notification */
+#define PLC_C_END_PATCH_DOWNLOAD				0x0600
+#endif	/* PLC_S_SYNCPATCH == 1 */
+
+#if ( PLC_S_BREAKPTS == 1 )
+/* Breakpoint management */
+#define PLC_C_GET_PLC_BREAKPOINT_ADDRESS					0x0610
+#define PLC_C_GET_BREAKPOINT_MASK_ADDRESS					0x0611
+#define PLC_C_SET_BREAKPOINT_MASK							0x0612
+#endif	/* ( PLC_S_BREAKPTS == 1 ) */
+
+#endif	/* PLC_CONF_ALCAP_V1 == 1 */
+
+/* Support for PLC run-time info (from 0x500 to 0x5FF) */
+#define PCL_C_GET_XML_INFO_STREAM_ADDRESS		0x0500
+#define PCL_C_GET_XML_INFO_STREAM_SIZE			0x0501
+
+#if( ( PLC_S_DYN_LINK_SUPPORT == 1 ) || ( PLC_S_DBACC_INDIR == 1 ) || ( PLC_S_FNACC_INDIR == 1 ) )
+
+/* Character string utils for dynamic links management */
+
+#if defined( ALPLC_C_GCCARM9 ) || defined( ALPLC_C_GCCX86 ) || defined( ALPLC_C_MSDEVX86 ) || defined( ALPLC_C_MSDEVARM ) || defined( ALPLC_C_CODEWARRIOR )
+
+#include <string.h>
+#include <ctype.h>
+
+#define PLC_F_STRLEN 	strlen
+#define PLC_F_STRCMP 	strcmp
+#define PLC_F_TOUPPER 	toupper
+
+#elif defined( ALPLC_C_SOFTUNE16FX )
+
+#include <_string.h>
+#include <ctype.h>
+
+#define PLC_F_STRLEN 	_strlenF
+#define PLC_F_STRCMP 	_strcmpFF
+#define PLC_F_TOUPPER 	toupper
+
+#endif
+
+#endif	/* ( ( PLC_S_DYN_LINK_SUPPORT == 1 ) || ( PLC_S_DBACC_INDIR == 1 ) || ( PLC_S_FNACC_INDIR == 1 ) ) */
+
+/***************    DATA TYPES     **************************************/
+
+typedef void (PLC_ATTR_CODE * PlcCodeFuncPtr)( void );
+
+/***************    PUBLIC VARIABLES     **************************************/
+
+#if ( PLC_CONF_RELOCATABLE == 1 )
+DYNAMIC_ADDRESSES ALPLCDYNADDRS = { 0 };
+#endif
+
+/***************    INTERNAL VARIABLES   **************************************/
+
+/*  Pointer to the header of the PLC actually active */
+static CIMG_HEAD_EX PLC_ATTR_CODE *	m_actualCode = NULL;
+
+#if !defined( PLC_F_CALCULATE_EXEMEMOID )
+static uint16_t CalculateMemoryID( void );
+#define PLC_F_CALCULATE_EXEMEMOID CalculateMemoryID()
+#endif
+
+#if !defined( PLC_F_CALCULATE_FULLMEMOID )
+static uint16_t CalculateFullMemoryID( void );
+#define PLC_F_CALCULATE_FULLMEMOID CalculateFullMemoryID()
+#endif
+
+#if ( PLC_S_SOURCE_CODE == 1 ) || ( PLC_S_SOURCE_CODE_AREA == 1 )
+
+/*  Pointer to the header of the source code area */
+static CIMG_SOURCE_HEAD PLC_ATTR_SOURCE * m_actualSource = NULL;
+
+#if !defined( PLC_F_GET_SOURCE_HEADER )
+#define PLC_F_GET_SOURCE_HEADER PLC_SOURCE_AREA
+#endif
+
+#if !defined( PLC_F_CALCULATE_SOURCE_CHECKSUM )
+static uint32_t CalculateSourceChecksum( void );
+#define PLC_F_CALCULATE_SOURCE_CHECKSUM CalculateSourceChecksum()
+#endif
+
+#endif	/* ( PLC_S_SOURCE_CODE == 1 ) || ( PLC_S_SOURCE_CODE_AREA == 1 ) */
+
+/*  Control bits for task reallocation (hot swap) */
+static PLC_ATTR_NON_CONST( TASKCTRLBITS ) m_taskBits;
+
+/*	Current CRC value	*/
+static uint16_t         m_exeMemoId;
+
+/*	Current extended CRC value */
+static uint16_t         m_fullMemoId;
+
+#if( PLC_S_HOTSWAP != 0 )
+/* Used to choose which application to load (hot-swap target) */
+static bool_t m_reloadCurrentApplication = FALSE;
+#endif
+
+#if ( PLC_S_DBACC_INDIR == 1 )
+
+#if ( PLC_CONF_PLUG_INS == 1 )
+#define DATA_BLOCK_PTR_TAB_SIZE		m_totalDataBlocks
+#else
+#define DATA_BLOCK_PTR_TAB_SIZE		PLC_NUM_DB
+#endif	/* ( PLC_CONF_PLUG_INS == 1 ) */
+
+static uint32_t m_frmwDataBlockPtrTab[ DATA_BLOCK_PTR_TAB_SIZE ];	/*	Data block pointer table created with firmware data block table info */
+static uint32_t m_runDataBlockPtrTab[ DATA_BLOCK_PTR_TAB_SIZE ];	/*	Data block pointer table created with firmware data block table info and plc program info in use */
+
+#endif	/* ( PLC_S_DBACC_INDIR == 1 ) */
+
+#if ( PLC_S_FNACC_INDIR == 1 )
+
+#if ( PLC_CONF_PLUG_INS == 1 )
+#define FUNCTION_PTR_TAB_SIZE		m_totalEmbeddedBlocks
+#else
+#define FUNCTION_PTR_TAB_SIZE		PLC_NUM_FUNCTS
+#endif	/* ( PLC_CONF_PLUG_INS == 1 ) */
+
+static uint32_t m_frmwFunctionPtrTab[ FUNCTION_PTR_TAB_SIZE ];	/*	Function pointer table created with firmware function table info */
+static uint32_t m_runFunctionPtrTab[ FUNCTION_PTR_TAB_SIZE ];	/*	Function pointer table created with firmware function table info and plc program info in use */
+
+#endif	/* ( PLC_S_FNACC_INDIR == 1 ) */
+
+/*	Info img file PLC	*/
+#if defined( PLC_CONST_CONF )
+/*	Constant version of info	*/
+#if defined( PLC_V_MPLCINFO )
+#define m_plcInfo                   PLC_V_MPLCINFO
+PLC_ATTR_CONST( TARGETADDRS_EX ) m_plcInfo =
+#else
+static PLC_ATTR_CONST( TARGETADDRS_EX ) m_plcInfo =
+#endif
+{
+	{
+		PLCRT_SWITCHES,						/*  Target Version */
+		0,									/*  ID memory configuration */
+
+		#if ( PLC_S_CODE_RELAT == 1 )
+		/*
+		 *	When the compiler is asked to generate position-independent code,
+		 *	the address of code area is not relevant.
+		 */
+		0,									/* Address of code area */
+		#else
+		( uint32_t ) PLC_CODE_AREA1,		/* Address of code area */
+		#endif // PLC_S_CODE_RELAT == 1
+
+		#if ( PLC_S_DATA_RELAT == 1 )
+		/*
+		 *	Addresses of the memory areas for the allocation of automatic variables.
+		 *
+		 *	When the compiler is asked to access automatic variables indirectly,
+		 *	these addresses are not relevant.
+		 */
+		0,									/* Memory area for the allocation of automatic variables */
+		0,									/* Memory area for the allocation of automatic bit variables */
+		0,									/* Memory area for the allocation of automatic retentive variables */
+		#else // PLC_S_DATA_RELAT == 1
+		( uint32_t ) PLC_DATA_AREA,			/* Memory area for the allocation of automatic variables */
+
+		#if defined( PLC_BITDATA_AREA )
+		( uint32_t ) PLC_BITDATA_AREA,		/* Memory area for the allocation of automatic bit variables */
+		#else
+		0,
+		#endif // PLC_BITDATA_AREA
+
+		#if defined( PLC_RETDATA_AREA )
+		( uint32_t ) PLC_RETDATA_AREA,		/* Memory area for the allocation of automatic retentive variables */
+		#else
+		0,
+		#endif // PLC_RETDATA_AREA
+
+		#endif // PLC_S_DATA_RELAT == 1
+
+		(uint32_t)PLC_DB_TAB,				/*  Address of DATA BLOCKS table */
+		(uint32_t)PLC_FUNCT_TAB,			/*  Address of EMBEDDED FUNCTIONS table */
+		PLC_NUM_DB,							/*  Number of DATA BLOCK records */
+		PLC_NUM_FUNCTS,						/*  Number of EMBEDDED FUNCTIONS records */
+		PLC_CODE_SIZE,						/*  Size of code */
+		PLC_DATA_SIZE,						/*  Size of auto vars */
+		#if defined( PLC_BITDATA_AREA ) 
+		PLC_BITDATA_UNITS,					/*  Units of bit vars */
+		#else
+		0,
+		#endif 
+		#if defined( PLC_RETDATA_AREA ) 
+		PLC_RETDATA_SIZE,					/*  Size of retentive auto vars */
+		#else
+		0,
+		#endif
+		#if defined( PLC_DEBUGDATA_AREA )
+		PLC_DEBUGDATA_SIZE,					/*  Size of debug area */
+		#else
+		0,
+		#endif
+	},
+	{
+		#if ( PLC_S_CODE_RELAT == 1 )
+		/*
+		 *	When the compiler is asked to generate position-independent code,
+		 *	the addresses of code areas are not relevant.
+		 */
+		0,									/* Address of code area #1 (hot-swap) */
+		0,									/* Address of code area #2 (hot-swap) */
+		#else
+		( uint32_t ) PLC_CODE_AREA1,		/* Address of code area #1 (hot-swap) */
+
+		#if defined( PLC_CODE_AREA2 )
+		( uint32_t ) PLC_CODE_AREA2,		/* Address of code area #2 (hot-swap) */
+		#else
+		0,
+		#endif
+
+		#endif // ( PLC_S_CODE_RELAT == 1 )
+
+		(uint32_t)&m_taskBits,				/*	Address of task control bits area  */
+		#if defined( PLC_DEBUGDATA_AREA )
+		(uint32_t)PLC_DEBUGDATA_AREA,		/*	Address of debug area */
+		#else
+		0,
+		#endif
+		#if defined( PLC_TRACEDATA_AREA )
+		(uint32_t)PLC_TRACEDATA_AREA,		/*	Address of trace area */
+		PLC_TRACEDATA_SIZE,					/*	Size of trace area */
+		#else
+		0,
+		0,
+		#endif
+		{ 0, 0 },							/*	Spare0 */
+		#if ( PLC_S_CHECKSTACK == 1 ) 
+		PLC_STACK_LIMIT,					/*	Limits for stack allocation */
+		#else
+		0,
+		#endif
+		#if defined( PLC_AUXDATA_AREA )
+		(uint32_t)PLC_AUXDATA_AREA,			/*	Address of aux data area */
+		PLC_AUXDATA_SIZE,					/*	Size of aux data area */
+		#else
+		0, 
+		0,
+		#endif
+		#if defined( PLC_SYSTIMER_ADDR )
+		(uint32_t)PLC_SYSTIMER_ADDR,		/*	Address of system timer */
+		#else
+		0,
+		#endif
+		PLCRT_EXT_SWITCHES,					/*	Extended features */
+		(uint32_t)PLC_TASK_DEFS,			/*	Task table address */
+		PLC_NUM_TASKS,						/*	Number of task table recs */
+		{ 0 }							   	/*	Spare for future implementations */
+	}
+};
+#else
+
+/*	Runtime initialized version of info	*/
+#if defined( PLC_V_MPLCINFO )
+#define m_plcInfo                   PLC_V_MPLCINFO
+TARGETADDRS_EX  m_plcInfo;
+#else
+static TARGETADDRS_EX  m_plcInfo;
+#endif
+
+#endif // defined( PLC_CONST_CONF )
+
+/*****************************************************************************
+	Overridable macros
+*****************************************************************************/
+
+#if ! defined( PLC_F_ZEROCODE_AREA )
+#define PLC_F_ZEROCODE_AREA(a)		PlcZeroMemory( (uint8_t *)a, PLC_CODE_SIZE )
+#define USEZERO_CODE
+#endif
+
+#if ! defined( PLC_F_ZERODATA_AREA )
+#define PLC_F_ZERODATA_AREA			PlcZeroMemory( (uint8_t *)PLC_DATA_AREA, PLC_DATA_SIZE )
+#define USEZERO_DATA
+#endif
+
+#if(( ! defined PLC_F_ZERODATABIT_AREA ) && ( defined PLC_BITDATA_AREA ))
+#define PLC_F_ZERODATABIT_AREA	PlcZeroMemory( (uint8_t *)PLC_BITDATA_AREA, PLC_BITDATA_SIZE )
+#define USEZERO_DATABIT
+#endif
+
+#if(( ! defined PLC_F_ZEROAUXDATA_AREA ) && ( defined PLC_AUXDATA_AREA ))
+#define PLC_F_ZEROAUXDATA_AREA	PlcZeroMemory( (uint8_t *)PLC_AUXDATA_AREA, PLC_AUXDATA_SIZE  )
+#define USEZERO_DATABIT
+#endif
+
+#if ! defined( PLC_F_ZERODATARET_AREA )
+#define PLC_F_ZERODATARET_AREA	PlcZeroMemory( (uint8_t *)PLC_RETDATA_AREA, PLC_RETDATA_SIZE )
+#define USEZERO_DATARET
+#endif
+
+#if ! defined( PLC_F_ZERODATA_CONF )
+#define PLC_F_ZERODATA_CONF		PlcZeroMemory( (uint8_t *)&m_plcInfo, sizeof(m_plcInfo) / sizeof(uint8_t) )
+#define USEZERO_CONF
+#endif
+
+#if ! defined( PLC_M_GET_CODE_BYTE )
+#define PLC_M_GET_CODE_BYTE(adr)	*((uint8_t PLC_ATTR_CODE *)(adr))
+#endif
+
+#if ! defined( PLC_M_GET_SOURCE_BYTE )
+#define PLC_M_GET_SOURCE_BYTE(adr)	*((uint8_t PLC_ATTR_CODE *)(adr))
+#endif
+
+//------------------------------------------------------------
+//
+//   Trasformazione in uppercase di una stringa
+//
+//------------------------------------------------------------
+
+#if( ( PLC_S_DYN_LINK_SUPPORT == 1 ) || ( PLC_S_DBACC_INDIR == 1 ) || ( PLC_S_FNACC_INDIR == 1 ) )
+
+static void makeupper( char_t * strDst, char_t * strSrc )
+{
+	uint16_t i;
+
+	if ( strSrc == NULL || strDst == NULL )
+		return;
+
+	for ( i=0; i < PLC_F_STRLEN( strSrc ); i++ )
+		strDst[i] = PLC_F_TOUPPER( strSrc[i] );
+
+	strDst[i] = '\0';
+}
+
+/*----------------------------------------------
+**
+**  Function for Dynamic Link
+**
+**---------------------------------------------*/
+
+//	Define per istruzioni link dinamico
+#define ARM9_OPCODE_DWORD				0x00
+#define IS_ARM9_OPCODE_DWORD( data )	((data) == ( ARM9_OPCODE_DWORD & 0x7F ) )
+
+
+//------------------------------------------------------------
+//
+//   Ricerca di un datablock usando indice e tipo tra quelli
+// 	 attualmente in esecuzione
+//
+//------------------------------------------------------------
+
+static PLC_ATTR_PLCIEC_DBREC_PTR FindDb( uint16_t dbId, uint8_t type, int32_t *offset )
+{
+	uint16_t i;
+
+	if ( offset != NULL )
+		*offset = -1;
+
+	/* Look-up the data block ID in the data blocks table */
+	for( i = 0; i < PLC_NUM_DB; i++ )
+	{
+		if ( ( dbId == PLC_DB_TAB[ i ].dbId ) && ( type == PLC_DB_TAB[ i ].type ) )
+		{
+			/* Set offset */
+			if ( offset != NULL )
+				*offset = PLC_DB_TAB[ i ].addr;
+
+			/* Data block IDs match */
+			return &PLC_DB_TAB[ i ];
+		}
+	}
+
+	#if ( PLC_S_REAL_PLUGIN == 1 ) && ( PLC_NUM_DB_REAL_PLUGIN > 0 )
+	/* Look-up the data block ID in the table of the real management optional module */
+	for( i = 0; i < PLC_NUM_DB_REAL_PLUGIN; i++ )
+	{
+		if ( ( dbId == AlPlcReal_PluginDataBlockTable[ i ].dbId ) &&
+			 ( type == AlPlcReal_PluginDataBlockTable[ i ].type ) )
+		{
+			/* Set offset */
+			if ( offset != NULL )
+				*offset = AlPlcReal_PluginDataBlockTable[ i ].addr;
+
+			/* Data block IDs match */
+			return &AlPlcReal_PluginDataBlockTable[ i ];
+		}
+	}
+	#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) && ( PLC_NUM_DB_REAL_PLUGIN > 0 ) */
+
+	#if ( PLC_S_STRING_PLUGIN == 1 ) && ( PLC_NUM_DB_STRING_PLUGIN > 0 )
+	/* Look-up the data block ID in the table of the string management optional module */
+	for( i = 0; i < PLC_NUM_DB_STRING_PLUGIN; i++ )
+	{
+		if ( ( dbId == AlPlcString_PluginDataBlockTable[ i ].dbId ) &&
+			 ( type == AlPlcString_PluginDataBlockTable[ i ].type ) )
+		{
+			/* Set offset */
+			if ( offset != NULL )
+				*offset = AlPlcString_PluginDataBlockTable[ i ].addr;
+
+			/* Data block IDs match */
+			return &AlPlcString_PluginDataBlockTable[ i ];
+		}
+	}
+	#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) && ( PLC_NUM_DB_STRING_PLUGIN > 0 ) */
+
+	#if ( PLC_S_MATH_PLUGIN == 1 ) && ( PLC_NUM_DB_MATH_PLUGIN > 0 )
+	/* Look-up the data block ID in the table of the math optional module */
+	for( i = 0; i < PLC_NUM_DB_MATH_PLUGIN; i++ )
+	{
+		if ( ( dbId == AlPlcMath_PluginDataBlockTable[ i ].dbId ) &&
+			 ( type == AlPlcMath_PluginDataBlockTable[ i ].type ) )
+		{
+			/* Set offset */
+			if ( offset != NULL )
+				*offset = AlPlcMath_PluginDataBlockTable[ i ].addr;
+
+			/* Data block IDs match */
+			return &AlPlcMath_PluginDataBlockTable[ i ];
+		}
+	}
+	#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) && ( PLC_NUM_DB_MATH_PLUGIN > 0 ) */
+
+	return NULL;
+}
+
+//------------------------------------------------------------
+//
+//   Ricerca di una funzione usando il nome tra quelle
+// 	 attualmente in esecuzione
+//
+//------------------------------------------------------------
+
+static PLC_ATTR_PLCIEC_FCNREC_PTR FindFunct( char_t* name, int32_t *offset )
+{
+	uint16_t i;
+	char_t strComp[ DIM_FNAME ];
+	char_t strRunt[ DIM_FNAME ];
+
+	/* Ensure the parameter is valid */
+	if( name == NULL )
+		return NULL;
+
+	/* Reset offset */
+	if ( offset != NULL )
+		*offset = -1;
+
+	/* Convert the function name to uppercase (for case-insensitive search) */
+	makeupper( strComp, name );
+
+	/* Look-up the function name in the embedded blocks table */
+	for( i = 0; i < PLC_NUM_FUNCTS; i++ )
+	{
+		/* Convert the function name to uppercase (for case-insensitive search) */
+		makeupper( strRunt, ( char_t* ) PLC_FUNCT_TAB[ i ].name );
+		if( PLC_F_STRCMP( strRunt, strComp ) == 0 )
+		{
+			/* Set offset */
+			if ( offset != NULL )
+				*offset = PLC_FUNCT_TAB[ i ].addr;
+
+			/* Function names match */
+			return &PLC_FUNCT_TAB[ i ];
+		}
+	}
+
+	#if ( PLC_S_REAL_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_REAL_PLUGIN > 0 )
+	/* Look-up the function name in the table of the real management optional module */
+	for( i = 0; i < PLC_NUM_FUNCTS_REAL_PLUGIN; i++ )
+	{
+		/* Convert the function name to uppercase (for case-insensitive search) */
+		makeupper( strRunt, ( char_t* ) AlPlcReal_PluginFunctionTable[ i ].name );
+		if( PLC_F_STRCMP( strRunt, strComp ) == 0 )
+		{
+			/* Set offset */
+			if ( offset != NULL )
+				*offset = AlPlcReal_PluginFunctionTable[ i ].addr;
+
+			/* Function names match */
+			return &AlPlcReal_PluginFunctionTable[ i ];
+		}
+	}
+	#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_REAL_PLUGIN > 0 ) */
+
+	#if ( PLC_S_STRING_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_STRING_PLUGIN > 0 )
+	/* Look-up the function name in the table of the string management optional module */
+	for( i = 0; i < PLC_NUM_FUNCTS_STRING_PLUGIN; i++ )
+	{
+		/* Convert the function name to uppercase (for case-insensitive search) */
+		makeupper( strRunt, ( char_t* ) AlPlcString_PluginFunctionTable[ i ].name );
+		if( PLC_F_STRCMP( strRunt, strComp ) == 0 )
+		{
+			/* Set offset */
+			if ( offset != NULL )
+				*offset = AlPlcString_PluginFunctionTable[ i ].addr;
+
+			/* Function names match */
+			return &AlPlcString_PluginFunctionTable[ i ];
+		}
+	}
+	#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_STRING_PLUGIN > 0 ) */
+
+	#if ( PLC_S_MATH_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_MATH_PLUGIN > 0 )
+	/* Look-up the function name in the table of the math optional module */
+	for( i = 0; i < PLC_NUM_FUNCTS_MATH_PLUGIN; i++ )
+	{
+		/* Convert the function name to uppercase (for case-insensitive search) */
+		makeupper( strRunt, ( char_t* ) AlPlcMath_PluginFunctionTable[ i ].name );
+		if( PLC_F_STRCMP( strRunt, strComp ) == 0 )
+		{
+			/* Set offset */
+			if ( offset != NULL )
+				*offset = AlPlcMath_PluginFunctionTable[ i ].addr;
+
+			/* Function names match */
+			return &AlPlcMath_PluginFunctionTable[ i ];
+		}
+	}
+	#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_MATH_PLUGIN > 0 ) */
+
+	return NULL;
+}
+
+#if ( PLC_S_DYN_LINK_SUPPORT == 1 )
+
+//------------------------------------------------------------
+//
+//   Patch del codice binario
+//
+//------------------------------------------------------------
+
+static bool_t patchAsm( uint32_t adrRuntime, uint32_t adrStartCode, LINK_OFFS * patch )
+{
+	if( IS_ARM9_OPCODE_DWORD( patch->instrType ))
+	{
+		//adrRuntime ?un indirizzo di memoria
+		*(uint32_t * )( adrStartCode + patch->codeOffs ) = adrRuntime;
+		return TRUE;
+	}
+	else
+		return FALSE;
+}
+
+//------------------------------------------------------------
+//
+//   Patch al codice scaricato per link runtime dei datablock
+//
+//------------------------------------------------------------
+
+static bool_t PatchDbCode( uint8_t * codPlc )
+{
+	uint16_t i, j;
+	PLCIEC_DBREC * recDatablock = NULL;
+	CIMG_HEAD_EX * headCode     = (( CIMG_HEAD_EX *)codPlc );
+	CIMG_REALLOC_TAB * adrReall = (CIMG_REALLOC_TAB *)((uint32_t)codPlc + headCode->reallocOffs );
+	LINK_DBCHECK * dbTabComp    = ( LINK_DBCHECK * )( (uint32_t)adrReall + adrReall->offsCheckDb );
+	REC_LINK_DB_EX * dbElPatch  = ( REC_LINK_DB_EX * )( (uint32_t)adrReall + adrReall->offsTabDb );
+	LINK_OFFS * linkPatch       = NULL;
+
+	//se 0 non ho record dinamici
+	if( headCode->reallocOffs == 0)
+		return TRUE;
+
+	//controlliamo l'esistenza di almeno un record
+	if( adrReall->nRecDb < 1 )
+		return TRUE;
+
+	// verifica di congruenza dei datablock in compilazione rispetto a quelli
+	// in esecuzione
+	for( i=0; i < adrReall->nRecCheckDb; i++ )
+	{
+		recDatablock = (PLCIEC_DBREC *)FindDb( dbTabComp[i].dbId, dbTabComp[i].type, NULL );
+		if ( recDatablock == NULL )
+		{
+			PLC_V_ERROR_CODE = PLCERR_DBPATCH_FAILED;
+			return FALSE;
+		}
+		else
+		{
+			if ( !(( dbTabComp[i].img == recDatablock->img ) &&
+				   ( dbTabComp[i].nel == recDatablock->nel ) &&
+				   ( ( ( uint8_t ) dbTabComp[i].dataSize ) == recDatablock->dataSize )) )
+			{
+				PLC_V_ERROR_CODE = PLCERR_DBPATCH_FAILED;
+				return FALSE;
+			}
+		}
+	}
+
+	//verifica dei datablock superata, quindi effettuiamo il patch del codice
+	for( i=0; i < adrReall->nRecDb; i++ )
+	{
+		//datablock estratto dalla tabella dei datablock in esecuzione
+		recDatablock = (PLCIEC_DBREC *)FindDb( dbElPatch->rec_db.dbIdx, LO_BYTE( dbElPatch->rec_db.type ), NULL );
+
+		#ifdef CHECK_DATA_ALIGNMENT
+		/*
+		 *	If the compiler is recent enough (since version 2.18),
+		 *	it provides in the MSB of REC_LINK_DB::type the data size (in bytes),
+		 *	so that a run-time check of data alignment can be performed.
+		 *
+		 *	Older compilers set the MSB of REC_LINK_DB::type to 0.
+		 *
+		 *	Please notice that CHECK_DATA_ALIGNMENT will not be called,
+		 *	if data size is 0.
+		 */
+		if( HI_BYTE( dbElPatch->rec_db.type ) != 0 )
+		{
+			/* Check architecture-specific data alignment requirements */
+			if( ! CHECK_DATA_ALIGNMENT( recDatablock->addr + dbElPatch->rec_db.offset,
+										HI_BYTE( dbElPatch->rec_db.type ) ) )
+			{
+				PLC_V_ERROR_CODE = PLCERR_WRONG_DATA_ALIGNMENT;
+				return FALSE;
+			}
+		}
+		#endif	/* PLC_M_CHECK_DATA_BLOCK */
+
+		//record con le informazioni per il patch nel codice
+		// header = REC_LINK_DB,
+		linkPatch = (LINK_OFFS * )((uint32_t)dbElPatch + sizeof( REC_LINK_DB_EX ));
+
+		//estraiamo tutti i punti in cui fare la path
+		for ( j=0; j < dbElPatch->rec_db.numLink; j++ )
+		{
+			//funzione di patch delle istruzioni in codice binario
+			//indirizzo definitivo che verr?utilizzato come patch
+			if ( !patchAsm( recDatablock->addr + dbElPatch->rec_db.offset, (uint32_t)headCode, &linkPatch[j] ) )
+			{
+				PLC_V_ERROR_CODE = PLCERR_DBPATCH_FAILED;
+				return FALSE;
+			}
+		}
+
+		//spostiamo l'indirizzo al secondo record ( header + records )
+		dbElPatch = (REC_LINK_DB_EX *)((uint32_t)dbElPatch + sizeof( REC_LINK_DB_EX ) + ( dbElPatch->rec_db.numLink * sizeof( LINK_OFFS ) ));
+
+	}
+
+	return TRUE;
+}
+
+//------------------------------------------------------------
+//
+//   Patch al codice scaricato per link runtime delle funzioni
+//
+//------------------------------------------------------------
+
+static bool_t PatchFnCode( uint8_t * codPlc )
+{
+	uint16_t i, j;
+	CIMG_HEAD_EX * headCode         = (( CIMG_HEAD_EX *)codPlc );
+	CIMG_REALLOC_TAB * adrReall     = (CIMG_REALLOC_TAB *)((uint32_t)codPlc + headCode->reallocOffs );
+	REC_LINK_FUNC_EX * functElPatch = ( REC_LINK_FUNC_EX * )( (uint32_t)adrReall + adrReall->offsTabFunct );
+	LINK_OFFS * linkPatch           = NULL;
+	PLCIEC_FCNREC * recFunct        = NULL;
+
+	//se 0 non ho record dinamici
+	if( headCode->reallocOffs == 0)
+		return TRUE;
+
+	//controlliamo l'esistenza di almeno un record
+	if( adrReall->nRecFunct < 1 )
+		return TRUE;
+
+	//verifica dei datablock superata, quindi effettuiamo il patch del codice
+	for( i=0; i < adrReall->nRecFunct; i++ )
+	{
+		recFunct = (PLCIEC_FCNREC *)FindFunct( functElPatch->rec_fn.name, NULL );
+		if ( recFunct == NULL )
+			return FALSE;
+
+		//record con le informazioni per il patch nel codice
+		// header = REC_LINK_FUNCT,
+		linkPatch = (LINK_OFFS * )((uint32_t)functElPatch + sizeof( REC_LINK_FUNC_EX ));
+
+		//estraiamo tutti i punti in cui fare la patch
+		for ( j=0; j < functElPatch->rec_fn.numLink; j++ )
+		{
+			//funzione di patch delle istruzioni in codice binario
+			//indirizzo definitivo che verr?utilizzato come patch
+			if ( !patchAsm( recFunct->addr, (uint32_t)headCode, &linkPatch[j] ) )
+				return FALSE;
+		}
+
+		//spostiamo l'indirizzo al secondo record ( header + records )
+		functElPatch = (REC_LINK_FUNC_EX *)((uint32_t)functElPatch + sizeof( REC_LINK_FUNC_EX ) + ( functElPatch->rec_fn.numLink * sizeof( LINK_OFFS ) ));
+
+	}
+
+	return TRUE;
+}
+
+#endif // PLC_S_DYN_LINK_SUPPORT == 1
+
+#if ( PLC_S_FNACC_INDIR == 1 )
+
+/*----------------------------------------------
+**
+**  Function for embedded function or data block relocation
+**
+**---------------------------------------------*/
+
+//------------------------------------------------------------
+//
+//   Verifica dei dati della tabella di funzioni embedded in caso di codice rilocabile
+//
+//------------------------------------------------------------
+
+static bool_t CheckEmbeddedFuncTabIndir( uint8_t * codPlc )
+{
+	uint16_t i;
+	CIMG_HEAD_EX * headCode         = (( CIMG_HEAD_EX *)codPlc );
+	CIMG_REALLOC_TAB * adrReall     = (CIMG_REALLOC_TAB *)((uint32_t)codPlc + headCode->reallocOffs );
+	REC_LINK_FUNC_EX * functElPatch = ( REC_LINK_FUNC_EX * )( (uint32_t)adrReall + adrReall->offsTabFunct );
+	PLCIEC_FCNREC * recFunct        = NULL;
+	int32_t frmwFuncTabOffs;
+
+	//se 0 non ho record dinamici
+	if( headCode->reallocOffs == 0)
+		return TRUE;
+
+	//controlliamo l'esistenza di almeno un record
+	if( adrReall->nRecFunct < 1 )
+		return TRUE;
+
+	//verifica dei datablock superata, quindi effettuiamo il patch del codice
+	for( i=0; i < adrReall->nRecFunct; i++ )
+	{
+		recFunct = (PLCIEC_FCNREC *)FindFunct( functElPatch->rec_fn.name, &frmwFuncTabOffs );
+
+		if ( recFunct == NULL )
+			return FALSE;
+
+		if ( ( frmwFuncTabOffs >= 0 ) && ( frmwFuncTabOffs % 4 == 0 ) && ( frmwFuncTabOffs / 4 < FUNCTION_PTR_TAB_SIZE ) )
+		{
+			/*	nella tabella di esecuzione copio il puntatore della tabella frmw */
+			m_runFunctionPtrTab[ functElPatch->rec_fn_ptr_addr / 4 ] = m_frmwFunctionPtrTab[ frmwFuncTabOffs / 4 ];
+		}
+		else
+			return FALSE;
+
+		//spostiamo l'indirizzo al secondo record ( header + records )
+		functElPatch = (REC_LINK_FUNC_EX *)((uint32_t)functElPatch + sizeof( REC_LINK_FUNC_EX ) + ( functElPatch->rec_fn.numLink * sizeof( LINK_OFFS ) ));
+	}
+
+	return TRUE;
+}
+
+#endif	// ( PLC_S_FNACC_INDIR == 1 ) 
+
+#if ( PLC_S_DBACC_INDIR == 1 ) 
+
+//------------------------------------------------------------
+//
+//   Verifica dei dati della tabella di data block in caso di codice rilocabile
+//
+//------------------------------------------------------------
+
+static bool_t CheckEmbeddedDataBlockTabIndir( uint8_t * codPlc )
+{
+	uint16_t i;
+	PLCIEC_DBREC * recDatablock = NULL;
+	CIMG_HEAD_EX * headCode     = (( CIMG_HEAD_EX *)codPlc );
+	CIMG_REALLOC_TAB * adrReall = (CIMG_REALLOC_TAB *)((uint32_t)codPlc + headCode->reallocOffs );
+	LINK_DBCHECK * dbTabComp    = ( LINK_DBCHECK * )( (uint32_t)adrReall + adrReall->offsCheckDb );
+	REC_LINK_DB_EX * dbElPatch  = ( REC_LINK_DB_EX * )( (uint32_t)adrReall + adrReall->offsTabDb );
+	int32_t frmwDbTabOffs;
+
+	//se 0 non ho record dinamici
+	if( headCode->reallocOffs == 0)
+		return TRUE;
+
+	//controlliamo l'esistenza di almeno un record
+	if( adrReall->nRecDb < 1 )
+		return TRUE;
+
+	// verifica di congruenza dei datablock in compilazione rispetto a quelli
+	// in esecuzione
+	for( i=0; i < adrReall->nRecCheckDb; i++ )
+	{
+		recDatablock = (PLCIEC_DBREC *)FindDb( dbTabComp[i].dbId, dbTabComp[i].type, NULL );
+		if ( recDatablock == NULL )
+			return FALSE;
+		else
+		{
+			if ( !(( dbTabComp[i].img == recDatablock->img ) &&
+				   ( dbTabComp[i].nel == recDatablock->nel ) &&
+				   ( ( ( uint8_t ) dbTabComp[i].dataSize ) == recDatablock->dataSize )) )
+				return FALSE;
+		}
+	}
+
+	for( i = 0; i < adrReall->nRecDb; i++ )
+	{
+		/* Check if data block still exists */
+		recDatablock = ( PLCIEC_DBREC* ) FindDb( dbElPatch->rec_db.dbIdx,
+												 LO_BYTE( dbElPatch->rec_db.type ), &frmwDbTabOffs );
+		if( recDatablock == NULL )
+		{
+			/* Data block not found */
+			return FALSE;
+		}
+
+		/* Check if data block has been moved */
+		if( dbElPatch->rec_db_ptr_addr != frmwDbTabOffs )
+		{
+			/* Data block is not at the same offset as it was when PLC application was built */
+			break;
+		}
+
+		/* Process next record */
+		dbElPatch = ( REC_LINK_DB_EX* )( ( uint32_t ) dbElPatch + sizeof( REC_LINK_DB_EX )
+										 + ( dbElPatch->rec_db.numLink * sizeof( LINK_OFFS ) ) );
+	}
+
+	/*
+	 *	If data block allocation is not strictly compatible with the time the PLC application
+	 *	was built, run-time pointer table is reset and built from scratch, disallowing the
+	 *	developer to watch target variables not used in the PLC application.
+     */
+	if( i < adrReall->nRecDb )
+	{
+		for( i = 0; i < DATA_BLOCK_PTR_TAB_SIZE; i++ )
+		{
+			m_runDataBlockPtrTab[ i ] = NULL;
+		}
+
+		dbElPatch = ( REC_LINK_DB_EX* )( ( uint32_t ) adrReall + adrReall->offsTabDb );
+		for( i = 0; i < adrReall->nRecDb; i++ )
+		{
+			/* Find data block */
+			recDatablock = ( PLCIEC_DBREC* ) FindDb( dbElPatch->rec_db.dbIdx,
+													 LO_BYTE( dbElPatch->rec_db.type ), &frmwDbTabOffs );
+			if( recDatablock == NULL )
+			{
+				return FALSE;
+			}
+
+			//nella tabella di esecuzione copio il puntatore della tabella frmw 
+			m_runDataBlockPtrTab[ dbElPatch->rec_db_ptr_addr / 4 ] = m_frmwDataBlockPtrTab[ frmwDbTabOffs / 4 ];
+
+			/* Process next record */
+			dbElPatch = ( REC_LINK_DB_EX* )( ( uint32_t ) dbElPatch + sizeof( REC_LINK_DB_EX )
+											 + ( dbElPatch->rec_db.numLink * sizeof( LINK_OFFS ) ) );
+		}
+	}
+	else
+	{
+		for( i = 0; i < DATA_BLOCK_PTR_TAB_SIZE; i++ )
+		{
+			m_runDataBlockPtrTab[ i ] = m_frmwDataBlockPtrTab[ i ];
+		}
+	}
+
+	return TRUE;
+}
+
+#endif	// ( PLC_S_DBACC_INDIR == 1 ) 
+
+#endif	// ( ( PLC_S_DYN_LINK_SUPPORT == 1 ) || ( PLC_S_DBACC_INDIR == 1 ) || ( PLC_S_FNACC_INDIR == 1 ) )
+
+/*----------------------------------------------
+**
+**  Empty function pointer initialization
+**
+**---------------------------------------------*/
+
+static void fnz_nop( void )
+{
+}
+
+/*------------------------------------------------
+**
+**  Reset memory function, default implementation
+**
+**-----------------------------------------------*/
+
+#if(( defined USEZERO_DATA ) || ( defined USEZERO_DATABIT ) || ( defined USEZERO_DATARET ) || ( defined USEZERO_CONF ))
+
+static void PlcZeroMemory( uint8_t * mem, uint32_t len )
+{
+	uint32_t n;
+	for( n = 0; n < len; n ++ )
+		mem[ n ] = 0;
+}
+
+#endif
+
+
+/*----------------------------------------------------------------
+**
+**	Initializes the runtime for non-static configuration systems
+**
+**---------------------------------------------------------------*/
+#if defined( PLC_RUNTIME_CONF )
+static void RuntimeConfiguration()
+{
+	/*	Clean all configuration */
+	PLC_F_ZERODATA_CONF;
+
+	/*	Initialize relevant members	*/
+	m_plcInfo.t.targId           = PLCRT_SWITCHES;
+
+	#if ( PLC_S_CODE_RELAT == 1 )
+	/*
+	 *	When the compiler is asked to generate position-independent code,
+	 *	the address of code area is not relevant.
+	 */
+	m_plcInfo.t.addrCode = 0;								/* Address of code area */
+	#else
+	m_plcInfo.t.addrCode = ( uint32_t ) PLC_CODE_AREA1;		/* Address of code area */
+	#endif // PLC_S_CODE_RELAT == 1
+
+	#if ( PLC_S_DATA_RELAT == 1 )
+	/*
+	 *	Addresses of the memory areas for the allocation of automatic variables.
+	 *
+	 *	When the compiler is asked to access automatic variables indirectly,
+	 *	these addresses are not relevant.
+	 */
+	m_plcInfo.t.addrAutoVar = 0;								/* Memory area for the allocation of automatic variables */
+	m_plcInfo.t.addrBitVar = 0;									/* Memory area for the allocation of automatic bit variables */
+	m_plcInfo.t.addrRitVar = 0;									/* Memory area for the allocation of automatic retentive variables */
+	#else
+	m_plcInfo.t.addrAutoVar = ( uint32_t ) PLC_DATA_AREA;		/* Memory area for the allocation of automatic variables */
+
+	#if defined( PLC_BITDATA_AREA )
+	m_plcInfo.t.addrBitVar = ( uint32_t ) PLC_BITDATA_AREA;		/* Memory area for the allocation of automatic bit variables */
+	m_plcInfo.t.dimDataBit = PLC_BITDATA_UNITS;
+	#else 
+	m_plcInfo.t.dimDataBit = 0;
+	#endif
+
+	#if defined( PLC_RETDATA_AREA )
+	m_plcInfo.t.addrRitVar = ( uint32_t ) PLC_RETDATA_AREA;		/* Memory area for the allocation of automatic retentive variables */
+	m_plcInfo.t.dimRitData = PLC_RETDATA_SIZE;
+	#else
+	m_plcInfo.t.dimRitData = 0;
+	#endif
+
+	#endif // PLC_S_DATA_RELAT == 1
+
+	m_plcInfo.t.addrDataBlockTab = (uint32_t)PLC_DB_TAB;
+	m_plcInfo.t.addrFunctionTab  = (uint32_t)PLC_FUNCT_TAB;
+	m_plcInfo.t.numDataBlockRec  = PLC_NUM_DB;
+	m_plcInfo.t.numFunctionRec   = PLC_NUM_FUNCTS;
+	m_plcInfo.t.dimCode          = PLC_CODE_SIZE;
+	m_plcInfo.t.dimData          = PLC_DATA_SIZE;
+
+	#if defined( PLC_DEBUGDATA_AREA )
+	m_plcInfo.t.dimDebug         = PLC_DEBUGDATA_SIZE;
+	#else
+	m_plcInfo.t.dimDebug         = 0;
+	#endif
+
+	#if ( PLC_S_CODE_RELAT == 1 )
+	/*
+	 *	When the compiler is asked to generate position-independent code,
+	 *	the addresses of code areas are not relevant.
+	 */
+	m_plcInfo.e.addrCode1 = 0;								/* Address of code area #1 (hot-swap) */
+	m_plcInfo.e.addrCode2 = 0;								/* Address of code area #2 (hot-swap) */
+	#else
+	m_plcInfo.e.addrCode1 = ( uint32_t ) PLC_CODE_AREA1;	/* Address of code area #1 (hot-swap) */
+
+	#if defined( PLC_CODE_AREA2 )
+	m_plcInfo.e.addrCode2 = ( uint32_t ) PLC_CODE_AREA2;	/* Address of code area #2 (hot-swap) */
+	#endif
+	#endif // PLC_S_CODE_RELAT == 1
+
+	m_plcInfo.e.addrTaskCtrlBits = (uint32_t)&m_taskBits;
+	#if defined( PLC_DEBUGDATA_AREA )
+	m_plcInfo.e.addrDebug        = (uint32_t)PLC_DEBUGDATA_AREA;
+	#endif
+	#if defined( PLC_TRACEDATA_AREA )
+	m_plcInfo.e.addrTrace        = (uint32_t)PLC_TRACEDATA_AREA;
+	m_plcInfo.e.dimTrace         = PLC_TRACEDATA_SIZE;
+	#else
+	m_plcInfo.e.addrTrace        = 0;	
+	m_plcInfo.e.dimTrace         = 0;
+	#endif
+
+
+	#if ( PLC_S_CHECKSTACK == 1 ) 
+	m_plcInfo.e.stackLimit       = PLC_STACK_LIMIT;
+	#else
+	m_plcInfo.e.stackLimit       = 0;
+	#endif
+
+	#if defined( PLC_AUXDATA_AREA )
+	m_plcInfo.e.addrDataAux      = (uint32_t)PLC_AUXDATA_AREA;
+	m_plcInfo.e.dimDataAux       = PLC_AUXDATA_SIZE;
+	#else
+	m_plcInfo.e.addrDataAux		 = 0;
+	m_plcInfo.e.dimDataAux       = 0;
+	#endif
+
+	#if defined( PLC_SYSTIMER_ADDR )
+	m_plcInfo.e.addrSysTimer     = (uint32_t)PLC_SYSTIMER_ADDR;
+	#endif
+
+	m_plcInfo.e.extFeatures      = PLCRT_EXT_SWITCHES;
+	m_plcInfo.e.addrTaskTable    = (uint32_t)PLC_TASK_DEFS;
+	m_plcInfo.e.numTaskRec       = PLC_NUM_TASKS;
+
+	sprintf( m_xml_info_stream, ALPLCINFO_XML_INFO_STREAM, ALPLC_TARGET_ID, ALPLC_TARGET_COMM );
+}
+#endif // PLC_RUNTIME_CONF
+
+/*----------------------------------------------------------------
+**
+**	CRC calculation function
+**
+**---------------------------------------------------------------*/
+
+static void InitCalcCRC16( uint16_t * crc )
+{
+	*crc = 0xFFFF;
+}
+
+static void CalcCRC16Buffer( PLC_ATTR_GENERIC_PTR( uint8_t ) data, uint32_t usDataLen, uint16_t * crc )
+{
+	PLC_ATTR_GENERIC_PTR( uint8_t ) p = data;
+	uint16_t	n;
+	uint16_t	b;
+	int16_t 	bbit;
+
+	for( n = 0; n < usDataLen; n ++, p ++ )
+	{
+		*crc = MAKE_WORD( LO_BYTE( (*crc) ) ^ *p, HI_BYTE( (*crc) ));
+
+		for( b = 0 ; b < 8; b ++ )
+		{
+			bbit = *crc & 1;
+			*crc = *crc >> 1;
+
+			if( bbit == 1 )
+				*crc = *crc ^ 0xA001;
+		}
+	}
+}
+
+static void CalcCRC16Uint32( uint32_t data, uint16_t * crc )
+{
+	CalcCRC16Buffer( (uint8_t *)&data, sizeof( uint32_t ), crc );
+}
+
+/*------------------------------------------------------
+**
+**  Memory ID of PLC area
+**
+**-----------------------------------------------------*/
+
+static uint16_t CalculateMemoryID( void )
+{
+	InitCalcCRC16( &m_exeMemoId );
+	CalcCRC16Uint32( (uint32_t)PLCRT_SWITCHES, &m_exeMemoId );
+
+	#if ( PLC_S_CODE_RELAT == 1 )
+	/*
+	 *	When the compiler is asked to generate position-independent code,
+	 *	the addresses of code areas are not included in the CRC computation.
+	 */
+	#else
+	CalcCRC16Uint32( (uint32_t)PLC_CODE_AREA1, &m_exeMemoId );
+	#endif	/* ( PLC_S_CODE_RELAT == 1 ) */
+
+	#if ( PLC_S_DATA_RELAT == 1 )
+	/*
+	 *	When the compiler is asked to access automatic variables indirectly,
+	 *	the addresses of the memory areas for the allocation of automatic
+	 *	variables are not included in the CRC computation.
+	 */
+	#else
+	CalcCRC16Uint32( (uint32_t)PLC_DATA_AREA, &m_exeMemoId );
+	#endif	/* ( PLC_S_DATA_RELAT == 1 ) */
+
+	CalcCRC16Uint32( (uint32_t)PLC_CODE_SIZE, &m_exeMemoId );
+	CalcCRC16Uint32( (uint32_t)PLC_DATA_SIZE, &m_exeMemoId );
+
+	#if ( PLC_S_CHECKSTACK == 1 ) 
+	CalcCRC16Uint32( (uint32_t)PLC_STACK_LIMIT, &m_exeMemoId );
+	#endif
+
+	CalcCRC16Uint32( (uint32_t)PLCRT_EXT_SWITCHES, &m_exeMemoId );
+
+	CalcCRC16Uint32( (uint32_t)PLC_NUM_TASKS, &m_exeMemoId );
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) PLC_TASK_DEFS,
+					 sizeof( PLCIEC_TASKDEF ) * PLC_NUM_TASKS, &m_exeMemoId );
+
+	#if defined( PLC_CODE_AREA2 )
+	#if ( PLC_S_CODE_RELAT == 1 )
+	/*
+	 *	When the compiler is asked to generate position-independent code,
+	 *	the addresses of code areas are not included in the CRC computation.
+	 */
+	#else
+	CalcCRC16Uint32( ( uint32_t )PLC_CODE_AREA2, &m_exeMemoId );
+	#endif	/* ( PLC_S_CODE_RELAT == 1 ) */
+	#endif	/* defined( PLC_CODE_AREA2 ) */
+
+	#if defined( PLC_BITDATA_AREA )
+	#if ( PLC_S_DATA_RELAT == 1 )
+	/*
+	 *	When the compiler is asked to access automatic variables indirectly,
+	 *	the addresses of the memory areas for the allocation of automatic
+	 *	variables are not included in the CRC computation.
+	 */
+	#else
+	CalcCRC16Uint32( ( uint32_t ) PLC_BITDATA_AREA, &m_exeMemoId );
+	#endif	/* ( PLC_S_DATA_RELAT == 1 ) */
+	CalcCRC16Uint32( (uint32_t) PLC_BITDATA_SIZE, &m_exeMemoId );
+	#endif	/* defined( PLC_BITDATA_AREA ) */
+
+	#if defined( PLC_RETDATA_AREA )
+	#if ( PLC_S_DATA_RELAT == 1 )
+	/*
+	 *	When the compiler is asked to access automatic variables indirectly,
+	 *	the addresses of the memory areas for the allocation of automatic
+	 *	variables are not included in the CRC computation.
+	 */
+	#else
+	CalcCRC16Uint32( ( uint32_t ) PLC_RETDATA_AREA, &m_exeMemoId );
+	#endif	/* ( PLC_S_DATA_RELAT == 1 ) */
+	CalcCRC16Uint32( PLC_RETDATA_SIZE, &m_exeMemoId );
+	#endif
+
+	#if defined( PLC_DEBUGDATA_AREA )
+	CalcCRC16Uint32( (uint32_t)PLC_DEBUGDATA_AREA, &m_exeMemoId );
+	CalcCRC16Uint32( PLC_DEBUGDATA_SIZE, &m_exeMemoId );
+	#endif
+
+	#if defined( PLC_TRACEDATA_AREA )
+	CalcCRC16Uint32( (uint32_t)PLC_TRACEDATA_AREA, &m_exeMemoId );
+	CalcCRC16Uint32( PLC_TRACEDATA_SIZE, &m_exeMemoId );
+	#endif
+
+	#if defined( PLC_AUXDATA_AREA )
+	CalcCRC16Uint32( (uint32_t)PLC_AUXDATA_AREA, &m_exeMemoId );
+	CalcCRC16Uint32( (uint32_t)PLC_AUXDATA_SIZE, &m_exeMemoId );
+	#endif
+
+	#if defined( PLC_SYSTIMER_ADDR )
+	CalcCRC16Uint32( (uint32_t)PLC_SYSTIMER_ADDR, &m_exeMemoId );
+	#endif
+
+	#if ( ( PLC_S_DYN_LINK_SUPPORT == 0 ) && ( PLC_S_DBACC_PATCH == 0 ) && ( PLC_S_DBACC_INDIR == 0 ) && ( PLC_S_FNACC_INDIR == 0 ) )
+
+	/* Data blocks table */
+	CalcCRC16Uint32( (uint32_t)PLC_NUM_DB, &m_exeMemoId );
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) PLC_DB_TAB,
+					 sizeof( PLCIEC_DBREC ) * PLC_NUM_DB, &m_exeMemoId );
+
+	#if ( PLC_S_REAL_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_DB_REAL_PLUGIN, &m_exeMemoId );
+	#if ( PLC_NUM_DB_REAL_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcReal_PluginDataBlockTable,
+					 sizeof( PLCIEC_DBREC ) * PLC_NUM_DB_REAL_PLUGIN, &m_exeMemoId );
+	#endif	/* ( PLC_NUM_DB_REAL_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) */
+
+	#if ( PLC_S_STRING_PLUGIN == 1 )
+	CalcCRC16Uint32( (uint32_t)PLC_NUM_DB_STRING_PLUGIN, &m_exeMemoId );
+	#if ( PLC_NUM_DB_STRING_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcString_PluginDataBlockTable,
+					 sizeof( PLCIEC_DBREC ) * PLC_NUM_DB_STRING_PLUGIN, &m_exeMemoId );
+	#endif	/* ( PLC_NUM_DB_STRING_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) */
+
+	#if ( PLC_S_MATH_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_DB_MATH_PLUGIN, &m_exeMemoId );
+	#if ( PLC_NUM_DB_MATH_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcMath_PluginDataBlockTable,
+					 sizeof( PLCIEC_DBREC ) * PLC_NUM_DB_MATH_PLUGIN, &m_exeMemoId );
+	#endif	/* ( PLC_NUM_DB_MATH_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) */
+
+	#endif	/* ( ( PLC_S_DYN_LINK_SUPPORT == 0 ) && ( PLC_S_DBACC_PATCH == 0 ) && ( PLC_S_DBACC_INDIR == 0 ) && ( PLC_S_FNACC_INDIR == 0 ) ) */
+
+	#if ( ( PLC_S_DYN_LINK_SUPPORT == 0 ) && ( PLC_S_DBACC_PATCH == 0 ) && ( PLC_S_DBACC_INDIR == 0 ) && ( PLC_S_FNACC_INDIR == 0 ) )
+
+	/* Embedded blocks table */
+	CalcCRC16Uint32( (uint32_t)PLC_NUM_FUNCTS, &m_exeMemoId );
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) PLC_FUNCT_TAB,
+					 sizeof( PLCIEC_FCNREC ) * PLC_NUM_FUNCTS, &m_exeMemoId );
+
+	#if ( PLC_S_REAL_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_FUNCTS_REAL_PLUGIN, &m_exeMemoId );
+	#if ( PLC_NUM_FUNCTS_REAL_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcReal_PluginFunctionTable,
+					 sizeof( PLCIEC_FCNREC ) * PLC_NUM_FUNCTS_REAL_PLUGIN, &m_exeMemoId );
+	#endif	/* ( PLC_NUM_FUNCTS_REAL_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) */
+
+	#if ( PLC_S_STRING_PLUGIN == 1 )
+	CalcCRC16Uint32( (uint32_t)PLC_NUM_FUNCTS_STRING_PLUGIN, &m_exeMemoId );
+	#if ( PLC_NUM_FUNCTS_STRING_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcString_PluginFunctionTable,
+					 sizeof( PLCIEC_FCNREC ) * PLC_NUM_FUNCTS_STRING_PLUGIN, &m_exeMemoId );
+	#endif	/* ( PLC_NUM_FUNCTS_STRING_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) */
+
+	#if ( PLC_S_MATH_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_FUNCTS_MATH_PLUGIN, &m_exeMemoId );
+	#if ( PLC_NUM_FUNCTS_MATH_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcMath_PluginFunctionTable,
+					 sizeof( PLCIEC_FCNREC ) * PLC_NUM_FUNCTS_MATH_PLUGIN, &m_exeMemoId );
+	#endif	/* ( PLC_NUM_FUNCTS_MATH_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) */
+
+	#endif	/* ( ( PLC_S_DYN_LINK_SUPPORT == 0 ) && ( PLC_S_DBACC_PATCH == 0 ) && ( PLC_S_DBACC_INDIR == 0 ) && ( PLC_S_FNACC_INDIR == 0 ) ) */
+
+	return m_exeMemoId;
+}
+
+
+/*------------------------------------------------------
+**
+**  Memory ID of PLC area full for dynamic link
+**
+**-----------------------------------------------------*/
+
+static uint16_t CalculateFullMemoryID( void )
+{
+	m_fullMemoId = m_exeMemoId;
+
+	CalcCRC16Uint32( (uint32_t)&m_taskBits, &m_fullMemoId );
+
+	#if ( PLC_S_DYN_LINK_SUPPORT == 1 )
+
+	#if ( PLC_S_DBACC_PATCH == 1 )
+
+	CalcCRC16Uint32( PLC_NUM_DB, &m_fullMemoId );
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) PLC_DB_TAB,
+					 sizeof( PLCIEC_DBREC ) * PLC_NUM_DB, &m_fullMemoId );
+
+	#if ( PLC_S_REAL_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_DB_REAL_PLUGIN, &m_fullMemoId );
+	#if ( PLC_NUM_DB_REAL_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcReal_PluginDataBlockTable,
+					 sizeof( PLCIEC_DBREC ) * PLC_NUM_DB_REAL_PLUGIN, &m_fullMemoId );
+	#endif	/* ( PLC_NUM_DB_REAL_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) */
+
+	#if ( PLC_S_STRING_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_DB_STRING_PLUGIN, &m_fullMemoId );
+	#if ( PLC_NUM_DB_STRING_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcString_PluginDataBlockTable,
+					 sizeof( PLCIEC_DBREC ) * PLC_NUM_DB_STRING_PLUGIN, &m_fullMemoId );
+	#endif	/* ( PLC_NUM_DB_STRING_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) */
+
+	#if ( PLC_S_MATH_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_DB_MATH_PLUGIN, &m_fullMemoId );
+	#if ( PLC_NUM_DB_MATH_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcMath_PluginDataBlockTable,
+					 sizeof( PLCIEC_DBREC ) * PLC_NUM_DB_MATH_PLUGIN, &m_fullMemoId );
+	#endif	/* ( PLC_NUM_DB_MATH_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) */
+
+	#endif	/* ( PLC_S_DBACC_PATCH == 1 ) */
+
+	#if ( PLC_S_FNACC_PATCH == 1 )
+
+	CalcCRC16Uint32( PLC_NUM_FUNCTS, &m_fullMemoId );
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) PLC_FUNCT_TAB,
+					 sizeof( PLCIEC_FCNREC ) * PLC_NUM_FUNCTS, &m_fullMemoId );
+
+	#if ( PLC_S_REAL_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_FUNCTS_REAL_PLUGIN, &m_fullMemoId );
+	#if ( PLC_NUM_FUNCTS_REAL_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcReal_PluginFunctionTable,
+					 sizeof( PLCIEC_FCNREC ) * PLC_NUM_FUNCTS_REAL_PLUGIN, &m_fullMemoId );
+	#endif	/* ( PLC_NUM_FUNCTS_REAL_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) */
+
+	#if ( PLC_S_STRING_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_FUNCTS_STRING_PLUGIN, &m_fullMemoId );
+	#if ( PLC_NUM_FUNCTS_STRING_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcString_PluginFunctionTable,
+					 sizeof( PLCIEC_FCNREC ) * PLC_NUM_FUNCTS_STRING_PLUGIN, &m_fullMemoId );
+	#endif	/* ( PLC_NUM_FUNCTS_STRING_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) */
+
+	#if ( PLC_S_MATH_PLUGIN == 1 )
+	CalcCRC16Uint32( PLC_NUM_FUNCTS_MATH_PLUGIN, &m_fullMemoId );
+	#if ( PLC_NUM_FUNCTS_MATH_PLUGIN > 0 )
+	CalcCRC16Buffer( ( PLC_ATTR_CONST_PTR( uint8_t ) ) AlPlcMath_PluginFunctionTable,
+					 sizeof( PLCIEC_FCNREC ) * PLC_NUM_FUNCTS_MATH_PLUGIN, &m_fullMemoId );
+	#endif	/* ( PLC_NUM_FUNCTS_MATH_PLUGIN > 0 ) */
+	#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) */
+
+	#endif	/* ( PLC_S_FNACC_PATCH == 1 ) */
+
+	#endif	/* ( PLC_S_DYN_LINK_SUPPORT == 1 ) */
+
+	#if ( PLC_CONF_RELOCATABLE == 1 )
+
+	#if ( PLC_S_DATA_RELAT == 1 )
+	/*
+	 *	PLC data is accessed by applying an offset to a base address: these
+	 *	base addresses are relevant in the computation of the full memo ID.
+     */
+	CalcCRC16Uint32( ALPLCDYNADDRS.dataArea, &m_fullMemoId );
+	CalcCRC16Uint32( ALPLCDYNADDRS.retainDataArea, &m_fullMemoId );
+	CalcCRC16Uint32( ALPLCDYNADDRS.bitDataArea, &m_fullMemoId );
+	#endif
+
+	#if ( PLC_S_CODE_RELAT == 1 )
+	/*
+	 *	PLC code is accessed by applying an offset to a base address: this
+	 *	base address is relevant in the computation of the full memo ID.
+	 */
+	CalcCRC16Uint32( ALPLCDYNADDRS.codeArea, &m_fullMemoId );
+	#endif
+
+	#if ( PLC_S_DBACC_INDIR == 1 )
+	/*
+	 *	Data block data is accessed through a pointer table: both the address
+	 *	of the pointer table and the values of the pointers are relevant
+	 *	in the computation of the full memo ID.
+     */
+	CalcCRC16Uint32( ALPLCDYNADDRS.numberOfDataBlocks, &m_fullMemoId );
+	CalcCRC16Uint32( ALPLCDYNADDRS.dataBlockPointerTable, &m_fullMemoId );
+	CalcCRC16Buffer( ( PLC_ATTR_NON_CONST_PTR( uint8_t ) ) m_frmwDataBlockPtrTab,
+					 sizeof( uint32_t ) * ALPLCDYNADDRS.numberOfDataBlocks, &m_fullMemoId );
+	#endif
+
+	#if ( PLC_S_FNACC_INDIR == 1 )
+	/*
+	 *	Embedded functions are called through a pointer table: both the address
+	 *	of the pointer table and the values of the pointers are relevant
+	 *	in the computation of the full memo ID.
+	 */
+	CalcCRC16Uint32( ALPLCDYNADDRS.numberOfEmbeddedBlocks, &m_fullMemoId );
+	CalcCRC16Uint32( ALPLCDYNADDRS.embeddedBlockPointerTable, &m_fullMemoId );
+	CalcCRC16Buffer( ( PLC_ATTR_NON_CONST_PTR( uint8_t ) ) m_frmwFunctionPtrTab,
+					 sizeof( uint32_t ) * ALPLCDYNADDRS.numberOfEmbeddedBlocks, &m_fullMemoId );
+	#endif
+
+	#endif	/* ( PLC_CONF_RELOCATABLE == 1 ) */
+
+	return m_fullMemoId;
+}
+
+/*------------------------------------------------------
+**
+**  PLC checksum calculation
+**
+**-----------------------------------------------------*/
+
+#if ( PLC_S_CHECKSUM == 1 )
+static uint32_t CalculatePlcChecksum( void )
+{
+	uint32_t calc_chk;
+	uint32_t n;
+	uint8_t PLC_ATTR_CODE * pCode;
+
+	/*	Reset checksum and init code pointer	*/
+	calc_chk = 0;
+	pCode = (uint8_t PLC_ATTR_CODE *)m_actualCode;
+
+	/*	Checksum calculation */
+	for( n = 0; n < m_actualCode->fileSize; n ++ )
+		calc_chk += PLC_M_GET_CODE_BYTE( ( uint32_t ) pCode + n );
+
+	/*	Subtract checksum value	*/
+	pCode = (uint8_t PLC_ATTR_CODE *)&m_actualCode->chksum;
+	calc_chk -= pCode[0];
+	calc_chk -= pCode[1];
+	calc_chk -= pCode[2];
+	calc_chk -= pCode[3];
+
+	return calc_chk;
+}
+#endif
+
+/*------------------------------------------------------
+**
+**  Source code checksum calculation
+**
+**-----------------------------------------------------*/
+
+#if ( PLC_S_SOURCE_CODE_AREA == 1 )
+static uint32_t CalculateSourceChecksum( void )
+{
+	uint32_t calc_chk;
+	uint32_t n;
+	uint8_t PLC_ATTR_SOURCE * pSource;
+
+	/*	Reset checksum and init code pointer	*/
+	calc_chk = 0;
+	pSource  = (uint8_t PLC_ATTR_CODE *)m_actualSource;
+
+	/*	Checksum calculation */
+	for( n = 0; n < m_actualSource->size; n ++ )
+		calc_chk += PLC_M_GET_SOURCE_BYTE( (uint32_t)pSource + n );
+
+	/*	Subtract checksum value	*/
+	pSource = (uint8_t PLC_ATTR_CODE *)&m_actualSource->chksum;
+	calc_chk -= pSource[0];
+	calc_chk -= pSource[1];
+	calc_chk -= pSource[2];
+	calc_chk -= pSource[3];
+
+	return calc_chk;
+}
+#endif // ( PLC_S_SOURCE_CODE_AREA == 1 )
+
+/*------------------------------------------------------
+**
+**  PLC area reset procedure and initialization
+**
+**-----------------------------------------------------*/
+
+static void ResetPlcIEC( void )
+{
+	uint16_t k;
+
+	/*  PLC ok flag default status  */
+	PLC_V_STATUS_OK = FALSE;
+
+	/*	Stop the PLC task execution	*/
+	#if defined( PLC_F_STOP_TASKS )
+	PLC_F_STOP_TASKS;
+	#endif
+
+	/*  PLC data areas reset  */
+	PLC_F_ZERODATA_AREA;
+
+	#if defined( PLC_F_ZERODATABIT_AREA )
+	PLC_F_ZERODATABIT_AREA;
+	#endif
+
+	#if defined( PLC_F_ZEROAUXDATA_AREA )
+	PLC_F_ZEROAUXDATA_AREA;
+	#endif
+
+	/*  Reset of PLC function pointers  */
+	for( k = 0; k < PLC_NUM_TASKS; k ++ )
+	{
+		/*  Reset of PLC function pointers  */
+		*(PLC_TASK_TAB[ k ].fnzExe)  = (void PLC_ATTR_CODE *)fnz_nop;
+		*(PLC_TASK_TAB[ k ].fnzInit) = (void PLC_ATTR_CODE *)fnz_nop;
+
+		/*	Optional PLC function pointers	*/
+		if ( PLC_TASK_TAB[ k ].fnzInput != NULL )
+			*(PLC_TASK_TAB[ k ].fnzInput) = (void PLC_ATTR_CODE *)fnz_nop;
+
+		if ( PLC_TASK_TAB[ k ].fnzOutput != NULL )
+			*(PLC_TASK_TAB[ k ].fnzOutput) = (void PLC_ATTR_CODE *)fnz_nop;
+
+		if ( PLC_TASK_TAB[ k ].taskValid != NULL )
+            *(PLC_TASK_TAB[ k ].taskValid) = FALSE;
+
+		/* Program name */
+		if( PLC_TASK_TAB[ k ].prgName != NULL )
+		{
+			*( PLC_TASK_TAB[ k ].prgName ) = NULL;
+		}
+	}
+
+	/*	Reset application version info	*/
+	#if ( PLC_S_INFOHEADER != 0 )
+	PLC_V_APPVER_MAJOR = 0xFFFF;
+	PLC_V_APPVER_MINOR = 0xFFFF;
+
+	#if defined( PLC_V_APPVER_BUILD )
+	PLC_V_APPVER_BUILD = 0;
+	#endif	/* defined( PLC_V_APPVER_BUILD ) */
+
+	for( k = 0; k < DIM_APP_NAME; k++ )
+	{
+		PLC_V_APPVER_NAME[ k ] = ' ';
+	}
+	#endif
+}
+
+/*----------------------------------------------
+**
+** Response value of download PLC request
+**
+**---------------------------------------------*/
+
+static void DownloadRequestResponse( void )
+{
+	/*	If not hot-swap PLC, the system reset is always required */
+	#if( PLC_S_HOTSWAP == 1 )
+
+    #if defined( PLC_F_SWAPCHECK )
+	int16_t nWord;
+	int16_t nBit;
+	uint16_t n;
+	uint16_t resp;
+    #endif  /* defined( PLC_F_SWAPCHECK ) */
+
+	/*	Check for identical code ID	*/
+	if(( m_taskBits.modId != 0 ) && ( m_taskBits.modId == PLC_R_APPL_ID ))
+	{
+			/*	Hot swap permitted	*/
+		PLC_R_DOWNL_RESP = SWP_OK;
+
+			/*  Check every bit associated to the tasks	*/
+		#if defined( PLC_F_SWAPCHECK )
+		for( n = 0; n < PLC_NUM_TASKS; n ++ )
+		{
+			/*  Bit coordinates	*/
+			nWord = n / 32;
+			nBit  = n % 32;
+
+            /*	Ask system firmware to check for task modification acknowledge */
+            resp = PLC_F_SWAPCHECK( n, ( ( m_taskBits.taskBits[ nWord ] & ( 1 << nBit ) ) != 0 ) );
+            if( resp == SWP_ALARM )
+            {
+                PLC_R_DOWNL_RESP = SWP_ALARM;
+                break;
+            }
+            else if( resp == SWP_STANBY )
+            {
+                PLC_R_DOWNL_RESP = SWP_STANBY;
+            }
+		}
+		#endif  /* defined( PLC_F_SWAPCHECK ) */
+
+		return;
+	}
+	#endif /* ( PLC_S_HOTSWAP == 1 ) */
+
+	/*  Check for system download lock condition  */
+	#if defined( PLC_F_SYSLOCK_REQ )
+	if( PLC_F_SYSLOCK_REQ() )
+		PLC_R_DOWNL_RESP = SWP_STANBY;
+	else
+		PLC_R_DOWNL_RESP = SWP_ALARM;
+	#else
+	PLC_R_DOWNL_RESP = SWP_ALARM;
+	#endif
+}
+
+/*------------------------------------------------------
+**
+**  Function that manages the source code
+**
+**-----------------------------------------------------*/
+
+#if ( PLC_S_SOURCE_CODE_AREA == 1 )
+static bool_t ProcessSourceCodeArea()
+{
+	uint32_t chksum;
+
+	/*	Set source area pointer */
+	m_actualSource = (CIMG_SOURCE_HEAD PLC_ATTR_SOURCE *) PLC_F_GET_SOURCE_HEADER;
+
+	/*	Check for header info */
+	if( m_actualSource->Id != CIMG_IDSRC )
+	{
+		m_actualSource = NULL;
+		return FALSE;
+	}
+
+	/*	Checksum calculation and verification	*/
+	chksum = PLC_F_CALCULATE_SOURCE_CHECKSUM;
+	if( chksum != m_actualSource->chksum )
+	{
+		m_actualSource = NULL;
+		return FALSE;
+	}
+
+	return TRUE;
+}
+#endif
+
+/*-----------------------------------------------------------------------------
+**
+**
+**	PUBLIC FUNCTIONS DEFINITIONS
+**
+**
+**----------------------------------------------------------------------------*/
+
+#if defined( PLC_CONF_SYNC_SWAP )
+void ALPLCSWAP( void )
+#else
+static void SwapPlc( void )
+#endif
+{
+	uint32_t k;
+	CIMG_TASK_EX PLC_ATTR_CODE* pTask = NULL;
+	uint16_t n;
+	PLC_ATTR_PLCIEC_TASKS_PTR tskIEC = NULL;
+	uint32_t actualCodeArea = ( uint32_t ) m_actualCode;
+
+	/* Iterate over the task table */
+	for( k = 0; k < PLC_NUM_TASKS; k++ )
+	{
+		/*  Pointer to PLC taskcontrol */
+		tskIEC = &PLC_TASK_TAB[ k ];
+
+		/* Check if the PLC application contains code to be executed by the k-th task */
+		pTask = ( CIMG_TASK_EX PLC_ATTR_CODE* )( actualCodeArea + sizeof( CIMG_HEAD_EX ) );
+		for( n = 0; n < m_actualCode->numTask; n++, pTask++ )
+		{
+			if( pTask->taskId == k )
+			{
+				/* Found code to be executed by the k-th task */
+				break;
+			}
+		}
+
+		#if defined( PLC_F_INTERRUPTDISABLE )
+		/*  Protect area during swap */
+		PLC_F_INTERRUPTDISABLE;
+		#endif
+
+		/* If no code to be executed by the k-th task has been found,... */
+		if( n == m_actualCode->numTask )
+		{
+			/* ...reset the k-th task */
+
+			*( tskIEC->fnzExe ) = ( void PLC_ATTR_CODE* ) fnz_nop;
+			*( tskIEC->fnzInit ) = ( void PLC_ATTR_CODE* ) fnz_nop;
+
+			if( tskIEC->fnzInput != NULL )
+			{
+				*( tskIEC->fnzInput ) = ( void PLC_ATTR_CODE* ) fnz_nop;
+			}
+
+			if( tskIEC->fnzOutput != NULL )
+			{
+				*( tskIEC->fnzOutput ) = ( void PLC_ATTR_CODE* ) fnz_nop;
+			}
+
+    		if ( tskIEC->taskValid != NULL )
+            {
+                *(tskIEC->taskValid) = FALSE;
+            }
+
+			/* Program name */
+			if( tskIEC->prgName != NULL )
+			{
+				*( tskIEC->prgName ) = NULL;
+			}
+		}
+		else
+		{
+			/* Address of exec functions */
+			*( tskIEC->fnzExe ) = PLC_CALCCODEADDR( pTask->offTask + actualCodeArea );
+			*( tskIEC->fnzInit ) = PLC_CALCCODEADDR( pTask->offInit + actualCodeArea );
+
+			/* Optional PLC function pointers */
+			if( tskIEC->fnzInput != NULL )
+			{
+				*( tskIEC->fnzInput ) = PLC_CALCCODEADDR( pTask->offInp + actualCodeArea );
+			}
+
+			if( tskIEC->fnzOutput != NULL )
+			{
+				*( tskIEC->fnzOutput ) = PLC_CALCCODEADDR( pTask->offOut + actualCodeArea );
+			}
+
+    		if ( tskIEC->taskValid != NULL )
+            {
+                *(tskIEC->taskValid) = TRUE;
+            }
+
+			/* Exec of init functions if needed */
+			if( PLC_R_DOWNL_RESP == SWP_ALARM || PLC_R_DOWNL_RESP == SWP_INIT )
+			{
+				*tskIEC->rqInit = TRUE;
+			}
+
+			/* Program name */
+			if( tskIEC->prgName != NULL )
+			{
+				*( tskIEC->prgName ) = ( char_t* )( pTask->adrProgName + actualCodeArea );
+			}
+		}
+
+		#if defined( PLC_F_INTERRUPTENABLE )
+		PLC_F_INTERRUPTENABLE;
+		#endif
+	}
+}
+
+/*------------------------------------------------------
+**
+**  Set up of PLC working environment
+**
+**-----------------------------------------------------*/
+
+bool_t ALPLCINIT( void )
+{
+	#if defined(PLC_CODE_FILE_SAVE_CONF) || defined(PLC_SOURCE_FILE_SAVE_CONF)
+	uint32_t loadAddr;
+	uint32_t fileSize;
+	#endif
+
+	#if ( ( PLC_S_DBACC_INDIR == 1 ) || ( PLC_S_FNACC_INDIR == 1 ) )
+	uint32_t i;
+	#if	( PLC_CONF_PLUG_INS == 1 )
+	uint32_t j;
+	#endif	/* ( PLC_CONF_PLUG_INS == 1 ) */
+	#endif	/* ( ( PLC_S_DBACC_INDIR == 1 ) || ( PLC_S_FNACC_INDIR == 1 ) ) */
+
+	#if defined( PLC_RUNTIME_CONF )
+	RuntimeConfiguration();
+	#endif
+
+	#if ( PLC_CONF_RELOCATABLE == 1 )
+
+	#if ( PLC_S_CODE_RELAT == 1 )
+	ALPLCDYNADDRS.codeArea = ( uint32_t ) PLC_CODE_AREA1;
+	#else
+	ALPLCDYNADDRS.codeArea = 0;
+	#endif
+
+	#if ( PLC_S_DATA_RELAT == 1 )
+	ALPLCDYNADDRS.dataArea = ( uint32_t ) PLC_DATA_AREA;
+
+	#if defined( PLC_BITDATA_AREA )
+	ALPLCDYNADDRS.bitDataArea = ( uint32_t ) PLC_BITDATA_AREA;
+	#else
+	ALPLCDYNADDRS.bitDataArea = 0;
+	#endif
+
+	#if defined( PLC_RETDATA_AREA )
+	ALPLCDYNADDRS.retainDataArea = ( uint32_t ) PLC_RETDATA_AREA;
+	#else
+	ALPLCDYNADDRS.retainDataArea = 0;
+	#endif
+
+	#if defined( PLC_AUXDATA_AREA )
+	ALPLCDYNADDRS.auxDataArea = ( uint32_t ) PLC_AUXDATA_AREA;
+	#else
+	ALPLCDYNADDRS.auxDataArea = 0;
+	#endif
+
+	#else
+	ALPLCDYNADDRS.dataArea = 0;
+	ALPLCDYNADDRS.bitDataArea = 0;
+	ALPLCDYNADDRS.retainDataArea = 0;
+	ALPLCDYNADDRS.auxDataArea = 0;
+	#endif // ( PLC_S_DATA_RELAT == 1 )
+
+	#if ( PLC_S_DBACC_INDIR == 1 )
+	ALPLCDYNADDRS.numberOfDataBlocks = ( uint32_t ) DATA_BLOCK_PTR_TAB_SIZE;
+	ALPLCDYNADDRS.dataBlockPointerTable = ( uint32_t ) m_runDataBlockPtrTab;
+	#else
+	ALPLCDYNADDRS.numberOfDataBlocks = 0;
+	ALPLCDYNADDRS.dataBlockPointerTable = 0;
+	#endif
+
+	#if ( PLC_S_FNACC_INDIR == 1 )
+	ALPLCDYNADDRS.numberOfEmbeddedBlocks = ( uint32_t ) FUNCTION_PTR_TAB_SIZE;
+	ALPLCDYNADDRS.embeddedBlockPointerTable = ( uint32_t ) m_runFunctionPtrTab;
+	#else
+	ALPLCDYNADDRS.numberOfEmbeddedBlocks = 0;
+	ALPLCDYNADDRS.embeddedBlockPointerTable = 0;
+	#endif
+
+	#endif // ( PLC_CONF_RELOCATABLE == 1 )
+
+	#if ( PLC_S_DBACC_INDIR == 1 )
+	/*	Initialize the pointer table for indirect access to data blocks	*/
+
+	for( i = 0; i < PLC_NUM_DB; i++ )
+	{
+		PLC_ATTR_PLCIEC_DBREC* dataBlock = &( PLC_DB_TAB[ i ] );
+		m_frmwDataBlockPtrTab[ i ] = dataBlock->addr;
+		m_runDataBlockPtrTab[ i ] = dataBlock->addr;
+		dataBlock->addr = i * ARRELSIZE( m_frmwDataBlockPtrTab );
+	}
+
+	#if ( PLC_S_REAL_PLUGIN == 1 ) && ( PLC_NUM_DB_REAL_PLUGIN > 0 )
+	for( j = 0; j < PLC_NUM_DB_REAL_PLUGIN; j++, i++ )
+	{
+		PLC_ATTR_PLCIEC_DBREC* dataBlock = &( AlPlcReal_PluginDataBlockTable[ j ] );
+		m_frmwDataBlockPtrTab[ i ] = dataBlock->addr;
+		m_runDataBlockPtrTab[ i ] = dataBlock->addr;
+		dataBlock->addr = i * ARRELSIZE( m_frmwDataBlockPtrTab );
+	}
+	#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) && ( PLC_NUM_DB_REAL_PLUGIN > 0 ) */
+
+	#if ( PLC_S_STRING_PLUGIN == 1 ) && ( PLC_NUM_DB_STRING_PLUGIN > 0 )
+	for( j = 0; j < PLC_NUM_DB_STRING_PLUGIN; j++, i++ )
+	{
+		PLC_ATTR_PLCIEC_DBREC* dataBlock = &( AlPlcString_PluginDataBlockTable[ j ] );
+		m_frmwDataBlockPtrTab[ i ] = dataBlock->addr;
+		m_runDataBlockPtrTab[ i ] = dataBlock->addr;
+		dataBlock->addr = i * ARRELSIZE( m_frmwDataBlockPtrTab );
+	}
+	#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) && ( PLC_NUM_DB_STRING_PLUGIN > 0 ) */
+
+	#if ( PLC_S_MATH_PLUGIN == 1 ) && ( PLC_NUM_DB_MATH_PLUGIN > 0 )
+	for( j = 0; j < PLC_NUM_DB_MATH_PLUGIN; j++, i++ )
+	{
+		PLC_ATTR_PLCIEC_DBREC* dataBlock = &( AlPlcMath_PluginDataBlockTable[ j ] );
+		m_frmwDataBlockPtrTab[ i ] = dataBlock->addr;
+		m_runDataBlockPtrTab[ i ] = dataBlock->addr;
+		dataBlock->addr = i * ARRELSIZE( m_frmwDataBlockPtrTab );
+	}
+	#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) && ( PLC_NUM_DB_MATH_PLUGIN > 0 ) */
+
+	#endif
+
+	#if ( PLC_S_FNACC_INDIR == 1 )
+	/*	Initialize the pointer table for indirect access to functions	*/
+
+	for( i = 0; i < PLC_NUM_FUNCTS; i++ )
+	{
+		PLC_ATTR_PLCIEC_FCNREC* function = &( PLC_FUNCT_TAB[ i ] );
+		m_frmwFunctionPtrTab[ i ] = function->addr;
+		m_runFunctionPtrTab[ i ] = (uint32_t)&fnz_nop;
+		function->addr = i * ARRELSIZE( m_frmwFunctionPtrTab );
+	}
+
+	#if ( PLC_S_REAL_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_REAL_PLUGIN > 0 )
+	for( j = 0; j < PLC_NUM_FUNCTS_REAL_PLUGIN; j++, i++ )
+	{
+		PLC_ATTR_PLCIEC_FCNREC* function = &( AlPlcReal_PluginFunctionTable[ j ] );
+		m_frmwFunctionPtrTab[ i ] = function->addr;
+		m_runFunctionPtrTab[ i ] = (uint32_t)&fnz_nop;
+		function->addr = i * ARRELSIZE( m_frmwFunctionPtrTab );
+	}
+	#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_REAL_PLUGIN > 0 ) */
+
+	#if ( PLC_S_STRING_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_STRING_PLUGIN > 0 )
+	for( j = 0; j < PLC_NUM_FUNCTS_STRING_PLUGIN; j++, i++ )
+	{
+		PLC_ATTR_PLCIEC_FCNREC* function = &( AlPlcString_PluginFunctionTable[ j ] );
+		m_frmwFunctionPtrTab[ i ] = function->addr;
+		m_runFunctionPtrTab[ i ] = (uint32_t)&fnz_nop;
+		function->addr = i * ARRELSIZE( m_frmwFunctionPtrTab );
+	}
+	#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_STRING_PLUGIN > 0 ) */
+
+	#if ( PLC_S_MATH_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_MATH_PLUGIN > 0 )
+	for( j = 0; j < PLC_NUM_FUNCTS_MATH_PLUGIN; j++, i++ )
+	{
+		PLC_ATTR_PLCIEC_FCNREC* function = &( AlPlcMath_PluginFunctionTable[ j ] );
+		m_frmwFunctionPtrTab[ i ] = function->addr;
+		m_runFunctionPtrTab[ i ] = (uint32_t)&fnz_nop;
+		function->addr = i * ARRELSIZE( m_frmwFunctionPtrTab );
+	}
+	#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) && ( PLC_NUM_FUNCTS_MATH_PLUGIN > 0 ) */
+
+	#endif
+
+	/*	Address of PLC info area */
+	PLC_R_INFOAREA = (uint32_t)&m_plcInfo;
+
+	/*  Target memory ID */
+	m_exeMemoId = PLC_F_CALCULATE_EXEMEMOID;
+	PLC_R_MEMO_ID = m_exeMemoId;
+	
+	/*  Target full memory ID */
+	m_fullMemoId = PLC_F_CALCULATE_FULLMEMOID;
+	PLC_R_FULLMEMO_ID = m_fullMemoId;
+
+	/*  Initial status for the PLC download area  */
+	PLC_R_DOWNLADDR = (uint32_t)PLC_CODE_AREA1;
+
+	/*	Alarm request  */
+	PLC_R_DOWNL_RESP = SWP_INIT;
+
+	/*	Invalidate code area */
+	m_actualCode = NULL;
+
+	/*  PLC area reset */
+	ResetPlcIEC();
+
+	/*	Load PLC from disk into execution area	*/
+	#if defined( PLC_CODE_FILE_SAVE_CONF )
+	if( PLC_F_READ_INIT )
+	{
+		/*	Read header of saved PLC code */
+		if( PLC_F_READ( &loadAddr, OFFSETOF( CIMG_HEAD_EX, execAddr ), sizeof( uint32_t )) &&
+			PLC_F_READ( &fileSize, OFFSETOF( CIMG_HEAD_EX, fileSize ), sizeof( uint32_t )))
+		{
+			/*	Copy the code into the proper execution area */
+			#if( PLC_S_HOTSWAP != 0 )
+			if( loadAddr == (uint32_t)PLC_CODE_AREA1 )
+				PLC_F_READ( PLC_CODE_AREA1, 0, fileSize );
+			else if( loadAddr == (uint32_t)PLC_CODE_AREA2 )
+				PLC_F_READ( PLC_CODE_AREA2, 0, fileSize );
+			#else
+			PLC_F_READ( PLC_CODE_AREA1, 0, fileSize );
+			#endif
+		}
+
+		PLC_F_READ_END;
+	}
+	#endif	/* PLC_CODE_FILE_SAVE_CONF */
+
+	#if ( PLC_S_SOURCE_CODE == 1 ) || ( PLC_S_SOURCE_CODE_AREA == 1 )
+
+	/*	Source code area pointer */
+	m_actualSource = NULL;
+
+	/*	Load PLC source code from disk source area	*/
+	#if defined( PLC_SOURCE_FILE_SAVE_CONF )
+	
+	if( PLC_F_READSRC_INIT )
+	{
+		/*	Read header of source code then read the whole file */
+		if( PLC_F_READSRC( &fileSize, OFFSETOF( CIMG_SOURCE_HEAD, size ), sizeof( uint32_t )))
+		{
+			/*	Reading of the source file */
+			if( PLC_F_READSRC( PLC_SOURCE_AREA, 0, fileSize ))
+			{
+				/*	Process data in the source area */
+				ProcessSourceCodeArea();
+			}
+		}
+		PLC_F_READSRC_END;
+	}
+	
+	#else	/* PLC_SOURCE_FILE_SAVE_CONF */
+
+	/*	Process data in the source area */
+	ProcessSourceCodeArea();
+	
+	#endif	/* PLC_S_SOURCE_CODE_AREA */
+
+	#endif	/* ( PLC_S_SOURCE_CODE == 1 ) || ( PLC_S_SOURCE_CODE_AREA == 1 ) */
+
+	return TRUE;
+}
+
+/*------------------------------------------------------
+**
+**  Function that load PLC from memory
+**
+**-----------------------------------------------------*/
+
+bool_t ALPLCLOAD( void )
+{
+	uint16_t n;
+	uint32_t actualCodeArea = 0;
+	CIMG_TASK_EX PLC_ATTR_CODE * pTask;
+	PlcCodeFuncPtr globalInit;
+
+	#if ( PLC_S_CHECKSUM == 1 )
+	uint32_t chksum;
+	#endif
+
+	#if ( PLC_S_INFOHEADER != 0 )
+	CIMG_HEAD_INFO PLC_ATTR_CODE*	pVersionInfo;
+	#endif
+
+	/*  Reset version for active PLC */
+	PLC_R_APPL_ID = 0;
+
+	/*	Different management for hot-swap runtime (RAM code) */
+	#if( PLC_S_HOTSWAP != 0 )
+
+	/*	Check for a valid area with PLC code */
+	if( ((CIMG_HEAD_EX PLC_ATTR_CODE *)PLC_CODE_AREA1)->Id == CIMG_IDMOD_EX &&
+		((CIMG_HEAD_EX PLC_ATTR_CODE *)PLC_CODE_AREA1)->execAddr == (uint32_t)PLC_CODE_AREA1 &&
+		( m_reloadCurrentApplication ?
+		  m_actualCode == ( CIMG_HEAD_EX PLC_ATTR_CODE* ) PLC_CODE_AREA1 :
+		  m_actualCode != ( CIMG_HEAD_EX PLC_ATTR_CODE* ) PLC_CODE_AREA1 ) )
+	{
+		/*	Address of current code area	*/
+		m_actualCode = (CIMG_HEAD_EX PLC_ATTR_CODE *)PLC_CODE_AREA1;
+		PLC_R_DOWNLADDR = (uint32_t)PLC_CODE_AREA2;
+
+		/*	Actual code area is code area #1	*/
+		#if ( PLC_S_CODE_RELAT == 1 )
+		ALPLCDYNADDRS.codeArea = ( uint32_t ) PLC_CODE_AREA1;
+		#endif
+	}
+	else if( ((CIMG_HEAD_EX PLC_ATTR_CODE *)PLC_CODE_AREA2)->Id == CIMG_IDMOD_EX &&
+			 ((CIMG_HEAD_EX PLC_ATTR_CODE *)PLC_CODE_AREA2)->execAddr == (uint32_t)PLC_CODE_AREA2 &&
+			 ( m_reloadCurrentApplication ?
+			   m_actualCode == ( CIMG_HEAD_EX PLC_ATTR_CODE* ) PLC_CODE_AREA2 :
+			   m_actualCode != ( CIMG_HEAD_EX PLC_ATTR_CODE* ) PLC_CODE_AREA2 ) )
+	{
+		m_actualCode = (CIMG_HEAD_EX PLC_ATTR_CODE *)PLC_CODE_AREA2;
+		PLC_R_DOWNLADDR = (uint32_t)PLC_CODE_AREA1;
+
+		/*	Actual code area is code area #2	*/
+		#if ( PLC_S_CODE_RELAT == 1 )
+		ALPLCDYNADDRS.codeArea = ( uint32_t ) PLC_CODE_AREA2;
+		#endif
+	}
+	else
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_INVMOD;
+		return FALSE;
+	}
+	#else // PLC_S_HOTSWAP != 0
+
+	/*	Check for valid code into the only one PLC area*/
+	if( ((CIMG_HEAD_EX PLC_ATTR_CODE *)PLC_CODE_AREA1)->Id == CIMG_IDMOD_EX )
+	{
+		m_actualCode = (CIMG_HEAD_EX PLC_ATTR_CODE *)PLC_CODE_AREA1;
+	}
+	else
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_INVMOD;
+		return FALSE;
+	}
+	#endif // PLC_S_HOTSWAP != 0
+
+	/*	Raw byte address of active PLC area */
+	actualCodeArea = ( uint32_t ) m_actualCode;
+
+	/*  Check number of task */
+	if( m_actualCode->numTask > PLC_NUM_TASKS )
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_NTASK;
+		return FALSE;
+	}
+
+	/*  Check firmware version */
+	if( m_actualCode->targId != m_plcInfo.t.targId )
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_TARGID;
+		return FALSE;
+	}
+
+	/*  Check memory ID */
+	if ( m_actualCode->memoId != m_exeMemoId )
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_MEMID;
+		return FALSE;
+	}
+
+	/*	PLC checksum calculation and verify	*/
+	#if ( PLC_S_CHECKSUM == 1 )
+	chksum = CalculatePlcChecksum();
+	if( chksum != m_actualCode->chksum )
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_PLCCHKSUM;
+		return FALSE;
+	}
+	#endif
+
+	/* Stop PLC tasks  */
+	if( PLC_R_DOWNL_RESP == SWP_ALARM )
+	{
+		/*	Reset the PLC environment	*/
+		ResetPlcIEC();
+
+		/*  Reset rit-var area only if rebuild-all + download */
+		#if defined( PLC_RETDATA_AREA )
+		PLC_F_ZERODATARET_AREA;
+		#endif
+	}
+
+		/*	Embedded data blocks table relocation */
+	#if( PLC_S_DBACC_INDIR == 1 )
+	if( ! CheckEmbeddedDataBlockTabIndir( ( uint8_t PLC_ATTR_CODE* ) actualCodeArea ) )
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_EMBEDDEDDBRELOC_FAILED;
+		return FALSE;
+	}
+	#endif // PLC_S_DBACC_INDIR == 1
+
+		/*	Embedded functions table relocation */
+	#if( PLC_S_FNACC_INDIR == 1 )
+	if( ! CheckEmbeddedFuncTabIndir( ( uint8_t PLC_ATTR_CODE* ) actualCodeArea ) )
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_EMBEDDEDFNRELOC_FAILED;
+		return FALSE;
+	}
+	#endif // PLC_S_FNACC_INDIR == 1
+
+		/*	Dynamic link load	*/
+	#if (( PLC_S_DYN_LINK_SUPPORT == 1 ) && (( PLC_S_DBACC_PATCH == 1 ) || ( PLC_S_FNACC_PATCH == 1 )))
+	#if( PLC_S_DBACC_PATCH == 1 )
+	if( ! PatchDbCode( ( uint8_t PLC_ATTR_CODE* ) actualCodeArea ) )
+	{
+		ResetPlcIEC();
+		//	Error code was set in PatchDbCode
+		return FALSE;
+	}
+	#endif // PLC_S_DBACC_PATCH == 1
+
+	#if( PLC_S_FNACC_PATCH == 1 )
+	if( ! PatchFnCode( ( uint8_t PLC_ATTR_CODE* ) actualCodeArea ) )
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_FNPATCH_FAILED;
+		return FALSE;
+	}
+	#endif // PLC_S_FNACC_PATCH == 1
+
+	#if ( PLC_S_CHECKSUM == 1 )
+	/*	Recalculate PLC checksum and store into code (RAM code assumed) */
+	m_actualCode->chksum = 0;
+	m_actualCode->chksum = CalculatePlcChecksum();
+	#endif	/* ( PLC_S_CHECKSUM == 1 ) */
+
+	#endif // (( PLC_S_DYN_LINK_SUPPORT == 1 ) && (( PLC_S_DBACC_PATCH == 1 ) || ( PLC_S_FNACC_PATCH == 1 )))
+
+	/*  Address of task headers */
+	pTask = (CIMG_TASK_EX PLC_ATTR_CODE *)(actualCodeArea + sizeof( CIMG_HEAD_EX ));
+
+	/*  Assign address of tasks */
+	for( n = 0; n < m_actualCode->numTask; n ++ )
+	{
+		/*  Check tasks */
+		if( pTask->Id != CIMG_IDTASK )
+		{
+			ResetPlcIEC();
+			PLC_V_ERROR_CODE = PLCERR_TASKID;
+			return FALSE;
+		}
+
+		/*  Check index of task to load */
+		if( pTask->taskId >= PLC_NUM_TASKS )
+		{
+			ResetPlcIEC();
+			PLC_V_ERROR_CODE = PLCERR_TASKNUM;
+			return FALSE;
+		}
+
+		++ pTask;
+	}
+
+	#if defined( PLC_CONF_SYNC_SWAP )
+	/* Wait for the hosting environment to swap PLC application */
+	PLC_F_WAIT_SWAP;
+	#else
+	/* Swap PLC application */
+	SwapPlc();
+	#endif
+
+	#if ( PLC_S_TASK_SETTINGS == 1 )
+	if( PLC_R_DOWNL_RESP == SWP_ALARM || PLC_R_DOWNL_RESP == SWP_INIT )
+	{
+		#if defined( PLC_F_TASK_CONFIGURATION_INIT )
+		/* Task configuration initialization */
+		if( ! PLC_F_TASK_CONFIGURATION_INIT )
+		{
+			ResetPlcIEC();
+			PLC_V_ERROR_CODE = PLCERR_INVALID_TASK_CONFIGURATION;
+			return FALSE;
+		}
+		#endif
+
+		pTask = ( CIMG_TASK_EX PLC_ATTR_CODE* )( actualCodeArea + sizeof( CIMG_HEAD_EX ) );
+		for( n = 0; n < m_actualCode->numTask; n++ )
+		{
+			/* If the task's execution period is configurable,... */
+			if( ( PLC_TASK_DEFS[ pTask->taskId ].flags & TRGT_SET_EXEC_PERIOD ) != 0 )
+			{
+				/* ...update it */
+				if( ! PLC_F_UPDATE_TASK_PERIOD( pTask->taskId, pTask->exePeriod ) )
+				{
+					ResetPlcIEC();
+					PLC_V_ERROR_CODE = PLCERR_INVALID_TASK_CONFIGURATION;
+					return FALSE;
+				}
+			}
+
+			++pTask;
+		}
+
+		#if defined( PLC_F_TASK_CONFIGURATION_END )
+		/* Task configuration finalization */
+		if( ! PLC_F_TASK_CONFIGURATION_END )
+		{
+			ResetPlcIEC();
+			PLC_V_ERROR_CODE = PLCERR_INVALID_TASK_CONFIGURATION;
+			return FALSE;
+		}
+		#endif
+	}
+	#endif
+
+	/* Global instances initialization */
+	globalInit = (PlcCodeFuncPtr) PLC_CALCCODEADDR( m_actualCode->initCodeOffs + actualCodeArea );
+	globalInit();
+
+	/*	Read application version	*/
+	#if ( PLC_S_INFOHEADER != 0 )
+ 	pVersionInfo = ( CIMG_HEAD_INFO PLC_ATTR_CODE* ) ( actualCodeArea + sizeof( CIMG_HEAD_EX ) + m_actualCode->numTask * sizeof( CIMG_TASK_EX ) );
+
+	/*	Ensure version info is available	*/
+	if( pVersionInfo->Id != CIMG_IDINFO )
+	{
+		ResetPlcIEC();
+		PLC_V_ERROR_CODE = PLCERR_INVVERINFO;
+		return FALSE;
+	}
+
+	/*	Read major and minor version number	*/
+	PLC_V_APPVER_MAJOR = pVersionInfo->appVer1;
+	PLC_V_APPVER_MINOR = pVersionInfo->appVer2;
+
+	#if defined( PLC_V_APPVER_BUILD )
+	/* Store in PLC_V_APPVER_BUILD the build time */
+	PLC_V_APPVER_BUILD = pVersionInfo->buildTime;
+	#endif	/* defined( PLC_V_APPVER_BUILD ) */
+
+	/*	Read application name	*/
+	for( n = 0; n < DIM_APP_NAME; n++ )
+	{
+		PLC_V_APPVER_NAME[ n ] = pVersionInfo->strApp[ n ];
+	}
+	#endif // PLC_S_INFOHEADER != 0
+
+	/*  New Target full memory ID */
+	m_fullMemoId = PLC_F_CALCULATE_FULLMEMOID;
+	PLC_R_FULLMEMO_ID = m_fullMemoId;
+
+	#if defined( PLC_V_FILESIZE )
+    /*  Set Plc file size  */
+    PLC_V_FILESIZE = m_actualCode->fileSize;
+	#endif
+
+	/*  Plc is ok  */
+	PLC_V_STATUS_OK = TRUE;
+
+	/*  Start PLC task */
+	#if defined( PLC_F_START_TASKS )
+	if( PLC_R_DOWNL_RESP == SWP_ALARM || PLC_R_DOWNL_RESP == SWP_INIT )
+		PLC_F_START_TASKS;
+	#endif
+
+	/*  Set version for active PLC */
+	PLC_R_APPL_ID = m_actualCode->modId;
+
+	/*	No error code	*/
+	PLC_V_ERROR_CODE = PLCERR_OK;
+
+	return TRUE;
+}
+
+/*----------------------------------------------
+**
+**   Check request and download command
+**
+**---------------------------------------------*/
+
+void ALPLCMANAGE( void )
+{
+	#if ( PLC_CONF_ALCAP_V1 == 1 )
+	uint32_t taskID;
+	#endif
+
+	/*  Check for LLab commands */
+	switch( PLC_R_COMMAND )
+	{
+	case PLC_RELOAD_CODE:
+
+		/*	Before load notification */
+		#if defined( PLC_F_INIT_LOAD )
+		PLC_F_INIT_LOAD;
+		#endif
+
+		/*  Load PLC and update the relative status */
+		PLC_V_STATUS_OK = ALPLCLOAD();
+
+		/*  PLC alarm status */
+		#if( defined( PLC_V_STATUS_ALARM ) && PLC_V_STATUS_ALARM != 0 )
+		PLC_V_STATUS_ALARM = ! PLC_V_STATUS_OK;
+		#endif
+
+		/*	End of load notification */
+		#if defined( PLC_F_END_LOAD )
+		PLC_F_END_LOAD( PLC_V_STATUS_OK );
+		#endif
+
+		/*  PLC save request */
+		#if defined( PLC_CODE_FILE_SAVE_CONF )
+		if( PLC_V_STATUS_OK )
+		{
+			if( PLC_F_WRITE_INIT )
+			{
+				PLC_F_WRITE( (uint32_t PLC_ATTR_CODE *)m_actualCode, 0, m_actualCode->fileSize );
+				PLC_F_WRITE_END;
+			}
+		}
+		#endif
+
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	case PLC_INITDW_CODE:
+		#if defined( PLC_F_INIT_DOWNLOAD )
+		PLC_F_INIT_DOWNLOAD;
+		#endif
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	case PLC_DOWNLREQ_CODE:
+		DownloadRequestResponse();
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	case PLC_ACK_CODE:
+	case PLC_NACK_CODE:
+		break;
+
+	case PCL_C_GET_XML_INFO_STREAM_ADDRESS:
+		PLC_R_COMMAND_RESPONSE = (uint32_t) (STATIC_VAR_ADDRESS) &m_xml_info_stream;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	case PCL_C_GET_XML_INFO_STREAM_SIZE:
+		PLC_R_COMMAND_RESPONSE = (uint32_t) sizeof( m_xml_info_stream );
+		PLC_R_COMMAND = PLC_ACK_CODE;		
+		break;
+
+	#if ( PLC_CONF_ALCAP_V1 == 1 )
+
+	#if ( PLC_S_BREAKPTS == 1 )
+	case PLC_C_GET_PLC_BREAKPOINT_ADDRESS:
+		/* Return the active breakpoint mask (by value) */
+		PLC_R_COMMAND_RESPONSE = ( uint32_t ) PLC_F_GET_PLC_BREAKPOINT_ADDRESS;
+	
+		/* Command accomplished */
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+	
+	case PLC_C_GET_BREAKPOINT_MASK_ADDRESS:
+		/* Return the address of the active breakpoint mask */
+		PLC_R_COMMAND_RESPONSE = ( uint32_t ) &PLC_V_HIT_BREAKPOINT_MASK;
+	
+		/* Command accomplished */
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+	
+	case PLC_C_SET_BREAKPOINT_MASK:
+		/* Set cleared breakpoint mask */
+		PLC_V_RUN_BREAKPOINT_MASK = PLC_R_COMMAND_RESPONSE;
+	
+		/* Command accomplished */
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+	#endif	/* ( PLC_S_BREAKPTS == 1 ) */
+
+	#if ( PLC_S_RUNTIME_CTRL == 1 )
+
+	/* Stop the PLC run-time */
+	case PLC_C_STOP:
+		#if defined( PLC_F_SYSLOCK_REQ )
+		if( PLC_F_SYSLOCK_REQ() )
+		{
+			/* PLC run-time cannot be stopped: stand-by required */
+			PLC_R_COMMAND_RESPONSE = COMMAND_ERROR;
+			PLC_R_COMMAND = PLC_ACK_CODE;
+			break;
+		}
+		#endif
+		
+		#if defined( PLC_F_STOP_RUNTIME_INIT )
+		/* Give control to the host system before stopping the PLC run-time */
+		if( ! PLC_F_STOP_RUNTIME_INIT )
+		{
+			/* System error */
+			PLC_R_COMMAND_RESPONSE = COMMAND_ERROR;
+			PLC_R_COMMAND = PLC_ACK_CODE;
+			break;
+		}
+		#endif
+		
+		/* Stop the PLC run-time execution */
+		ResetPlcIEC();
+		
+		#if defined( PLC_F_STOP_RUNTIME_END )
+		/* Give control to the host system after having stopped the PLC run-time */
+		if( ! PLC_F_STOP_RUNTIME_END )
+		{
+			/* System error */
+			PLC_R_COMMAND_RESPONSE = COMMAND_ERROR;
+			PLC_R_COMMAND = PLC_ACK_CODE;
+			break;
+		}
+		#endif
+			
+		/* Execution of PLC run-time terminated */
+		PLC_R_COMMAND_RESPONSE = COMMAND_OK;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/* Start the PLC run-time */
+	case PLC_C_START:
+		#if defined( PLC_F_SYSLOCK_REQ )
+		if( PLC_F_SYSLOCK_REQ() )
+		{
+			/* PLC run-time cannot be started: stand-by required */
+			PLC_R_COMMAND_RESPONSE = COMMAND_ERROR;
+			PLC_R_COMMAND = PLC_ACK_CODE;
+			break;
+		}
+		#endif
+		
+		#if defined( PLC_F_START_RUNTIME_INIT )
+		/* Give control to the host system before starting the PLC run-time */
+		if( ! PLC_F_START_RUNTIME_INIT )
+		{
+			/* System error */
+			PLC_R_COMMAND_RESPONSE = COMMAND_ERROR;
+			PLC_R_COMMAND = PLC_ACK_CODE;
+			break;
+		}
+		#endif
+		
+		#if( PLC_S_HOTSWAP != 0 )
+		/* Reload current application and start the PLC run-time execution */
+		m_reloadCurrentApplication = TRUE;
+		ALPLCLOAD();
+		m_reloadCurrentApplication = FALSE;
+		#else
+		/* Start the PLC run-time execution */
+		ALPLCLOAD();
+		#endif
+		
+		#if defined( PLC_F_START_RUNTIME_END )
+		/* Give control to the host system after having started the PLC run-time */
+		if( ! PLC_F_START_RUNTIME_END )
+		{
+			/* System error */
+			PLC_R_COMMAND_RESPONSE = COMMAND_ERROR;
+			PLC_R_COMMAND = PLC_ACK_CODE;
+			break;
+		}
+		#endif
+		
+		/* Execution of PLC run-time started */
+		PLC_R_COMMAND_RESPONSE = COMMAND_OK;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	#endif	/* PLC_S_RUNTIME_CTRL == 1 */
+
+	#if ( PLC_S_RUNTIME_CTRL == 1 ) || ( PLC_S_RUNTIME_STATUS == 1 )
+
+	/*	Read the PLC application status variable	*/
+	case PLC_C_GET_V_STATUS_OK:
+	case PLC_C_GET_V_STATUS_OK_BY_VALUE:
+		/*	Return either the address or the value of the PLC application status variable	*/
+		PLC_R_COMMAND_RESPONSE = ( ( PLC_R_COMMAND & READ_BY_VALUE_MASK ) != 0 ) ?
+										PLC_V_STATUS_OK : ( uint32_t ) &PLC_V_STATUS_OK;
+
+		/*	Command processed	*/
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*	Read the PLC run-time error code variable	*/
+	case PLC_C_GET_V_ERROR_CODE:
+	case PLC_C_GET_V_ERROR_CODE_BY_VALUE:
+		/*	Return either the address or the value of the run-time error code variable	*/
+		PLC_R_COMMAND_RESPONSE = ( ( PLC_R_COMMAND & READ_BY_VALUE_MASK ) != 0 ) ?
+										PLC_V_ERROR_CODE : ( uint32_t ) &PLC_V_ERROR_CODE;
+
+		/*	Command processed	*/
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	case PLC_C_GET_V_RUNTIME_RUNNING_STATE:
+	case PLC_C_GET_V_RUNTIME_RUNNING_STATE_BY_VALUE:
+		#if defined( PLC_V_RUNTIME_RUNNING_STATE )
+		/* Host system defines an independent run-time running state (with respect to PLC application status) */
+
+		#if defined( PLC_F_UPDATE_RUNTIME_RUNNING_STATE )
+		/* Update run-time running state */
+		PLC_V_RUNTIME_RUNNING_STATE = PLC_F_UPDATE_RUNTIME_RUNNING_STATE;
+		#endif
+
+		/* Return either the address or the value of the run-time running state variable */
+		PLC_R_COMMAND_RESPONSE = ( ( PLC_R_COMMAND & READ_BY_VALUE_MASK ) != 0 ) ?
+										PLC_V_RUNTIME_RUNNING_STATE : ( uint32_t ) &PLC_V_RUNTIME_RUNNING_STATE;
+		#else
+		/* Run-time running state is the PLC application status */
+
+		/* Return either the address or the value of the run-time running state variable */
+		PLC_R_COMMAND_RESPONSE = ( ( PLC_R_COMMAND & READ_BY_VALUE_MASK ) != 0 ) ?
+										PLC_V_STATUS_OK : ( uint32_t ) &PLC_V_STATUS_OK;
+		#endif
+
+		/* Command processed */
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	#endif /* ( PLC_S_RUNTIME_CTRL == 1 ) || ( PLC_S_RUNTIME_STATUS == 1 ) */
+
+	#if ( PLC_S_HOTSWAP == 1 )
+	case PLC_C_SWAP_CODE_AREA:
+		if( PLC_R_COMMAND_PARAM == PLC_R_DOWNLADDR )
+		{
+			/* PLC run-time is already set up as requested */
+			PLC_R_COMMAND = PLC_ACK_CODE;
+			break;
+		}
+
+		if( PLC_R_APPL_ID != 0 )
+		{
+			/* Cannot change PLC run-time configuration while executing an application */
+			PLC_R_COMMAND = PLC_NACK_CODE;
+			break;
+		}
+
+		if( ( PLC_R_COMMAND_PARAM != ( uint32_t ) PLC_CODE_AREA1 )
+			&& ( PLC_R_COMMAND_PARAM != ( uint32_t ) PLC_CODE_AREA2 ) )
+		{
+			/* Invalid code area address */
+			PLC_R_COMMAND = PLC_NACK_CODE;
+			break;
+		}
+
+		/* Set code are to be used for the next download */
+		PLC_R_DOWNLADDR = PLC_R_COMMAND_PARAM;
+
+		/* Command processed */
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+	#endif	/* ( PLC_S_HOTSWAP == 1 ) */
+
+	#if ( PLC_CONF_RELOCATABLE == 1 )
+
+	/*	Read the dynamic addresses	*/
+	case PLC_C_GET_DYNAMIC_ADDRESSES:
+		PLC_R_COMMAND_RESPONSE = ( uint32_t ) &ALPLCDYNADDRS;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	#endif	//	PLC_CONF_RELOCATABLE == 1
+
+	#if ( PLC_S_SOURCE_CODE == 1 ) || ( PLC_S_SOURCE_CODE_AREA == 1 )
+
+	/*	Notification of the beginning of source download	*/
+	case PLC_C_INIT_SOURCE_DOWNL:
+		#if defined( PLC_F_INIT_DOWNL_SOURCE )
+		PLC_F_INIT_DOWNL_SOURCE;
+		#endif
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*	Notification of the end of source download	*/
+	case PLC_C_END_SOURCE_DOWNL:
+		
+		if( !ProcessSourceCodeArea() )
+		{
+			PLC_R_COMMAND = PLC_NACK_CODE;
+			break;
+		}
+		
+		#if defined( PLC_SOURCE_FILE_SAVE_CONF )
+		/*	Save source file if source is correctly loaded */
+		if( m_actualSource != NULL )
+		{
+			if( PLC_F_WRITESRC_INIT )
+			{
+				PLC_F_WRITESRC( (uint32_t PLC_ATTR_CODE *)m_actualSource, 0, m_actualSource->size );
+				PLC_F_WRITESRC_END;
+			}
+		}
+		#endif
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*	Read the source code ID	*/
+	case PLC_C_GET_SOURCE_ID:
+		PLC_R_COMMAND_RESPONSE = (uint32_t)( m_actualSource != NULL ? m_actualSource->sourceId : 0 );
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*	Read the source code address	*/
+	case PLC_C_GET_SOURCE_ADDRESS:
+		#if ( PLC_S_SOURCE_CODE_AREA == 1 )
+		PLC_R_COMMAND_RESPONSE = (uint32_t)PLC_SOURCE_AREA;
+		#else
+		PLC_R_COMMAND_RESPONSE = 0xFFFFFFFF;
+		#endif
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*	Read the source code area size	*/
+	case PLC_C_GET_SOURCE_SIZE:
+		#if ( PLC_S_SOURCE_CODE_AREA == 1 )
+		PLC_R_COMMAND_RESPONSE = ( uint32_t )PLC_SOURCE_AREA_SIZE;
+		#else
+		PLC_R_COMMAND_RESPONSE = 0xFFFFFFFF;
+		#endif
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	case PLC_C_NOTIFY_SOURCE_CODE_SIZE:
+		#ifdef PLC_F_NOTIFY_SOURCE_CODE_SIZE
+		PLC_F_NOTIFY_SOURCE_CODE_SIZE( PLC_R_COMMAND_RESPONSE );
+		#endif
+	
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	#endif	// ( PLC_S_SOURCE_CODE == 1 ) || ( PLC_S_SOURCE_CODE_AREA == 1 )
+
+	#if ( PLC_CONF_PLUG_INS == 1 )
+
+	/* Return a 32-bit mask of all active plug-ins */
+	case PLC_C_GET_ACTIVE_PLUG_INS:
+		PLC_R_COMMAND_RESPONSE = PLCRT_ACTIVE_PLUGINS;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	#if ( PLC_S_REAL_PLUGIN == 1 )
+
+	/*
+	 *	Return the number of data blocks of the
+	 *	PLC run-time plug-in for the management of basic operations on IEC 61131-3 floating-point types.
+	 */
+	case PLC_C_GET_REAL_PLUG_IN_DB_NUM:
+		PLC_R_COMMAND_RESPONSE = PLC_NUM_DB_REAL_PLUGIN;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*
+	 *	Return the address of the data block table of the
+	 *	PLC run-time plug-in for the management of basic operations on IEC 61131-3 floating-point types.
+	 */
+	case PLC_C_GET_REAL_PLUG_IN_DB_TAB:
+		#if ( PLC_NUM_DB_REAL_PLUGIN > 0 )
+		PLC_R_COMMAND_RESPONSE = ( uint32_t ) AlPlcReal_PluginDataBlockTable;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		#else
+		/* The plug-in doesn't publish any data blocks */
+		PLC_R_COMMAND = PLC_NACK_CODE;
+		#endif
+		break;
+
+	/*
+	 *	Return the number of embedded blocks of the
+	 *	PLC run-time plug-in for the management of basic operations on IEC 61131-3 floating-point types.
+	 */
+	case PLC_C_GET_REAL_PLUG_IN_FUN_NUM:
+		PLC_R_COMMAND_RESPONSE = PLC_NUM_FUNCTS_REAL_PLUGIN;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*
+	 *	Return the address of the embedded block table of the
+	 *	PLC run-time plug-in for the management of basic operations on IEC 61131-3 floating-point types.
+	 */
+	case PLC_C_GET_REAL_PLUG_IN_FUN_TAB:
+		#if ( PLC_NUM_FUNCTS_REAL_PLUGIN > 0 )
+		PLC_R_COMMAND_RESPONSE = ( uint32_t ) AlPlcReal_PluginFunctionTable;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		#else
+		/* The plug-in doesn't publish any embedded blocks */
+		PLC_R_COMMAND = PLC_NACK_CODE;
+		#endif
+		break;
+
+	#endif	/* ( PLC_S_REAL_PLUGIN == 1 ) */
+	
+	#if ( PLC_S_STRING_PLUGIN == 1 )
+
+	/*
+	 *	Return the number of data blocks of the
+	 *	PLC run-time plug-in for the management of IEC 61131-3 character strings.
+	 */
+	case PLC_C_GET_STRING_PLUG_IN_DB_NUM:
+		PLC_R_COMMAND_RESPONSE = PLC_NUM_DB_STRING_PLUGIN;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*
+	 *	Return the address of the data block table of the
+	 *	PLC run-time plug-in for the management of IEC 61131-3 character strings.
+	 */
+	case PLC_C_GET_STRING_PLUG_IN_DB_TAB:
+		#if ( PLC_NUM_DB_STRING_PLUGIN > 0 )
+		PLC_R_COMMAND_RESPONSE = ( uint32_t ) AlPlcString_PluginDataBlockTable;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		#else
+		/* The plug-in doesn't publish any data blocks */
+		PLC_R_COMMAND = PLC_NACK_CODE;
+		#endif
+		break;
+
+	/*
+	 *	Return the number of embedded blocks of the
+	 *	PLC run-time plug-in for the management of IEC 61131-3 character strings.
+	 */
+	case PLC_C_GET_STRING_PLUG_IN_FUN_NUM:
+		PLC_R_COMMAND_RESPONSE = PLC_NUM_FUNCTS_STRING_PLUGIN;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*
+	 *	Return the address of the embedded block table of the
+	 *	PLC run-time plug-in for the management of IEC 61131-3 character strings.
+	 */
+	case PLC_C_GET_STRING_PLUG_IN_FUN_TAB:
+		#if ( PLC_NUM_FUNCTS_STRING_PLUGIN > 0 )
+		PLC_R_COMMAND_RESPONSE = ( uint32_t ) AlPlcString_PluginFunctionTable;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		#else
+		/* The plug-in doesn't publish any embedded blocks */
+		PLC_R_COMMAND = PLC_NACK_CODE;
+		#endif
+		break;
+
+	#endif	/* ( PLC_S_STRING_PLUGIN == 1 ) */
+
+	#if ( PLC_S_MATH_PLUGIN == 1 )
+
+	/*
+	 *	Return the number of data blocks of the
+	 *	PLC run-time plug-in for the management of advanced mathematical operations.
+	 */
+	case PLC_C_GET_MATH_PLUG_IN_DB_NUM:
+		PLC_R_COMMAND_RESPONSE = PLC_NUM_DB_MATH_PLUGIN;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*
+	 *	Return the address of the data block table of the
+	 *	PLC run-time plug-in for the management of advanced mathematical operations.
+	 */
+	case PLC_C_GET_MATH_PLUG_IN_DB_TAB:
+		#if ( PLC_NUM_DB_MATH_PLUGIN > 0 )
+		PLC_R_COMMAND_RESPONSE = ( uint32_t ) AlPlcMath_PluginDataBlockTable;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		#else
+		/* The plug-in doesn't publish any data blocks */
+		PLC_R_COMMAND = PLC_NACK_CODE;
+		#endif
+		break;
+
+	/*
+	 *	Return the number of embedded blocks of the
+	 *	PLC run-time plug-in for the management of advanced mathematical operations.
+	 */
+	case PLC_C_GET_MATH_PLUG_IN_FUN_NUM:
+		PLC_R_COMMAND_RESPONSE = PLC_NUM_FUNCTS_MATH_PLUGIN;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		break;
+
+	/*
+	 *	Return the address of the embedded block table of the
+	 *	PLC run-time plug-in for the management of advanced mathematical operations.
+	 */
+	case PLC_C_GET_MATH_PLUG_IN_FUN_TAB:
+		#if ( PLC_NUM_FUNCTS_MATH_PLUGIN > 0 )
+		PLC_R_COMMAND_RESPONSE = ( uint32_t ) AlPlcMath_PluginFunctionTable;
+		PLC_R_COMMAND = PLC_ACK_CODE;
+		#else
+		/* The plug-in doesn't publish any embedded blocks */
+		PLC_R_COMMAND = PLC_NACK_CODE;
+		#endif
+		break;
+
+	#endif	/* ( PLC_S_MATH_PLUGIN == 1 ) */
+
+	#endif	/* ( PLC_CONF_PLUG_IN == 1 ) */
+
+	#if ( PLC_S_SYNCPATCH == 1 )
+	/* Synchronous patch download notification */
+	case PLC_C_END_PATCH_DOWNLOAD:
+		{
+			SYNC_TRIGGER* patch = ( SYNC_TRIGGER* ) PLC_DEBUGDATA_AREA;
+			if( PLC_F_APPLY_PATCH( patch->adrJmpPatch, patch->lenByte, patch->code ) )
+			{
+				PLC_R_COMMAND_RESPONSE = COMMAND_OK;
+			}
+			else
+			{
+				PLC_R_COMMAND_RESPONSE = COMMAND_ERROR;
+			}
+			PLC_R_COMMAND = PLC_ACK_CODE;
+		}
+		break;
+	#endif	/* ( PLC_S_SYNCPATCH == 1 ) */
+
+	default:
+		if( IS_PLC_C_READ_T( PLC_R_COMMAND ) )
+		{
+			taskID = GET_PLC_C_READ_T_ID( PLC_R_COMMAND );
+
+			switch( GET_PLC_C_READ_T_OBJECT( PLC_R_COMMAND ) )
+			{
+			#if ( PLC_S_RUNTIME_CTRL == 1 )
+
+			/*	Get the task status (ready or not)	*/
+			case PLC_C_READ_T_READY:
+					PLC_R_COMMAND_RESPONSE = ( *( PLC_TASK_TAB[ taskID ].fnzExe ) != ( void PLC_ATTR_CODE* ) fnz_nop );
+
+				/*	Command processed	*/
+					PLC_R_COMMAND = PLC_ACK_CODE;
+				break;
+
+			/*	Read the task execution period	*/
+			case PLC_C_READ_T_EXEC_PERIOD:
+			case PLC_C_READ_T_EXEC_PERIOD_BY_VALUE:
+				if( ( ( PLC_TASK_DEFS[ taskID ].flags & TRGT_GET_EXEC_PERIOD ) != 0 ) &&
+					( PLC_TASK_TAB[ taskID ].exePeriod != NULL ) )
+				{
+					PLC_R_COMMAND_RESPONSE = ( ( PLC_R_COMMAND & READ_BY_VALUE_MASK ) != 0 ) ?
+						*( PLC_TASK_TAB[ taskID ].exePeriod ) :
+						( ( uint32_t ) PLC_TASK_TAB[ taskID ].exePeriod );
+
+					/*	Command processed	*/
+					PLC_R_COMMAND = PLC_ACK_CODE;
+				}
+				else
+				{
+					/*	Command refused	*/
+					PLC_R_COMMAND = PLC_NACK_CODE;
+				}
+
+				break;
+
+			/*	Read the task execution time	*/
+			case PLC_C_READ_T_EXEC_TIME:
+			case PLC_C_READ_T_EXEC_TIME_BY_VALUE:
+				if( ( ( PLC_TASK_DEFS[ taskID ].flags & TRGT_GET_EXEC_TIME ) != 0 ) &&
+					( PLC_TASK_TAB[ taskID ].exeTime != NULL ) )
+				{
+					PLC_R_COMMAND_RESPONSE = ( ( PLC_R_COMMAND & READ_BY_VALUE_MASK ) != 0 ) ?
+						*( PLC_TASK_TAB[ taskID ].exeTime ) :
+						( ( uint32_t ) PLC_TASK_TAB[ taskID ].exeTime );
+
+					/*	Command processed	*/
+					PLC_R_COMMAND = PLC_ACK_CODE;
+				}
+				else
+				{
+					/*	Command refused	*/
+					PLC_R_COMMAND = PLC_NACK_CODE;
+				}
+
+				break;
+
+			/*	Read the task execution count	*/
+			case PLC_C_READ_T_EXEC_COUNT:
+			case PLC_C_READ_T_EXEC_COUNT_BY_VALUE:
+				if( ( ( PLC_TASK_DEFS[ taskID ].flags & TRGT_GET_EXEC_COUNT ) != 0 ) &&
+					( PLC_TASK_TAB[ taskID ].exeCount != NULL ) )
+				{
+					PLC_R_COMMAND_RESPONSE = ( ( PLC_R_COMMAND & READ_BY_VALUE_MASK ) != 0 ) ?
+						*( PLC_TASK_TAB[ taskID ].exeCount ) :
+						( ( uint32_t ) PLC_TASK_TAB[ taskID ].exeCount );
+
+					/*	Command processed	*/
+					PLC_R_COMMAND = PLC_ACK_CODE;
+				}
+				else
+				{
+					/*	Command refused	*/
+					PLC_R_COMMAND = PLC_NACK_CODE;
+				}
+
+		break;
+
+			/*	Read the task execution status (running or not)	*/
+			case PLC_C_READ_T_EXEC_STATUS:
+			case PLC_C_READ_T_EXEC_STATUS_BY_VALUE:
+				if( ( ( PLC_TASK_DEFS[ taskID ].flags & TRGT_GET_EXEC_STATUS ) != 0 ) &&
+					( PLC_TASK_TAB[ taskID ].exeStatus != NULL ) )
+				{
+					PLC_R_COMMAND_RESPONSE = ( ( PLC_R_COMMAND & READ_BY_VALUE_MASK ) != 0 ) ?
+						*( PLC_TASK_TAB[ taskID ].exeStatus ) :
+						( ( uint32_t ) PLC_TASK_TAB[ taskID ].exeStatus );
+
+					/*	Command processed	*/
+					PLC_R_COMMAND = PLC_ACK_CODE;
+				}
+				else
+				{
+					/*	Command refused	*/
+					PLC_R_COMMAND = PLC_NACK_CODE;
+				}
+
+				break;
+
+			#endif // PLC_S_RUNTIME_CTRL == 1
+
+			/*	Unknown command	*/
+			default:
+				PLC_R_COMMAND = PLC_NACK_CODE;
+				break;
+			}
+		}
+		else
+		{
+			/*	Unknown command	*/
+			PLC_R_COMMAND = PLC_NACK_CODE;
+		}
+
+		break;
+
+	#else // PLC_CONF_ALCAP_V1 == 1
+
+	/*	Unknown command	*/
+	default:
+		PLC_R_COMMAND = PLC_NACK_CODE;
+		break;
+
+	#endif // PLC_CONF_ALCAP_V1 == 1
+	}
+}
+
