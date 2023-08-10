@@ -39,7 +39,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
 #if defined(_CRS_DBG)
-#if _CRS_DBGDSK
+#if CRS_DBGDSK
 #pragma GCC optimize (0) // crs_dbg
 #else
 #pragma GCC optimize (2)
@@ -130,6 +130,12 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
   bSysStatPowerEnabled = sMh_MotorDataOut.sPowerStageSts.b.bVoltageEnabled ;
   bSysStatPowerReady   = sMh_MotorDataOut.sPowerStageSts.b.bFullyActive    ;
 
+#if defined(_HW_AXS_DAYCO22KW)
+  // Id and Iq filtered by DSP
+  sMh_MotorDataOut.slIdFb = (SLONG)((FLOAT)sMotorHandlerRun.swIdFb * sMotorHandlerRun.flRatioI_EQ_RMS) ;
+  sMh_MotorDataOut.slIqFb = (SLONG)((FLOAT)sMotorHandlerRun.swIqFb * sMotorHandlerRun.flRatioI_EQ_RMS) ;
+#endif
+
     /* check fault from PWM */
   if (FPGA_PWM_STATUS_FAULT_ACTIVE(uwPwmStatus))
   {
@@ -199,8 +205,8 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
   sMh_MotorDataOut.swVwEffective = (SWORD)((FLOAT)sMh_MotorDataOut.swDcBusValue * (((SWORD)FPGA_VEST_W) / 2000.0F));
 #endif // cfg_vmotor_read
 
-  // Vd and Vq filtered by DSP
 #if defined(_HW_AXS_DAYCO22KW)
+  // Vd and Vq filtered by DSP
   sMh_MotorDataOut.swVdOut = (SWORD)((FLOAT)sMotorHandlerRun.swVdOut * sMotorHandlerRun.flRatioV_DC_PEAK) ;
   sMh_MotorDataOut.swVqOut = (SWORD)((FLOAT)sMotorHandlerRun.swVqOut * sMotorHandlerRun.flRatioV_DC_PEAK) ;
 #endif
@@ -660,16 +666,9 @@ BOOL Mh_MotorDataToFpga8KHz(void)
 
     FPGA_CPUH_URAM_WR_SW(FPGAIR_IREF_D, sMh_MotorDataOut.sDSPOut.swId);
 
-/*
-    if (!sMh_MotorDataIn.psPStageCtrl->b.bPowerEnable)
-    {   // integral status reset when disabled
-        FPGA_CPUH_URAM_WR_SW(FPGAIR_S_KI_D, 0);
-        FPGA_CPUH_URAM_WR_SW(FPGAIR_S_KI_Q, 0);
-    }
-*/
-
 #if defined(_HW_AXS_DAYCO22KW)
-    if(sMotorHandlerRun.swUsrVdcSet == USRVDC_SET_FIX) // set at boot
+    // **************** VdcBus management for DSP modulator ****************
+    if(sMotorHandlerRun.swUsrVdcSet == USRVDC_SET_FIX) // it is set ONLY at boot
     {   // VdcBus value from fw/plc @8kHz
     	if (sMh_PlcAdvancedWorks.swVdcbusSet <= 0)
     	{	// Vdc < 0 not allowed
@@ -681,20 +680,48 @@ BOOL Mh_MotorDataToFpga8KHz(void)
     	}
     }
     else
-    {   // VdcBus value @1MHz from ADC
-    	if(sMh_MotorDataOut.swDcBusValue <= 0)
-    	{   // VdcBus value from fw @8kHz
-    		sMotorHandlerRun.swUsrVdcVal = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)31457280)) ; // set 48.0V (*65536) as default
-    	}
-    	else
-    	{   // keep value updated even if it is not used
-    		sMotorHandlerRun.swUsrVdcVal = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)sMh_MotorDataOut.swDcBusValue<<16)) ;
-    	}
+    {   // VdcBus value @1MHz from ADC: keep user value to zero since it is not used and can create error in DSP
+    	sMotorHandlerRun.swUsrVdcVal = 0 ;
     }
+    // **************** VdcBus management for DSP modulator ****************
+
+    // *************** Integral status management for DSP PI ***************
+    if (!sMh_MotorDataOut.sPowerStageSts.b.bVoltageEnabled)
+    {  	// when disabled set DSP integral status
+    	sMotorHandlerRun.swDspIntegralSet = USRDSP_SETINTEGRAL;
+
+        if (sMotorHandlerRun.flags.b.bDspIntegralSet)
+    	{	// set a specific value
+    		sMotorHandlerRun.swDspIntegralVal_D = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)sMh_PlcAdvancedWorks.swDspIntegralVal_D<<16)) ;
+    		sMotorHandlerRun.swDspIntegralVal_Q = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)sMh_PlcAdvancedWorks.swDspIntegralVal_Q<<16)) ;
+    	}
+        else
+        {	// keep integral resetted
+    		sMotorHandlerRun.swDspIntegralVal_D = 0 ;
+    		sMotorHandlerRun.swDspIntegralVal_Q = 0 ;
+        }
+    }
+	else
+	{   // do not set DSP integral status: keep user value to zero since it is not used and can (maybe) create error in DSP
+		sMotorHandlerRun.swDspIntegralSet   = USRDSP_RUNINTEGRAL;
+		sMotorHandlerRun.swDspIntegralVal_D = 0 ;
+		sMotorHandlerRun.swDspIntegralVal_Q = 0 ;
+	}
+    // *************** Integral status management for DSP PI ***************
+
     FPGA_CPUH_URAM_WR_SW(FPGAIR_P_VDC_SETVAL, sMotorHandlerRun.swUsrVdcVal); // FPGAIR_P_VDC_SETVAL used only in dayco
 
+    // DSP integral initialization
+    FPGA_CPUH_URAM_WR_SW(FPGAIR_P_SET_INTSTS, sMotorHandlerRun.swDspIntegralSet); // FPGAIR_P_SET_INTSTS used only in dayco
+    FPGA_CPUH_URAM_WR_SW(FPGAIR_P_INTSTS_D, sMotorHandlerRun.swDspIntegralVal_D); // FPGAIR_P_INTSTS_VAL_D used only in dayco
+    FPGA_CPUH_URAM_WR_SW(FPGAIR_P_INTSTS_Q, sMotorHandlerRun.swDspIntegralVal_Q); // FPGAIR_P_INTSTS_VAL_Q used only in dayco
+
+    // FPGA filter for  Vd, Vq, IdFb, IqFb
     FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_VD, -sMotorHandlerRun.swVdOut);
     FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_VQ, -sMotorHandlerRun.swVqOut);
+    FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_ID, -sMotorHandlerRun.swIdFb);
+    FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_IQ, -sMotorHandlerRun.swIqFb);
+
 #endif
       // revert to data flush mode
     FPGA_CPUH_RGUPD_SET_QUEUE = FALSE;
@@ -712,10 +739,10 @@ BOOL Mh_MotorDataToFpga8KHz(void)
     FPGA_CPUH_RGUPD_SET_QUEUE = FALSE;
   }
 
-  FPGA_IQFLT_IQREF    = sMh_MotorDataOut.sDSPOut.swIq;
+  FPGA_IQFLT_IQREF = sMh_MotorDataOut.sDSPOut.swIq;
 
   if( sLoc_Mh_PlcAdvancedWorks.uwDtCompSet != sMh_PlcAdvancedWorks.uwDtCompSet )
-    FPGA_PWM_DTCOMP_SET   = sMh_PlcAdvancedWorks.uwDtCompSet;
+    FPGA_PWM_DTCOMP_SET = sMh_PlcAdvancedWorks.uwDtCompSet;
 
   sLoc_Mh_PlcAdvancedWorks = sMh_PlcAdvancedWorks;
 

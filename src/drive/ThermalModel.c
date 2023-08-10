@@ -2443,7 +2443,7 @@ static void MotorI2T_Runtime(void)
 #endif
     
     // looking for MaxDeltaTemp of the 3 phases
-#if _CRS_DBGDSK
+#if CRS_DBGDSK
     swMotorDeltaT_Max = 0 ;
     swMotorDeltaT_V   = 0 ;
     swMotorDeltaT_W   = 0 ;

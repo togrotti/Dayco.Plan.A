@@ -45,7 +45,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
 #if defined(_CRS_DBG)
-#if _CRS_DBGDSK
+#if CRS_DBGDSK
 #pragma GCC optimize (0) // crs_dbg
 #else
 #pragma GCC optimize (2)
@@ -279,8 +279,10 @@ extern const unsigned long  ILoopStandard_length;
 
 #ifdef _HW_DC
 #if defined(_HW_AXS_DAYCO22KW)
-extern const unsigned char ILoopParBr1Dayco[];
-extern const unsigned long ILoopParBr1Dayco_length;
+extern const unsigned char ILoopParBr1Dayco_1[];
+extern const unsigned long ILoopParBr1Dayco_1_length;
+//extern const unsigned char ILoopParBr1Dayco[];
+//extern const unsigned long ILoopParBr1Dayco_length;
 #else
 extern const unsigned char  ILoopParBr1[];
 extern const unsigned long  ILoopParBr1_length;
@@ -1355,6 +1357,17 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   sAInDef.uwDstIntAvg=ANPROC_ADR_DISABLE;
 
   // feedback Id and Iq
+#if defined(_HW_AXS_DAYCO22KW)
+  sRGODef.ubOpt=ANPROC_OF_DST_SHORT;
+  sMotorHandlerRun.flRatioI_EQ_RMS = flRatioI_EQ_RMS ;
+  sRGODef.flScale=1.0;
+
+  sRGODef.pvDst=&sMotorHandlerRun.swIdFb;
+  AnProc_RGOutSet(FPGAIR_RGO_IFB_AD,&sRGODef);
+
+  sRGODef.pvDst=&sMotorHandlerRun.swIqFb;
+  AnProc_RGOutSet(FPGAIR_RGO_IFB_AQ,&sRGODef);
+#else
   sRGODef.ubOpt=ANPROC_OF_DST_LONG;
   sRGODef.flScale=flRatioI_EQ_RMS;
 
@@ -1363,6 +1376,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
 
   sRGODef.pvDst=&sMh_MotorDataOut.slIqFb;
   AnProc_RGOutSet(FPGAIR_RGO_IFB_AQ,&sRGODef);
+#endif // _hw_axs_dayco22kw
 
   // output Vd and Vq
   sRGODef.ubOpt=ANPROC_OF_DST_SHORT;
@@ -1383,7 +1397,8 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
 
   sRGODef.pvDst=&sMh_MotorDataOut.swVqOut;
   AnProc_RGOutSet(FPGAIR_RGO_VOUT_Q,&sRGODef);
-#endif
+#endif // _hw_axs_dayco22kw
+
   // output Vu and Vv
   sRGODef.flScale=-flRatioV_AC_PEAK;
 
@@ -1530,7 +1545,10 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
 #if (defined _HW_AXS_DAYCO22KW)
         	{   // ******************* Dayco  DSP *******************
         		sMh_MotorDataOut.ubDSPIsCustom=0;
-                assert(DSPHLoad(ILoopParBr1Dayco, (UWORD)ILoopParBr1Dayco_length, FPGAIR_IFB_AW));
+                assert(DSPHLoad(ILoopParBr1Dayco_1, (UWORD)ILoopParBr1Dayco_1_length, FPGAIR_IFB_AW));
+//                assert(DSPHLoad(ILoopParBr1Dayco, (UWORD)ILoopParBr1Dayco_length, FPGAIR_IFB_AW));
+
+
         	}
 #else
         	{   // ****************** Standard DSP ******************
@@ -1575,13 +1593,22 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     FPGA_CPUH_DRAM_WR_SW(FPGAIR_C_1D125,  0x0106); // = 262   = 32768 / 125
 
 #if defined(_HW_AXS_DAYCO22KW)
-  // set user Vdc setup (only at boot)
+  // set user Vdc setup feature (only at boot)
   if(sMh_PlcAdvancedWorks.flags.b.bUserVdcBusSet)
     sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_FIX;
   else
     sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_ADC;
 
+  if (sMh_PlcAdvancedWorks.swVdcbusSet <= 0)
+	sMh_PlcAdvancedWorks.swVdcbusSet = 480 ; // zero or negative value not allowed: set default at 48.0V
+
   sMotorHandlerRun.swUsrVdcVal = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)sMh_PlcAdvancedWorks.swVdcbusSet<<16)) ;
+
+  // set user DSP integral status value feature (only at boot)
+  sMotorHandlerRun.flags.b.bDspIntegralSet = sMh_PlcAdvancedWorks.flags2.b.bDspIntegralSet ;
+  sMotorHandlerRun.swDspIntegralSet   = USRDSP_RUNINTEGRAL;
+  sMotorHandlerRun.swDspIntegralVal_D = 0 ;
+  sMotorHandlerRun.swDspIntegralVal_Q = 0 ;
 
 #else
     // and initialize user set Vdcbus

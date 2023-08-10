@@ -53,6 +53,8 @@
 #define USRVDC_SET_ADC             (+16383) // Vdc@1MHz (DSP ADC)
 #define USRVDC_SET_FIX             (-16384) // Vdc@125uS
 
+#define USRDSP_RUNINTEGRAL         (+16383)
+#define USRDSP_SETINTEGRAL         (-16384)
 //****************************************************************************
 // Input/Output data structures
 
@@ -132,22 +134,22 @@ typedef struct {
   /* Flags */
   union {
       struct {
-        BOOL bDisable2StepAuto     ;
-        BOOL bEnable2Steps         ;
-        BOOL bSelect2StepsLOnly    ;
-        BOOL bSelect2StepsFloat    ;
-        BOOL bDtCompCurrentSign    ;
-        BOOL bEnableDirectDrive    ;
-        BOOL bEnableTransfMod      ;
-        BOOL bDisableAutoFrequency ;
-        BOOL bUserVdcBusSet        ;
-        BOOL bSelEnOutEnable       ;
-        BOOL bSelectStraight       ;
-        BOOL bEnablePhaseShift     ;
-        BOOL bEnMultiBrgImmCurr    ;
-        BOOL bDisableOnChange      ;
-        BOOL bEnableCustomCurrScale;
-        BOOL bDisableOCPwmout      ;
+        BOOL bDisable2StepAuto     ; // word0.byte0
+        BOOL bEnable2Steps         ; // word0.byte1
+        BOOL bSelect2StepsLOnly    ; // word1.byte0
+        BOOL bSelect2StepsFloat    ; // word1.byte1
+        BOOL bDtCompCurrentSign    ; // word2.byte0
+        BOOL bEnableDirectDrive    ; // word2.byte1
+        BOOL bEnableTransfMod      ; // word3.byte0
+        BOOL bDisableAutoFrequency ; // word3.byte1
+        BOOL bUserVdcBusSet        ; // word4.byte0
+        BOOL bSelEnOutEnable       ; // word4.byte1
+        BOOL bSelectStraight       ; // word5.byte0
+        BOOL bEnablePhaseShift     ; // word5.byte1
+        BOOL bEnMultiBrgImmCurr    ; // word6.byte0
+        BOOL bDisableOnChange      ; // word6.byte1
+        BOOL bEnableCustomCurrScale; // word7.byte0
+        BOOL bDisableOCPwmout      ; // word7.byte1
       } b ;
       UWORD w[8] ;
   } flags ;
@@ -169,14 +171,16 @@ typedef struct {
 
   union {
       struct {
-        BOOL bEnableChargerMode;
-        BOOL bDummy;
+        BOOL bEnableChargerMode  ; // word0.byte0
+        BOOL bDspIntegralSet ;     // word0.byte1
       } b ;
       UWORD w ;
   } flags2 ;
 
   UWORD uwTransfModValue_V;
   UWORD uwTransfModValue_W;
+  SWORD swDspIntegralVal_D ;
+  SWORD swDspIntegralVal_Q ;
 } MH_PLCADVANCED_WORKS ;
 
 typedef struct {

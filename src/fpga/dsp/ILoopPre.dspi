@@ -41,8 +41,10 @@
 [REGISTER]  C_7D8       0x138  // 7/8
 [REGISTER]  T_VOUT_D    0x140  // output of I_PI_D loop (crs for Dayco)
 [REGISTER]  T_VOUT_Q    0x148  // output of I_PI_Q loop (crs for Dayco)
-[REGISTER]  T_FLTIFB_ID  0x150 // output of I_PI_D loop (crs for Dayco)
-[REGISTER]  T_FLTIFB_IQ  0x158 // output of I_PI_Q loop (crs for Dayco)
+[REGISTER]  T_FLTIFB_ID  0x150 // filtered ID @1MHz (crs for Dayco)
+[REGISTER]  T_FLTIFB_IQ  0x158 // filtered IQ @1MHz (crs for Dayco)
+[REGISTER]  T_INTSTS_D  0x160 // shifted init D integral status (crs for Dayco)
+[REGISTER]  T_INTSTS_Q  0x168 // shifted init Q integral status (crs for Dayco)
 
 [INPUT]     P_KI        0x10 
 [INPUT]     P_KP        0x11 
@@ -52,6 +54,11 @@
 [INPUT]     P_CORR_VD   0x17  // crs for Dayco
 [INPUT]     P_CORR_VQ   0x18  // crs for Dayco
 [INPUT]     P_VDC_SETVAL 0x19 // crs for Dayco
+[INPUT]     P_CORR_ID   0x26  // crs for Dayco
+[INPUT]     P_CORR_IQ   0x27  // crs for Dayco
+[INPUT]     P_SET_INTSTS 0x28 // crs for Dayco
+[INPUT]     P_INTSTS_D  0x29  // crs_for Dayco
+[INPUT]     P_INTSTS_Q  0x2A  // crs_for Dayco
 
 //********************************************
 // Constants

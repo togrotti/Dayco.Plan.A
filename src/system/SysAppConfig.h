@@ -161,9 +161,9 @@
 
 
 //***************************************************************************
-#define _CRS_DBGDSK        0
+#define CRS_DBGDSK        0
 // Manage fast task overtime
-#if _CRS_DBGDSK
+#if CRS_DBGDSK
 #define	CFG_FASTTASKOVERTIMEDISABLE 1
 #else
 #define	CFG_FASTTASKOVERTIMEDISABLE 0

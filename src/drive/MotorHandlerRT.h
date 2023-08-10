@@ -98,6 +98,9 @@ typedef struct {
       UWORD bDflxWithIqFltRef        : 1 ;
       UWORD bDisableSTOAlarm         : 1 ;
       UWORD bSTOAlarmActivated       : 1 ;
+#if defined(_HW_AXS_DAYCO22KW)
+      UWORD bDspIntegralSet          : 1 ;
+#endif
     } b;
     ULONG l;
   } flags;
@@ -177,8 +180,15 @@ typedef struct {
   SWORD swVdOut ;
   SWORD swVqOut ;
   FLOAT flRatioV_DC_PEAK ;
-#endif
 
+  SWORD swIdFb ;
+  SWORD swIqFb ;
+  FLOAT flRatioI_EQ_RMS ;
+
+  SWORD swDspIntegralSet ;
+  SWORD swDspIntegralVal_D ;
+  SWORD swDspIntegralVal_Q ;
+#endif // _hw_axs_dayco22kw
 } MHRT_RUNTIME ;
 
 //***************************************************************************

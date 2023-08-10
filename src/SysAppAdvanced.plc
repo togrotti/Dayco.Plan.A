@@ -64,9 +64,12 @@ VAR_GLOBAL
     plcPStageAdvOvCurrCntLimit          AT %MB427.52 : UINT; { DE:"" }
 
     plcPStageAdvEnableChargerMode       AT %MX427.54: BOOL; { DE:"" }
+    plcPStageAdvDspIntegralSet          AT %MX427.55: BOOL; { DE:"" }
     plcPStageAdvTransfModValue_V        AT %MW427.56: UINT; { DE:"" }
     plcPStageAdvTransfModValue_W        AT %MW427.58: UINT; { DE:"" }
-
+    plcPStageAdvDspIntegralVal_D        AT %MW427.60: INT;  { DE:"" }
+    plcPStageAdvDspIntegralVal_Q        AT %MW427.62: INT;  { DE:"" }
+   
     wksPStageAdvIuScale                 AT %MB429.0  : INT; { DE:"value 1000 = gain 1.0" }
     wksPStageAdvIvScale                 AT %MB429.2  : INT; { DE:"value 1000 = gain 1.0" }
     wksPStageAdvIwScale                 AT %MB429.4  : INT; { DE:"value 1000 = gain 1.0" }

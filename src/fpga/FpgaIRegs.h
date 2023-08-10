@@ -40,6 +40,11 @@
 #define FPGAIR_P_CORR_VD               23
 #define FPGAIR_P_CORR_VQ               24
 #define FPGAIR_P_VDC_SETVAL            25
+#define FPGAIR_P_CORR_ID               38
+#define FPGAIR_P_CORR_IQ               39
+#define FPGAIR_P_SET_INTSTS            40
+#define FPGAIR_P_INTSTS_D              41
+#define FPGAIR_P_INTSTS_Q              42
 
 // Registers
 #define FPGAIR_VOUT_U                  0
@@ -87,6 +92,8 @@
 #define FPGAIR_T_VOUT_Q                328
 #define FPGAIR_T_FLTIFB_ID             336
 #define FPGAIR_T_FLTIFB_IQ             344
+#define FPGAIR_T_INTSTS_D              352
+#define FPGAIR_T_INTSTS_Q              360
 
 // Outputs
 #define FPGAIR_RGO_VOUT_U              68
