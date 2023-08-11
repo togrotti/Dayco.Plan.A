@@ -683,10 +683,15 @@ BOOL Mh_MotorDataToFpga8KHz(void)
     {   // VdcBus value @1MHz from ADC: keep user value to zero since it is not used and can create error in DSP
     	sMotorHandlerRun.swUsrVdcVal = 0 ;
     }
+
+    FPGA_CPUH_URAM_WR_SW(FPGAIR_P_VDC_SETVAL, sMotorHandlerRun.swUsrVdcVal); // FPGAIR_P_VDC_SETVAL used only in dayco
     // **************** VdcBus management for DSP modulator ****************
 
     // *************** Integral status management for DSP PI ***************
-    if (!sMh_MotorDataOut.sPowerStageSts.b.bVoltageEnabled)
+// !!!!crs!!!! if (!sMotorHandlerRun.flags.b.bDSPCustomCode) // check if DSP custom is running?
+// !!!!crs!!!! if (!sMh_MotorDataOut.sPowerStageSts.b.bVoltageEnabled) //use output?
+    if(!sMh_MotorDataIn.psPStageCtrl->b.bPowerEnable) // use input?
+
     {  	// when disabled set DSP integral status
     	sMotorHandlerRun.swDspIntegralSet = USRDSP_SETINTEGRAL;
 
@@ -707,14 +712,13 @@ BOOL Mh_MotorDataToFpga8KHz(void)
 		sMotorHandlerRun.swDspIntegralVal_D = 0 ;
 		sMotorHandlerRun.swDspIntegralVal_Q = 0 ;
 	}
-    // *************** Integral status management for DSP PI ***************
-
-    FPGA_CPUH_URAM_WR_SW(FPGAIR_P_VDC_SETVAL, sMotorHandlerRun.swUsrVdcVal); // FPGAIR_P_VDC_SETVAL used only in dayco
 
     // DSP integral initialization
     FPGA_CPUH_URAM_WR_SW(FPGAIR_P_SET_INTSTS, sMotorHandlerRun.swDspIntegralSet); // FPGAIR_P_SET_INTSTS used only in dayco
     FPGA_CPUH_URAM_WR_SW(FPGAIR_P_INTSTS_D, sMotorHandlerRun.swDspIntegralVal_D); // FPGAIR_P_INTSTS_VAL_D used only in dayco
     FPGA_CPUH_URAM_WR_SW(FPGAIR_P_INTSTS_Q, sMotorHandlerRun.swDspIntegralVal_Q); // FPGAIR_P_INTSTS_VAL_Q used only in dayco
+
+    // *************** Integral status management for DSP PI ***************
 
     // FPGA filter for  Vd, Vq, IdFb, IqFb
     FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_VD, -sMotorHandlerRun.swVdOut);

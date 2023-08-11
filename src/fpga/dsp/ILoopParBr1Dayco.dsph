@@ -32,7 +32,7 @@
 //[INSTRUCTION] (C_ZERO + C_1D8) * IFB_IQ      + C_ZERO
 //[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_IQ + [ALU] | --> T_FLTIFB_IQ
 
-// no Id and Iq FPGA filter
+// no Id and Iq FPGA filter for ILoopPI
 [INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_ID | --> T_FLTIFB_ID 
 [INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_IQ | --> T_FLTIFB_IQ 
 
