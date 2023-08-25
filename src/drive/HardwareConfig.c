@@ -1268,7 +1268,7 @@ static BOOL retrievepwbconfiguration(void)
 {
     SWORD swScn;
     BOOL bValid=FALSE;
-//    tempbit |=1;
+
     for(swScn=0, bValid=FALSE; swScn<RESCAN_OW_TIMES && !bValid; swScn++)
     {
 #if CFG_IIC
@@ -1300,7 +1300,6 @@ static BOOL retrievepwbconfiguration(void)
 // Check for known and managed hardware
 static BOOL checkknownhardware(void)
 {
-//	tempbit |=(1<<2);
         // check control board and revisions
     switch(sGlbControlBoardParameters.sProductInfo.uwProductCode)
     {
@@ -2150,25 +2149,40 @@ static BOOL onXsBri(const HWDATA_LIST * psDat, HPVOID hpvSrc, UWORD uwSrcSz, UWO
 #endif
 
     HWGRP_XS_BRI * hpSrc=(HWGRP_XS_BRI *)hpvSrc;
-    SWORD u=-1;
+    UWORD u;
 
     if(uwSrcSz>psDat->uwDataSize)
         return FALSE;
 
-    if(hpSrc->sUnit.ulIDMask&HWUNITID_BRI_FULL_0)
-        u=0;
-    else if(hpSrc->sUnit.ulIDMask&HWUNITID_BRI_FULL_1)
-        u=1;
-    else if(hpSrc->sUnit.ulIDMask&HWUNITID_BRI_FULL_2)
-        u=2;
-    else
-        return FALSE;
+    for(u=0; u<3; u++)
+    {
+        ULONG mask;
+        switch(u)
+        {
+            case 0:
+                mask=HWUNITID_BRI_FULL_0;
+                break;
+
+            case 1:
+                mask=HWUNITID_BRI_FULL_1;
+                break;
+
+            case 2:
+                mask=HWUNITID_BRI_FULL_2;
+                break;
+
+            default:
+                return FALSE;
+        }
+
+        if((hpSrc->sUnit.ulIDMask&mask)==mask)
+        {
+            memcpy(&sGlbPowerBoardParameters.sUniv.sTempSens[u]    ,&hpSrc->sTempSens  , sizeof(HWPRMS_AD_SETTINGS      ));
+            memcpy(&sGlbPowerBoardParameters.sUniv.sBrCurrRange[u] ,&hpSrc->sCurrRange , sizeof(HWPRM2_CURRENT_RANGE    ));
+        }
+    }
 
     sGlbPowerBoardParameters.sUniv.sUnit.ulIDMask |= hpSrc->sUnit.ulIDMask;
-
-    memcpy(&sGlbPowerBoardParameters.sUniv.sTempSens[u]    ,&hpSrc->sTempSens  , sizeof(HWPRMS_AD_SETTINGS      ));
-    memcpy(&sGlbPowerBoardParameters.sUniv.sBrCurrRange[u] ,&hpSrc->sCurrRange , sizeof(HWPRM2_CURRENT_RANGE    ));
-
     if(puwRev)
         *puwRev=hpSrc->uwProductRev;
 

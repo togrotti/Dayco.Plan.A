@@ -79,9 +79,9 @@ typedef struct {
 
 typedef struct {
   struct {
-    BOOL bVoltageEnabled  ;
-    BOOL bFullyActive     ;
-    BOOL bReferenceEnabled;
+    BOOL bVoltageEnabled  ; // bit from FPGA: PWM is switched on with dutycycle @50%
+    BOOL bFullyActive     ; // bit from FPGA: PWM is fully enabled with dutycycle "working"
+    BOOL bReferenceEnabled; // bit from fw: reference sent to FPGA are valid (current reference different from zero)
     BOOL bBackEMFDataValid;
     BOOL bACInputDataValid;
     BOOL bBridge1Valid    ;
@@ -213,6 +213,9 @@ typedef struct {
   SWORD swVvEffective;
   SWORD swVwEffective;
 #endif 
+
+  SLONG slDspIntSts_D ; // Dbg
+  SLONG slDspIntSts_Q ; // Dbg
 } MH_MOTORDATA_OUT ;
 
 //****************************************************************************

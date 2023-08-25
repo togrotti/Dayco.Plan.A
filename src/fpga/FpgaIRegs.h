@@ -65,6 +65,8 @@
 #define FPGAIR_IFB_AQ                  104
 #define FPGAIR_VOUT_D                  112
 #define FPGAIR_VOUT_Q                  120
+#define FPGAIR_INTSTS_D                352
+#define FPGAIR_INTSTS_Q                360
 #define FPGAIR_C_ZERO                  128
 #define FPGAIR_C_1DSQT3                136
 #define FPGAIR_C_SQT3D2                144
@@ -92,8 +94,6 @@
 #define FPGAIR_T_VOUT_Q                328
 #define FPGAIR_T_FLTIFB_ID             336
 #define FPGAIR_T_FLTIFB_IQ             344
-#define FPGAIR_T_INTSTS_D              352
-#define FPGAIR_T_INTSTS_Q              360
 
 // Outputs
 #define FPGAIR_RGO_VOUT_U              68
@@ -102,3 +102,5 @@
 #define FPGAIR_RGO_IFB_AQ              65
 #define FPGAIR_RGO_VOUT_D              66
 #define FPGAIR_RGO_VOUT_Q              67
+#define FPGAIR_RGO_INTSTS_D            70
+#define FPGAIR_RGO_INTSTS_Q            71

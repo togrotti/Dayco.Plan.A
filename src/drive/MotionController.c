@@ -47,7 +47,7 @@
 #else
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
-//#pragma GCC optimize (0)
+
 #pragma GCC optimize (2)
 
 #endif // _infineon_
@@ -558,6 +558,7 @@ typedef union {
         UWORD bIsPositioning            : 1 ; // 15
         UWORD bIgnoreEncStatus          : 1 ; // 16
         UWORD bIgnoreHomingDoneBit      : 1 ; // 17
+        UWORD bHomingForce1stServoRun   : 1 ; // 18
     } b ;
 } MOTCTRL_RFLAGS ; 
 
@@ -642,8 +643,6 @@ void (* pfSelectedProfile2Use)(void) ;
 
 BOOL MotCtrlInit(void)
 {
-	BOOL bRetVal = FALSE ;
-
     // init runtime structure 
     sMotCtrlRFlags.b.bEmcyDisabled = FALSE ;
     sMotCtrlRFlags.b.bSysStatBooting_1 = bSysStatBooting ;
@@ -664,6 +663,7 @@ BOOL MotCtrlInit(void)
     _uint64_atomic_copy(&sMotCtrlRun.sqHomingUserOffset8kHz, &sMotCtrlParameters.sqHomingUserOffset); // crs: do not allow to change sqHomingUserOffset at 8kHz when NOT in homing mode
     _uint64_atomic_copy(&sMotCtrl_Out.sqUserOffset, &sMotCtrlRun.sqHomingUserOffset8kHz);
     sMotCtrlRFlags.b.bIgnoreHomingDoneBit = sMotCtrlParameters.flags.b.bIgnoreHomingDoneBit ; // crs: allow infinite homing procedure
+    sMotCtrlRFlags.b.bHomingForce1stServoRun = TRUE ; // crs: to manage homing later initialization. Avoid error due to homing mode set with start bit already 1
 
     /* install background function */
     if(!TaskSched_AddBackgroundTask(&MotCtrlSlowTask))
@@ -1260,7 +1260,7 @@ static UBYTE motCtrl402OmProfileInterpolatedSetup(void)
 }
 
 //***************************************************************************
-static UBYTE motCtrl402OmProfileVelocitySetup(void)
+static UBYTE motCtrl402OmProfileVelocitySetup(void)     //velocity mode
 {
     ULONG ulAddressFunction2Use ;
 
@@ -1284,7 +1284,7 @@ static UBYTE motCtrl402OmProfileVelocitySetup(void)
     sMotCtrlRFlags.b.bInSpeedTimerSet = FALSE ;  
 
     // imposto il puntatore alla funzione da usare (lo faccio atomico per evitare casini)
-    ulAddressFunction2Use = (ULONG)(&motCtrl402OmProfileVelocity8KHz) ;
+    ulAddressFunction2Use = (ULONG)(&motCtrl402OmProfileVelocity8KHz) ;   //the fast task in velocity mode
     atomic_move(&pfSelectedProfile2Use, &ulAddressFunction2Use, sizeof(ULONG)) ;
 
     Os_EndCriticalSection(OS_CRITSECT_GLOBAL) ;
@@ -1315,6 +1315,7 @@ static UBYTE motCtrl402OmProfileHomingSetup(void)
     sMotCtrlRFlags.b.bPID_IntegralEnable = TRUE ; // faccio andare l'integrale dell'anello di controllo
 
     sMotCtrlRFlags.b.bHomeAttained = FALSE;
+    sMotCtrlRFlags.b.bHomingForce1stServoRun = TRUE ; // crs: to manage homing later initialization
     sMotCtrlRun.puwHomingRun = NULL;  // later initialization
     sMotCtrlRun.puwHomingPCmd = NULL; // later initialization
     sMotCtrlRun.ubHomingPrevHomeSwitch = HmGetSwitchStatus(sMotCtrlRun.ubHomingSSrcHomeSwitch, sMotCtrl_In.psMotCtrl_In->sbHomingSoftHomeSwitch);
@@ -1812,7 +1813,7 @@ static void motCtrl402OmProfileHoming8KHz(void)
     // ##################### check home operation start ######################
     // #######################################################################
 
-    if( uwLocCntrlWord & MOTCTRL_402_CF_HM_OP_START )
+    if(( uwLocCntrlWord & MOTCTRL_402_CF_HM_OP_START ) && (!sMotCtrlRFlags.b.bHomingForce1stServoRun))
     {
             // if pointer is NULL then method is not valid or there's some
             // other parameters error or already error
@@ -1958,6 +1959,8 @@ static void motCtrl402OmProfileHoming8KHz(void)
 
     else
     {
+    	sMotCtrlRFlags.b.bHomingForce1stServoRun = FALSE ; // 1st servo run done
+
         sPo_UsrPostnerIn.slLocalSpeed = 0l;
         sMotCtrlRFlags.b.bHomeAttained = FALSE;
         sMotCtrlRun.puwHomingPCmd = sMotCtrlRun.puwHomingRun;

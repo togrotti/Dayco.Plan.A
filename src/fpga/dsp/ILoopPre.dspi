@@ -25,7 +25,7 @@
 [REGISTER]  T_COSD3     0x0C8  // cos/3
 [REGISTER]  T_SINDSQT3  0x0D0  // sin/sqrt(3)
 [REGISTER]  T_COSDSQT3  0x0D8  // cos/sqrt(3)
-[REGISTER]  C_1D125     0x0E0  // crs for Dayco
+[REGISTER]  C_1D125     0x0E0  // 1/125 (crs for DspAdvanced)
 [REGISTER]  T_VOUT_B    0x0E8
 [REGISTER]  T_LMTSHIFT  0x0F0
 [REGISTER]  T_LMTLIM    0x0F8
@@ -36,29 +36,27 @@
 [REGISTER]  T_IFBEQ_U   0x110
 [REGISTER]  T_IFBEQ_V   0x118
 [REGISTER]  T_IFBEQ_W   0x120
-[REGISTER]  C_1D4       0x128  // 1/4
-[REGISTER]  C_1D8       0x130  // 1/8
-[REGISTER]  C_7D8       0x138  // 7/8
-[REGISTER]  T_VOUT_D    0x140  // output of I_PI_D loop (crs for Dayco)
-[REGISTER]  T_VOUT_Q    0x148  // output of I_PI_Q loop (crs for Dayco)
-[REGISTER]  T_FLTIFB_ID  0x150 // filtered ID @1MHz (crs for Dayco)
-[REGISTER]  T_FLTIFB_IQ  0x158 // filtered IQ @1MHz (crs for Dayco)
-[REGISTER]  T_INTSTS_D  0x160 // shifted init D integral status (crs for Dayco)
-[REGISTER]  T_INTSTS_Q  0x168 // shifted init Q integral status (crs for Dayco)
+[REGISTER]  C_1D4       0x128  // 1/4 (to be removed?)
+[REGISTER]  C_1D8       0x130  // 1/8 (to be removed?)
+[REGISTER]  C_7D8       0x138  // 7/8 (to be removed?)
+[REGISTER]  T_VOUT_D    0x140  // output of I_PI_D loop (crs for DspAdvanced)
+[REGISTER]  T_VOUT_Q    0x148  // output of I_PI_Q loop (crs for DspAdvanced)
+[REGISTER]  T_FLTIFB_ID 0x150  // filtered ID @1MHz (crs for DspAdvanced)
+[REGISTER]  T_FLTIFB_IQ 0x158  // filtered IQ @1MHz (crs for DspAdvanced)
 
 [INPUT]     P_KI        0x10 
 [INPUT]     P_KP        0x11 
 [INPUT]     P_OUTSHIFT  0x12 
 [INPUT]     P_OUTLIM    0x13
 [INPUT]     IREF_D      0x14 
-[INPUT]     P_CORR_VD   0x17  // crs for Dayco
-[INPUT]     P_CORR_VQ   0x18  // crs for Dayco
-[INPUT]     P_VDC_SETVAL 0x19 // crs for Dayco
-[INPUT]     P_CORR_ID   0x26  // crs for Dayco
-[INPUT]     P_CORR_IQ   0x27  // crs for Dayco
-[INPUT]     P_SET_INTSTS 0x28 // crs for Dayco
-[INPUT]     P_INTSTS_D  0x29  // crs_for Dayco
-[INPUT]     P_INTSTS_Q  0x2A  // crs_for Dayco
+[INPUT]     P_CORR_VD   0x17  // crs for DspAdvanced
+[INPUT]     P_CORR_VQ   0x18  // crs for DspAdvanced
+[INPUT]     P_VDC_SETVAL 0x19 // crs for DspAdvanced
+[INPUT]     P_CORR_ID   0x26  // crs for DspAdvanced
+[INPUT]     P_CORR_IQ   0x27  // crs for DspAdvanced
+[INPUT]     P_SET_INTSTS 0x28 // crs for DspAdvanced (to be removed)
+[INPUT]     P_INTSTS_D  0x29  // crs_for DspAdvanced 
+[INPUT]     P_INTSTS_Q  0x2A  // crs_for DspAdvanced
 
 //********************************************
 // Constants

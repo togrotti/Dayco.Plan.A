@@ -268,7 +268,7 @@ static ULONG EndatExecuteTransaction(ENDAT_WORKS * psWorks, UBYTE ubCommand, UBY
             if(FPGA_ENDAT_STAT_ADICRCERR(FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_STATUS)))
                 ulResult|=ENDAT_FUNCTION_ERROR_CRC_ERROR;
         }
-        else
+        else // crs-endat.22
         {   // get result
             ulResult=FPGA_BASEOFF_32(dwBaseAddress, FPGA_ENDAT_DATAOUT_LLSW);
  

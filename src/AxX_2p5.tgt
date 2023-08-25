@@ -443,7 +443,7 @@ VAR_GLOBAL
     varPStageEmfBeta                  AT %MB20.18 : INT; { DE:"" }
     varPStageEmfSqRoot                AT %MB20.20 : UINT; { DE:"" }
     varPStageEmfAngle                 AT %MB20.22 : INT; { DE:"" }
-    varPStageVdcBus                   AT %MB20.28 : INT; { DE:"" }  
+    varPStageVdcBus                   AT %MB20.28 : INT; { DE:"" } 
 
     varPStageVoltageEnabled           AT %MX26.0 : BOOL; { DE:"" }     
     varPStageFullyActive              AT %MX26.1 : BOOL; { DE:"" }     

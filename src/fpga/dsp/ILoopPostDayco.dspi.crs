@@ -8,25 +8,35 @@
 // proportional part uses filtered  Ifbk
 //********************************************
 // I direct/quadrature PID
-[INSTRUCTION] (C_ZERO + C_ZERO)  * C_ZERO + P_OUTLIM | << T_LMTSHIFT | --> T_LMTLIM
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + P_OUTLIM   | << T_LMTSHIFT | --> T_LMTLIM
 
-[INSTRUCTION] (IREF_D - IFB_ID)  * P_KI + S_KI_D | LMT T_LMTLIM
-[INSTRUCTION] [LMT] + C_ZERO                     | --> S_KI_D
-[INSTRUCTION] (IREF_D - IFB_AD)  * P_KP+[ALU]    | LMT T_LMTLIM
-[INSTRUCTION] [LMT] + C_ZERO     | << P_OUTSHIFT | --> VOUT_D
 
-[INSTRUCTION] (IREF_FQ - IFB_IQ) * P_KI + S_KI_Q | LMT T_LMTLIM
-[INSTRUCTION] [LMT] + C_ZERO                     | --> S_KI_Q
-[INSTRUCTION] (IREF_FQ - IFB_AQ) * P_KP + [ALU]  | LMT T_LMTLIM
-[INSTRUCTION] [LMT] + C_ZERO     | << P_OUTSHIFT | --> VOUT_Q
+
+
+
+
+
+[INSTRUCTION] (IREF_D  - IFB_ID)      * P_KI + S_KI_D | LMT T_LMTLIM
+[INSTRUCTION] [LMT]   + C_ZERO                        | --> S_KI_D
+[INSTRUCTION] (IREF_D - T_FLTIFB_ID)  * P_KP + [ALU]  | LMT T_LMTLIM
+[INSTRUCTION] [LMT]   + C_ZERO        | << P_OUTSHIFT | --> T_VOUT_D
+
+
+
+
+
+[INSTRUCTION] (IREF_FQ - IFB_IQ)      * P_KI + S_KI_Q | LMT T_LMTLIM
+[INSTRUCTION] [LMT] + C_ZERO                          | --> S_KI_Q
+[INSTRUCTION] (IREF_FQ - T_FLTIFB_IQ) * P_KP + [ALU]  | LMT T_LMTLIM
+[INSTRUCTION] [LMT] + C_ZERO          | << P_OUTSHIFT | --> T_VOUT_Q
 
 //********************************************
 // inverse clark+park
-[INSTRUCTION] (-K_COS    + C_ZERO) * VOUT_D + C_ZERO
-[INSTRUCTION] ( K_SIN    + C_ZERO) * VOUT_Q + [ALU]   | --> VOUT_U
+[INSTRUCTION] (-K_COS    + C_ZERO) * T_VOUT_D + C_ZERO
+[INSTRUCTION] ( K_SIN    + C_ZERO) * T_VOUT_Q + [ALU] | --> VOUT_U
 
-[INSTRUCTION] (-K_SIN    + C_ZERO) * VOUT_D + C_ZERO
-[INSTRUCTION] (-K_COS    + C_ZERO) * VOUT_Q + [ALU]   | --> T_VOUT_B
+[INSTRUCTION] (-K_SIN    + C_ZERO) * T_VOUT_D + C_ZERO
+[INSTRUCTION] (-K_COS    + C_ZERO) * T_VOUT_Q + [ALU] | --> T_VOUT_B
 
 [INSTRUCTION] (-C_1D2    + C_ZERO) * VOUT_U + C_ZERO
 [INSTRUCTION] ( C_SQT3D2 + C_ZERO) * T_VOUT_B + [ALU] | --> VOUT_V
@@ -55,9 +65,20 @@
 // due to internal optimizations and in order to
 // switch with only one variable:
 // P_VDC_SET=+1/2 => use VDC_A
-// P_VDC_SET=-1/2 => use P_VDC_VAL
-[INSTRUCTION] (C_1D2 + P_VDC_SEL) * VDC_A     + C_ZERO
-[INSTRUCTION] (C_1D2 - P_VDC_SEL) * P_VDC_VAL + [ALU] | --> VDC_OUT
+// P_VDC_SET=-1/2 => Dayco: VdcBus from fw updated at 8kHz
+[INSTRUCTION] (C_1D2 + P_VDC_SEL) * VDC_A        + C_ZERO
+[INSTRUCTION] (C_1D2 - P_VDC_SEL) * P_VDC_SETVAL + [ALU] | --> VDC_OUT
+
+//********************************************
+// no Vd and Vq FPGA filter
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_VOUT_D | --> VOUT_D
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_VOUT_Q | --> VOUT_Q
+
+
+
+
+
+
 
 //********************************************
 // zeroes arm_comp user offset

@@ -296,12 +296,6 @@ SWORD UmConv_Convert_32to16(SWORD mult, SWORD shift, SLONG value, UWORD sel)
 	long res;
 	SWORD nshift;
 
-
-	static volatile SLLNG sllTemp0 = 0 ;
-	static volatile SLLNG sllTemp1 = 0 ;
-	static volatile SLONG slTemp_0 = 0 ;
-	static volatile SWORD swTemp_0 = 0 ;
-
 	if( sel == 1 )
 		nshift = shift+16;
 	else if( sel == 2 )
@@ -314,11 +308,6 @@ SWORD UmConv_Convert_32to16(SWORD mult, SWORD shift, SLONG value, UWORD sel)
 		nshift = -shift-16;
 	else if( sel == 6 )
 		nshift = -shift-24;
-
-	slTemp_0 = value>>nshift;
-	sllTemp0 = (SLLNG)slTemp_0 * mult ;
-	sllTemp1 = sllTemp0 >> 16 ;
-	swTemp_0 = (SWORD)sllTemp1;
 
 	res = ((SLLNG)(value>>nshift) * mult) >> 16; // 32 to 16
 

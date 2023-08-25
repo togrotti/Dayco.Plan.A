@@ -25,8 +25,8 @@
 [INSTRUCTION] ( T_SIND3   + T_COSDSQT3)  * T_IFBEQ_V + [ALU]
 [INSTRUCTION] ( T_SIND3   - T_COSDSQT3)  * T_IFBEQ_W + [ALU] |--> IFB_IQ
 
-// IdFbImmediate and IqFbImmediate filtered with lowpass 7/8 to be used for the PI loop
-// to be used with immediate values
+// IdFbImmediate and IqFbImmediate filtered with lowpass  
+// 7/8 to be used for the PI loop with immediate values
 //[INSTRUCTION] (C_ZERO + C_1D8) * IFB_ID      + C_ZERO
 //[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_ID + [ALU] | --> T_FLTIFB_ID 
 //[INSTRUCTION] (C_ZERO + C_1D8) * IFB_IQ      + C_ZERO

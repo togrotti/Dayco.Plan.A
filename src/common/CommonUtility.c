@@ -374,6 +374,7 @@ ULONG atomic_long_set_bits(HPULONG dst, ULONG data)
 //        mov     [r8+#2],r5
 //    }
 	*dst = *dst | data;
+	return (*dst);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -395,6 +396,7 @@ ULONG atomic_long_clear_bits(HPULONG dst, ULONG data)
 //        mov     [r8+#2],r5
 //    }
 	*dst = *dst & ~data;
+	return (*dst);
 }
 
 /////////////////////////////////////////////////////////////////////////////

@@ -852,11 +852,10 @@ static void SendHandler1(void *CallBackRef)
         	pcob->flags.bInhibited = TRUE;//fast_atomic_set_bits(pcob->flags, CANDRV_F_INHIBITED);
         }
         else
-                // otherwise free location
+        {        // otherwise free location
             sTxAwaitingCobs[NODE1][moidx].psTxCob = NULL;
-
+	    }
     }
-
 }
 
 

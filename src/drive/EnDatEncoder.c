@@ -60,7 +60,7 @@ const ENDAT_PARAMS sEn_DefParams =
 // Defines
 
 #define CRC_ERROR_LIMIT     0x02
-#define CRC_ERROR_LIMIT_ADI 0x80
+#define CRC_ERROR_LIMIT_ADI 0x80 // crs-endat.22
 
 #define ENDAT_OLD_EP_MEMAREA        0xAB
 #define ENDAT_OLD_EP_MEMADDR        0x00

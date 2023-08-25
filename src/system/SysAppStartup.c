@@ -396,7 +396,7 @@ static void SystemBoot(void)
         if(!HwConfGlobalOptions())
             if(!bSysStatLockedByBootError)
             {
-                uwSystemBootErrorCode=SYSTEMBOOTERR_UNSUPPORTEDGLBOPT;
+                uwSystemBootErrorCode=SYSTEMBOOTERR_UNSUPPORTEDGLBOPT;      // unsupported hardware
                 bSysStatLockedByBootError=1;
             }
 

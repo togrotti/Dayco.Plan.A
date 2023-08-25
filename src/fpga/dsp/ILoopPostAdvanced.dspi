@@ -9,26 +9,26 @@
 //********************************************
 // I direct/quadrature PID
 [INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + P_OUTLIM   | << T_LMTSHIFT | --> T_LMTLIM
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + P_INTSTS_D | << T_LMTSHIFT | --> T_INTSTS_D
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + P_INTSTS_Q | << T_LMTSHIFT | --> T_INTSTS_Q
 
-// init integral status (already shifted) when necessary
-[INSTRUCTION] (C_1D2 + P_SET_INTSTS)  * S_KI_D + C_ZERO
-[INSTRUCTION] (C_1D2 - P_SET_INTSTS)  * T_INTSTS_D  + [ALU] | --> S_KI_D
-
-[INSTRUCTION] (IREF_D  - IFB_ID)      * P_KI + S_KI_D | LMT T_LMTLIM
+[INSTRUCTION] (IREF_D - IFB_ID)       * P_KI + S_KI_D | LMT T_LMTLIM
 [INSTRUCTION] [LMT]   + C_ZERO                        | --> S_KI_D
 [INSTRUCTION] (IREF_D - T_FLTIFB_ID)  * P_KP + [ALU]  | LMT T_LMTLIM
-[INSTRUCTION] [LMT]   + C_ZERO        | << P_OUTSHIFT | --> T_VOUT_D
-
-// init integral status (already shifted) when necessary
-[INSTRUCTION] (C_1D2 + P_SET_INTSTS)  * S_KI_Q + C_ZERO
-[INSTRUCTION] (C_1D2 - P_SET_INTSTS)  * T_INTSTS_Q  + [ALU] | --> S_KI_Q
+//[INSTRUCTION] [LMT]   + C_ZERO        | << P_OUTSHIFT | --> T_VOUT_D
+// manage Vout_D user initialization value
+[INSTRUCTION] [LMT]   + C_ZERO          | << P_OUTSHIFT    | --> T_VOUT_B
+[INSTRUCTION] (P_INTSTS_D + P_INTSTS_D) * C_1D2 + T_VOUT_B | --> T_VOUT_D
 
 [INSTRUCTION] (IREF_FQ - IFB_IQ)      * P_KI + S_KI_Q | LMT T_LMTLIM
-[INSTRUCTION] [LMT] + C_ZERO                          | --> S_KI_Q
+[INSTRUCTION] [LMT]    + C_ZERO                       | --> S_KI_Q
 [INSTRUCTION] (IREF_FQ - T_FLTIFB_IQ) * P_KP + [ALU]  | LMT T_LMTLIM
-[INSTRUCTION] [LMT] + C_ZERO          | << P_OUTSHIFT | --> T_VOUT_Q
+//[INSTRUCTION] [LMT]    + C_ZERO       | << P_OUTSHIFT | --> T_VOUT_Q
+// manage Vout_Q user initialization value
+[INSTRUCTION] [LMT]   + C_ZERO          | << P_OUTSHIFT    | --> T_VOUT_B
+[INSTRUCTION] (P_INTSTS_Q + P_INTSTS_Q) * C_1D2 + T_VOUT_B | --> T_VOUT_Q
+
+// Dbg
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_D | --> INTSTS_D
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_Q | --> INTSTS_Q
 
 //********************************************
 // inverse clark+park
@@ -70,15 +70,15 @@
 [INSTRUCTION] (C_1D2 - P_VDC_SEL) * P_VDC_SETVAL + [ALU] | --> VDC_OUT
 
 //********************************************
+// no Vd and Vq FPGA filter
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_VOUT_D | --> VOUT_D
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_VOUT_Q | --> VOUT_Q
+
 // Vd and Vq FPGA filter 
 [INSTRUCTION] (T_VOUT_D   + C_ZERO) * C_1D125 + VOUT_D
 [INSTRUCTION] (P_CORR_VD  + C_ZERO) * C_1D125 + [ALU] | --> VOUT_D
 [INSTRUCTION] (T_VOUT_Q   + C_ZERO) * C_1D125 + VOUT_Q
 [INSTRUCTION] (P_CORR_VQ  + C_ZERO) * C_1D125 + [ALU] | --> VOUT_Q
-
-// no Vd and Vq FPGA filter
-//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_VOUT_D | --> VOUT_D
-//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_VOUT_Q | --> VOUT_Q
 
 //********************************************
 // zeroes arm_comp user offset

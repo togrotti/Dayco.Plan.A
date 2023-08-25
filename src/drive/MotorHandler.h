@@ -53,8 +53,6 @@
 #define USRVDC_SET_ADC             (+16383) // Vdc@1MHz (DSP ADC)
 #define USRVDC_SET_FIX             (-16384) // Vdc@125uS
 
-#define USRDSP_RUNINTEGRAL         (+16383)
-#define USRDSP_SETINTEGRAL         (-16384)
 //****************************************************************************
 // Input/Output data structures
 
@@ -265,7 +263,7 @@ BOOL Mh_PlcDSPLoad(HPUBYTE hpubBin, UWORD uwSize);
 BOOL Mh_PlcDSPDBLoad(HPUBYTE hpubBin, UWORD uwSize);
 void Mh_PlcDSPHalt(void);
 void Mh_PlcDSPResume(void);
-BOOL Mh_PlcDSPConfig(BOOL bAdvance); // crs
+BOOL Mh_PlcDSPConfig(BOOL bAdvance);
 
 SWORD Mh_POSTExecute(void);
 

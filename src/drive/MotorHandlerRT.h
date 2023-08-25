@@ -68,38 +68,37 @@ typedef struct {
   
   union {
     struct {
-      UWORD bUpdateFpgaGains         : 1 ;
-      UWORD bCurrentCalibrEnable     : 1 ;
-      UWORD bCurrentCalibrAbort      : 1 ;
-      UWORD bCurrentCalibrRTSum      : 1 ;
-      UWORD bCurrentCalibrFirstRun   : 1 ;
-      UWORD bCurrentCalibrUpdOnly    : 1 ;
-      UWORD bCurrentCalibrResetTmr   : 1 ;
-      UWORD bBrakeInstalled          : 1 ;
-      UWORD bBackEMFDataEnable       : 1 ;
-      UWORD bBackEMFATanEnable       : 1 ;
-      UWORD bDIF                     : 1 ;
-      UWORD bSTOInstalled            : 1 ;
-      UWORD bResFltPolarity          : 1 ;
-      UWORD bSTOWarnActivated        : 1 ;
-      UWORD bEnergyProtEnabled       : 1 ;
-      UWORD bUpdatePwmFrequency      : 1 ;
-      UWORD bUpdateFilters           : 1 ;
-      UWORD bDefluxEnabled           : 1 ;
-      UWORD bDSPCustomCode           : 1 ;
-#ifdef _HW_DC
-      UWORD bParallelBr1Mode         : 1 ;
-      UWORD bParallelBr2Mode         : 1 ;
-#endif
+      UWORD bUpdateFpgaGains         : 1 ; // b.0
+      UWORD bCurrentCalibrEnable     : 1 ; // b.1
+      UWORD bCurrentCalibrAbort      : 1 ; // b.2
+      UWORD bCurrentCalibrRTSum      : 1 ; // b.3
+      UWORD bCurrentCalibrFirstRun   : 1 ; // b.4
+      UWORD bCurrentCalibrUpdOnly    : 1 ; // b.5
+      UWORD bCurrentCalibrResetTmr   : 1 ; // b.6
+      UWORD bBrakeInstalled          : 1 ; // b.7
+      UWORD bBackEMFDataEnable       : 1 ; // b.8
+      UWORD bBackEMFATanEnable       : 1 ; // b.9
+      UWORD bDIF                     : 1 ; // b.10
+      UWORD bSTOInstalled            : 1 ; // b.11
+      UWORD bResFltPolarity          : 1 ; // b.12
+      UWORD bSTOWarnActivated        : 1 ; // b.13
+      UWORD bEnergyProtEnabled       : 1 ; // b.14
+      UWORD bUpdatePwmFrequency      : 1 ; // b.15
+      UWORD bUpdateFilters           : 1 ; // b.16
+      UWORD bDefluxEnabled           : 1 ; // b.17
+      UWORD bDSPCustomCode           : 1 ; // b.18
+      UWORD bAlmaPS                  : 1 ; // b.19
+      UWORD bDflxWithIqFltRef        : 1 ; // b.20
+      UWORD bDisableSTOAlarm         : 1 ; // b.21
+      UWORD bSTOAlarmActivated       : 1 ; // b.22
+      UWORD bDspIntegralSet          : 1 ; // b.23
+      UWORD bDSPAdvance              : 1 ; // b.24
 #ifdef _APP_XC
-      UWORD bOvToShortEnabled        : 1 ;
+      UWORD bOvToShortEnabled        : 1 ; // b.25
 #endif
-      UWORD bAlmaPS                  : 1 ;
-      UWORD bDflxWithIqFltRef        : 1 ;
-      UWORD bDisableSTOAlarm         : 1 ;
-      UWORD bSTOAlarmActivated       : 1 ;
-#if defined(_HW_AXS_DAYCO22KW)
-      UWORD bDspIntegralSet          : 1 ;
+#ifdef _HW_DC
+      UWORD bParallelBr1Mode         : 1 ; // b.26
+      UWORD bParallelBr2Mode         : 1 ; // b.27
 #endif
     } b;
     ULONG l;
@@ -176,7 +175,7 @@ typedef struct {
 
   UWORD uwSTODeactTOut;
 
-#if defined(_HW_AXS_DAYCO22KW)
+//#if defined(_HW_AXS_DAYCO22KW)
   SWORD swVdOut ;
   SWORD swVqOut ;
   FLOAT flRatioV_DC_PEAK ;
@@ -185,10 +184,12 @@ typedef struct {
   SWORD swIqFb ;
   FLOAT flRatioI_EQ_RMS ;
 
-  SWORD swDspIntegralSet ;
   SWORD swDspIntegralVal_D ;
   SWORD swDspIntegralVal_Q ;
-#endif // _hw_axs_dayco22kw
+
+  SLONG slDspIntSts_D ; // Dbg
+  SLONG slDspIntSts_Q ; // Dbg
+//#endif // _hw_axs_dayco22kw
 } MHRT_RUNTIME ;
 
 //***************************************************************************

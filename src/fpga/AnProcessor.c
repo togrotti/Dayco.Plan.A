@@ -73,7 +73,7 @@ typedef struct
 
 typedef struct
 {
-	UWORD uwRaw[4];
+    UWORD uwRaw[4];
 } AN_SCALER;
 
 #define rawset(src,sel,dst)         bitfield_set((src), sel##_B, sel##_S, (dst).uwRaw);
@@ -131,7 +131,7 @@ BOOL AnProc_Init(UWORD uwTaskParam)
             timer_wait(uwSysTimers1ms, 1);
             break;
 
-        default:;
+        default:
             assert(FALSE);
     }
 
@@ -143,7 +143,7 @@ BOOL AnProc_Init(UWORD uwTaskParam)
 
 BOOL AnProc_Set(UBYTE ubSrcTag, ANPROC_CHAN * hpsChannel)
 {
-        // //assert tag validity
+        // assert tag validity
     assert(ubSrcTag<CHANSETUP_SIZE);
 
         // and store setup
@@ -157,7 +157,7 @@ BOOL AnProc_Set(UBYTE ubSrcTag, ANPROC_CHAN * hpsChannel)
 
 BOOL AnProc_Get(UBYTE ubSrcTag, ANPROC_CHAN * hpsChannel)
 {
-        // //assert tag validity
+        // assert tag validity
     assert(ubSrcTag<CHANSETUP_SIZE);
 
         // and get from store
@@ -171,7 +171,7 @@ BOOL AnProc_Get(UBYTE ubSrcTag, ANPROC_CHAN * hpsChannel)
 
 BOOL AnProc_RGOutSet(UBYTE ubSrcTag, ANPROC_RGOUT * hpsRgOut)
 {
-        // //assert tag validity
+        // assert tag validity
     assert(ubSrcTag>=ANPROC_RGO_TAGOFFSET && ubSrcTag<ANPROC_RGO_TAGOFFSET+CHANSETUP_SIZE*2);
 
         // and store setup
@@ -186,7 +186,7 @@ BOOL AnProc_RGOutSet(UBYTE ubSrcTag, ANPROC_RGOUT * hpsRgOut)
 
 BOOL AnProc_UnSet(UBYTE ubSrcTag)
 {
-        // //assert tag validity
+        // assert tag validity
     assert(ubSrcTag<CHANSETUP_SIZE);
 
         // disable channel
@@ -202,7 +202,7 @@ BOOL AnProc_AdjustOffset(UBYTE ubSrcTag, UWORD uwOffset)
 {
     AN_PRE sTmp;
 
-        // //assert tag validity
+        // assert tag validity
     assert(ubSrcTag<CHANSETUP_SIZE);
 
         // and adjust offset, both internally and on compiled data structures
@@ -299,7 +299,7 @@ static BOOL compiler()
     for(i=0,uwShortIdx=0,uwLongIdx=uwShortSz;i<CHANSETUP_SIZE;i++)
     {
             // if disabled
-		if (hpsChanSetup[i].ubOpt==0x00)
+        if(hpsChanSetup[i].ubOpt==0x00)
             continue;
 
             // setup analog precondition

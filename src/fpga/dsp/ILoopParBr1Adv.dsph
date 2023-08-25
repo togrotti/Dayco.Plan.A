@@ -10,7 +10,7 @@
 #INCLUDE "ILoopPre.dspi"
 
 //********************************************
-// compute equivalent currents IFBEQ = (IFB + IFB_BR1)/2 
+// compute equivalent currents IFBEQ = (IFB + IFB_BR1)/2
 [INSTRUCTION] (IFB_AU + IFB_BR1_AU) * C_1D2 + C_ZERO |--> T_IFBEQ_U
 [INSTRUCTION] (IFB_AV + IFB_BR1_AV) * C_1D2 + C_ZERO |--> T_IFBEQ_V
 [INSTRUCTION] (IFB_AW + IFB_BR1_AW) * C_1D2 + C_ZERO |--> T_IFBEQ_W
@@ -25,8 +25,8 @@
 [INSTRUCTION] ( T_SIND3   + T_COSDSQT3)  * T_IFBEQ_V + [ALU]
 [INSTRUCTION] ( T_SIND3   - T_COSDSQT3)  * T_IFBEQ_W + [ALU] |--> IFB_IQ
 
-// IdFbImmediate and IqFbImmediate filtered with lowpass 7/8 to be used for the PI loop
-// to be used with immediate values
+// IdFbImmediate and IqFbImmediate filtered with lowpass  
+// 7/8 to be used for the PI loop with immediate values
 //[INSTRUCTION] (C_ZERO + C_1D8) * IFB_ID      + C_ZERO
 //[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_ID + [ALU] | --> T_FLTIFB_ID 
 //[INSTRUCTION] (C_ZERO + C_1D8) * IFB_IQ      + C_ZERO
@@ -38,10 +38,16 @@
 
 // value to cockpit 
 // Id and Iq without FPGA filter
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_FLTIFB_ID | --> IFB_AD 
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_FLTIFB_IQ | --> IFB_AQ 
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_FLTIFB_ID | --> IFB_AD 
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_FLTIFB_IQ | --> IFB_AQ 
+
+// Id and Iq with FPGA filter 
+[INSTRUCTION] (IFB_AD     + C_ZERO) * C_1D125 + IFB_ID
+[INSTRUCTION] (P_CORR_ID  + C_ZERO) * C_1D125 + [ALU] | --> IFB_AD
+[INSTRUCTION] (IFB_AQ     + C_ZERO) * C_1D125 + IFB_IQ
+[INSTRUCTION] (P_CORR_IQ  + C_ZERO) * C_1D125 + [ALU] | --> IFB_AQ
 
 //********************************************
 // common
 
-#INCLUDE "ILoopPostDayco.dspi"
+#INCLUDE "ILoopPostAdvanced.dspi"

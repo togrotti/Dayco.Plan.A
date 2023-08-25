@@ -60,7 +60,6 @@
 
 
 /* ================================ #define ================================ */
-
 /* 32767 : 1 = x : 0.866     *
  * x = 32767 * 0.866 = 28377 */
 /* Nota: RADICE_TRE_MEZZI in realta' e' RADICE_TRE_MEZZI/2 */
@@ -276,20 +275,25 @@ const MH_MOTORDATA_PARAM  sMh_MotorDataDefParam =
 
 extern const unsigned char  ILoopStandard[];
 extern const unsigned long  ILoopStandard_length;
+extern const unsigned char  ILoopAdvanced[];
+extern const unsigned long  ILoopAdvanced_length;
 
 #ifdef _HW_DC
-#if defined(_HW_AXS_DAYCO22KW)
-extern const unsigned char ILoopParBr1Dayco_1[];
-extern const unsigned long ILoopParBr1Dayco_1_length;
-//extern const unsigned char ILoopParBr1Dayco[];
-//extern const unsigned long ILoopParBr1Dayco_length;
-#else
+//#if defined(_HW_AXS_DAYCO22KW)
+//extern const unsigned char ILoopParBr1Dayco_1[];
+//extern const unsigned long ILoopParBr1Dayco_1_length;
+////extern const unsigned char ILoopParBr1Dayco[];
+////extern const unsigned long ILoopParBr1Dayco_length;
+//#else
 extern const unsigned char  ILoopParBr1[];
 extern const unsigned long  ILoopParBr1_length;
-#endif // _hw_axs_dayco22kw
+extern const unsigned char  ILoopParBr1Adv[];
+extern const unsigned long  ILoopParBr1Adv_length;
+//#endif // _hw_axs_dayco22kw
 
 extern const unsigned char  ILoopParBr2[];
 extern const unsigned long  ILoopParBr2_length;
+
 #endif // _hw_dc
 
 //***************************************************************************
@@ -304,6 +308,8 @@ static UWORD  uwDSPCustomSize=0;
 
 static LOCDSPPARDB *  hpubDSPCustomDBAddr=NULL;
 static UWORD  uwDSPCustomDBLength=0;
+
+static BOOL bDSPAdvance;
 
 //***************************************************************************
 // AC in layout
@@ -604,7 +610,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   UWORD uwACLayout[3];
   SWORD swACPSPLSign[2];
   UWORD uwSwitchDeadTime;
-  SWORD swLocOverVoltage=0,swDCBusScale,swPSPlUScale=0,swPSPlVScale=0;
+  SWORD swLocOverVoltage=0, swDCBusScale=0, swPSPlUScale=0, swPSPlVScale=0;
   UWORD uwDCBusOffst=FPGA_ADCDEF_DCBUS_OFF,uwPSPlUOffst=FPGA_ADCDEF_PSPL_OFF,uwPSPlVOffst=FPGA_ADCDEF_PSPL_OFF;
   BOOL bBrakeDrivePresent = FALSE;
   BOOL bBrakeDrivePolarity;
@@ -621,10 +627,11 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   BOOL bIBrakeValid = FALSE;
 #endif
 
-
   sMotorHandlerRun.sErrorSent.w = 0 ; /* clear errors */
   memset(&sMotorHandlerRun.sPStageStatusSet.b, 0, sizeof(MH_POWERSTAGECONTROL)) ; /* clear status setup */
   sMotorHandlerRun.flags.l = 0l;
+
+  sMotorHandlerRun.flags.b.bDSPAdvance = bDSPAdvance ; // workaround to use bDSPAdvance in RT
 
   sMh_MotorDataOut.sIqLimit.slMin=SLONG_MIN_VALUE;
   sMh_MotorDataOut.sIqLimit.slMax=SLONG_MAX_VALUE;
@@ -1167,15 +1174,16 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   // if parallel bridge selected
   if(sMotorHandlerRun.flags.b.bParallelBr1Mode)
   {
+//#if (defined _HW_AXS_DAYCO22KW)
+	if (sMotorHandlerRun.flags.b.bDSPAdvance)
+      sMh_PlcAdvancedWorks.flags.b.bEnMultiBrgImmCurr = TRUE ;
+//#endif
+
     // bridge 1 phase currents (same as above but just average DSP destination)
     sAInDef.uwDstIntImm=ANPROC_ADR_DISABLE;
     sAInDef.uwDstIntAvg=ANPROC_ADR_DISABLE;
     sAInDef.pvDstExtImm=NULL;
     sAInDef.pvDstExtAvg=NULL;
-
-#if (defined _HW_AXS_DAYCO22KW)
-    sMh_PlcAdvancedWorks.flags.b.bEnMultiBrgImmCurr = TRUE ;
-#endif
     
     // virtual bridge 1 U current
     sAInDef.sCal.uwOffst=sMotorHandlerRun.tCurBr1Cal[sMotorHandlerRun.sCfgCurrents.d.ubLayoutU-1].uwOffst;
@@ -1357,47 +1365,59 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   sAInDef.uwDstIntAvg=ANPROC_ADR_DISABLE;
 
   // feedback Id and Iq
-#if defined(_HW_AXS_DAYCO22KW)
-  sRGODef.ubOpt=ANPROC_OF_DST_SHORT;
-  sMotorHandlerRun.flRatioI_EQ_RMS = flRatioI_EQ_RMS ;
-  sRGODef.flScale=1.0;
+//#if defined(_HW_AXS_DAYCO22KW)
+  if (sMotorHandlerRun.flags.b.bDSPAdvance)
+  {
+    sRGODef.ubOpt=ANPROC_OF_DST_SHORT;
+    sMotorHandlerRun.flRatioI_EQ_RMS = flRatioI_EQ_RMS ;
+    sRGODef.flScale=1.0;
 
-  sRGODef.pvDst=&sMotorHandlerRun.swIdFb;
-  AnProc_RGOutSet(FPGAIR_RGO_IFB_AD,&sRGODef);
+    sRGODef.pvDst=&sMotorHandlerRun.swIdFb;
+    AnProc_RGOutSet(FPGAIR_RGO_IFB_AD,&sRGODef);
 
-  sRGODef.pvDst=&sMotorHandlerRun.swIqFb;
-  AnProc_RGOutSet(FPGAIR_RGO_IFB_AQ,&sRGODef);
-#else
-  sRGODef.ubOpt=ANPROC_OF_DST_LONG;
-  sRGODef.flScale=flRatioI_EQ_RMS;
+    sRGODef.pvDst=&sMotorHandlerRun.swIqFb;
+    AnProc_RGOutSet(FPGAIR_RGO_IFB_AQ,&sRGODef);
+  }
+  else
+//#else
+  {
+    sRGODef.ubOpt=ANPROC_OF_DST_LONG;
+    sRGODef.flScale=flRatioI_EQ_RMS;
 
-  sRGODef.pvDst=&sMh_MotorDataOut.slIdFb;
-  AnProc_RGOutSet(FPGAIR_RGO_IFB_AD,&sRGODef);
+    sRGODef.pvDst=&sMh_MotorDataOut.slIdFb;
+    AnProc_RGOutSet(FPGAIR_RGO_IFB_AD,&sRGODef);
 
-  sRGODef.pvDst=&sMh_MotorDataOut.slIqFb;
-  AnProc_RGOutSet(FPGAIR_RGO_IFB_AQ,&sRGODef);
-#endif // _hw_axs_dayco22kw
+    sRGODef.pvDst=&sMh_MotorDataOut.slIqFb;
+    AnProc_RGOutSet(FPGAIR_RGO_IFB_AQ,&sRGODef);
+  }
+//#endif // _hw_axs_dayco22kw
 
   // output Vd and Vq
   sRGODef.ubOpt=ANPROC_OF_DST_SHORT;
-#if defined(_HW_AXS_DAYCO22KW)
-  sMotorHandlerRun.flRatioV_DC_PEAK = flRatioV_DC_PEAK ;
-  sRGODef.flScale=1.0;
+//#if defined(_HW_AXS_DAYCO22KW)
+  if (sMotorHandlerRun.flags.b.bDSPAdvance)
+  {
+	sMotorHandlerRun.flRatioV_DC_PEAK = flRatioV_DC_PEAK ;
+    sRGODef.flScale=1.0;
 
-  sRGODef.pvDst=&sMotorHandlerRun.swVdOut;
-  AnProc_RGOutSet(FPGAIR_RGO_VOUT_D,&sRGODef);
+    sRGODef.pvDst=&sMotorHandlerRun.swVdOut;
+    AnProc_RGOutSet(FPGAIR_RGO_VOUT_D,&sRGODef);
 
-  sRGODef.pvDst=&sMotorHandlerRun.swVqOut;
-  AnProc_RGOutSet(FPGAIR_RGO_VOUT_Q,&sRGODef);
-#else
-  sRGODef.flScale=flRatioV_DC_PEAK;
+    sRGODef.pvDst=&sMotorHandlerRun.swVqOut;
+    AnProc_RGOutSet(FPGAIR_RGO_VOUT_Q,&sRGODef);
+  }
+  else
+//#else
+  {
+    sRGODef.flScale=flRatioV_DC_PEAK;
 
-  sRGODef.pvDst=&sMh_MotorDataOut.swVdOut;
-  AnProc_RGOutSet(FPGAIR_RGO_VOUT_D,&sRGODef);
+    sRGODef.pvDst=&sMh_MotorDataOut.swVdOut;
+    AnProc_RGOutSet(FPGAIR_RGO_VOUT_D,&sRGODef);
 
-  sRGODef.pvDst=&sMh_MotorDataOut.swVqOut;
-  AnProc_RGOutSet(FPGAIR_RGO_VOUT_Q,&sRGODef);
-#endif // _hw_axs_dayco22kw
+    sRGODef.pvDst=&sMh_MotorDataOut.swVqOut;
+    AnProc_RGOutSet(FPGAIR_RGO_VOUT_Q,&sRGODef);
+  }
+//#endif // _hw_axs_dayco22kw
 
   // output Vu and Vv
   sRGODef.flScale=-flRatioV_AC_PEAK;
@@ -1407,6 +1427,21 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
 
   sRGODef.pvDst=&sMh_MotorDataOut.swVvOut;
   AnProc_RGOutSet(FPGAIR_RGO_VOUT_V,&sRGODef);
+
+//#if defined(_HW_AXS_DAYCO22KW)
+  if (sMotorHandlerRun.flags.b.bDSPAdvance)
+  { // Dbg
+    sRGODef.ubOpt=ANPROC_OF_DST_LONG;
+    sRGODef.flScale=1.0;
+
+    sRGODef.pvDst=&sMotorHandlerRun.slDspIntSts_D;
+    AnProc_RGOutSet(FPGAIR_RGO_INTSTS_D,&sRGODef);
+
+    sRGODef.pvDst=&sMotorHandlerRun.slDspIntSts_Q;
+    AnProc_RGOutSet(FPGAIR_RGO_INTSTS_Q,&sRGODef);
+  }
+//#endif
+
 
   // setup standard address for current channels min/max
   SetMinMaxChannels(SETMINMAX_RUNMODE, 0);
@@ -1421,7 +1456,6 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
 
   sMh_MotorDataOut.sDriveLimit.swOverVoltage = sMotorHandlerRun.swMaxOverVoltage = swLocOverVoltage;
   FPGA_PWM_FLT_DCBUSLIMIT = UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK, (SLONG)sMh_MotorDataOut.sDriveLimit.swOverVoltage<<16);
-
 
   // Setup drive current limit (minimum between drive and motor)
   if((SLONG)(sGlbMotorParameters.flCurrentPeak * 10000.0) < sMh_MotorDataOut.sDriveLimit.slCurrentLimit)
@@ -1527,7 +1561,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     }
 
     sMotorHandlerRun.flags.b.bDSPCustomCode=TRUE;
-    sMh_MotorDataOut.ubDSPIsCustom=1;
+    sMh_MotorDataOut.ubDSPIsCustom = 1;
     // ***************** PLC custom DSP *****************
   }
   else
@@ -1535,34 +1569,43 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
 #ifdef _HW_DC
     if(sMotorHandlerRun.flags.b.bParallelBr1Mode)
     {
-        if(sMotorHandlerRun.flags.b.bParallelBr2Mode)
-        {   // ********** FW Standard DSP  (3 bridges) **********
-            sMh_MotorDataOut.ubDSPIsCustom=0;
-            assert(DSPHLoad(ILoopParBr2, (UWORD)ILoopParBr2_length, FPGAIR_IFB_AW));
+      if(sMotorHandlerRun.flags.b.bParallelBr2Mode)
+      { // ********** FW Standard DSP  (3 bridges) **********
+        sMh_MotorDataOut.ubDSPIsCustom=0;
+        assert(DSPHLoad(ILoopParBr2, (UWORD)ILoopParBr2_length, FPGAIR_IFB_AW));
+      }
+      else
+      { // *************** FW DSP (2 bridges) ***************
+//#if (defined _HW_AXS_DAYCO22KW)
+        if(sMotorHandlerRun.flags.b.bDSPAdvance)
+        {  // ****************** Advanced DSP ******************
+          sMh_MotorDataOut.ubDSPIsCustom=2;
+                assert(DSPHLoad(ILoopParBr1Adv, (UWORD)ILoopParBr1Adv_length, FPGAIR_IFB_AW));
+//          assert(DSPHLoad(ILoopParBr1Dayco_1, (UWORD)ILoopParBr1Dayco_1_length, FPGAIR_IFB_AW));
+//          assert(DSPHLoad(ILoopParBr1Dayco, (UWORD)ILoopParBr1Dayco_length, FPGAIR_IFB_AW));
         }
+//#else
         else
-        {   // *************** FW DSP (2 bridges) ***************
-#if (defined _HW_AXS_DAYCO22KW)
-        	{   // ******************* Dayco  DSP *******************
-        		sMh_MotorDataOut.ubDSPIsCustom=0;
-                assert(DSPHLoad(ILoopParBr1Dayco_1, (UWORD)ILoopParBr1Dayco_1_length, FPGAIR_IFB_AW));
-//                assert(DSPHLoad(ILoopParBr1Dayco, (UWORD)ILoopParBr1Dayco_length, FPGAIR_IFB_AW));
-
-
-        	}
-#else
-        	{   // ****************** Standard DSP ******************
-        	    sMh_MotorDataOut.ubDSPIsCustom=0;
-                assert(DSPHLoad(ILoopParBr1, (UWORD)ILoopParBr1_length, FPGAIR_IFB_AW));
-        	}
-#endif // _hw_axs_dayco22kw
+        { // ****************** Standard DSP ******************
+          sMh_MotorDataOut.ubDSPIsCustom=0;
+          assert(DSPHLoad(ILoopParBr1, (UWORD)ILoopParBr1_length, FPGAIR_IFB_AW));
         }
+//#endif // _hw_axs_dayco22kw
+      }
     }
     else
 #endif // _hwdc
-    {   // *********** FW Standard DSP (1 bridge) ***********
-        sMh_MotorDataOut.ubDSPIsCustom=0;
-        assert(DSPHLoad(ILoopStandard, (UWORD)ILoopStandard_length, FPGAIR_IFB_AW));
+    { // *********** FW Standard DSP (1 bridge) ***********
+      if(sMotorHandlerRun.flags.b.bDSPAdvance)
+      { // ****************** Advanced DSP ******************
+    	sMh_MotorDataOut.ubDSPIsCustom=2;
+    	assert(DSPHLoad(ILoopAdvanced, (UWORD)ILoopAdvanced_length, FPGAIR_IFB_AW));
+      }
+      else
+      {  // ****************** Standard DSP ******************
+         sMh_MotorDataOut.ubDSPIsCustom=0;
+    	 assert(DSPHLoad(ILoopStandard, (UWORD)ILoopStandard_length, FPGAIR_IFB_AW));
+      }
     }
   }
 
@@ -1580,8 +1623,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   }
 
   if(!sMotorHandlerRun.flags.b.bDSPCustomCode)
-  {
-    // setup constants
+  { // setup constants
     FPGA_CPUH_DRAM_WR_SW(FPGAIR_C_ZERO,   0x0000); // = zero
     FPGA_CPUH_DRAM_WR_SW(FPGAIR_C_1DSQT3, 0x49E7); // = 18919 = 32768 * 1/sqrt(3)
     FPGA_CPUH_DRAM_WR_SW(FPGAIR_C_SQT3D2, 0x6EDA); // = 28378 = 32768 * sqrt(3)/2
@@ -1592,29 +1634,38 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     FPGA_CPUH_DRAM_WR_SW(FPGAIR_C_7D8,    0x7000); // = 28672 = 32768 * 7/8
     FPGA_CPUH_DRAM_WR_SW(FPGAIR_C_1D125,  0x0106); // = 262   = 32768 / 125
 
+    // set user Vdc setup feature (only at boot) and initialize user set Vdcbus
+//#if defined(_HW_AXS_DAYCO22KW)
+  if (sMotorHandlerRun.flags.b.bDSPAdvance)
+  {
+    if(sMh_PlcAdvancedWorks.flags.b.bUserVdcBusSet)
+      sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_FIX;
+    else
+      sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_ADC;
+
+    if (sMh_PlcAdvancedWorks.swVdcbusSet <= 0)
+    {
 #if defined(_HW_AXS_DAYCO22KW)
-  // set user Vdc setup feature (only at boot)
-  if(sMh_PlcAdvancedWorks.flags.b.bUserVdcBusSet)
-    sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_FIX;
-  else
-    sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_ADC;
-
-  if (sMh_PlcAdvancedWorks.swVdcbusSet <= 0)
-	sMh_PlcAdvancedWorks.swVdcbusSet = 480 ; // zero or negative value not allowed: set default at 48.0V
-
-  sMotorHandlerRun.swUsrVdcVal = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)sMh_PlcAdvancedWorks.swVdcbusSet<<16)) ;
-
-  // set user DSP integral status value feature (only at boot)
-  sMotorHandlerRun.flags.b.bDspIntegralSet = sMh_PlcAdvancedWorks.flags2.b.bDspIntegralSet ;
-  sMotorHandlerRun.swDspIntegralSet   = USRDSP_RUNINTEGRAL;
-  sMotorHandlerRun.swDspIntegralVal_D = 0 ;
-  sMotorHandlerRun.swDspIntegralVal_Q = 0 ;
-
+	   sMh_PlcAdvancedWorks.swVdcbusSet = 480 ; // zero or negative value not allowed: set default at 48.0V
 #else
-    // and initialize user set Vdcbus
+	   sMh_PlcAdvancedWorks.swVdcbusSet = 6000 ; // zero or negative value not allowed: set default at 600.0V
+#endif
+    }
+
+    sMotorHandlerRun.swUsrVdcVal = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)sMh_PlcAdvancedWorks.swVdcbusSet<<16)) ;
+
+    // set user DSP integral status initialization value feature (only at boot)
+    sMotorHandlerRun.flags.b.bDspIntegralSet = sMh_PlcAdvancedWorks.flags2.b.bDspIntegralSet ;
+    sMotorHandlerRun.swDspIntegralVal_D = 0 ;
+    sMotorHandlerRun.swDspIntegralVal_Q = 0 ;
+  }
+  else
+//#else
+  {
     sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_ADC;
     sMotorHandlerRun.swUsrVdcVal = 0;
-#endif
+  }
+//#endif
   }
 
   // re-enable DSPH
@@ -2613,17 +2664,16 @@ static void MotorDataBkGd(void)
   // se vengono cambiati da plc i parametri avanzati, li applica
   FPGA_REG16_ATSETBIT(FPGA_PWM_SET,   FPGA_PWM_B_DTCOMP_CUR_SIGN, sMh_PlcAdvancedWorks.flags.b.bDtCompCurrentSign);
 
-  FPGA_PWM_DEADTIME                      = sMh_PlcAdvancedWorks.uwDeadTime;
-  FPGA_PWM_HOLDTIME                      = sMh_PlcAdvancedWorks.uwHoldTime;
-  FPGA_PWM_BLANKTIME                     = sMh_PlcAdvancedWorks.uwBlankTime;
+  FPGA_PWM_DEADTIME  = sMh_PlcAdvancedWorks.uwDeadTime;
+  FPGA_PWM_HOLDTIME  = sMh_PlcAdvancedWorks.uwHoldTime;
+  FPGA_PWM_BLANKTIME = sMh_PlcAdvancedWorks.uwBlankTime;
 
   /* setup overcurrent counter limit and flag of PWM output */
   if(sMh_PlcAdvancedWorks.uwOvCurrCntLimit!=0)
      FPGA_PWM_OC_CNTLIMIT = sMh_PlcAdvancedWorks.uwOvCurrCntLimit-1;
   FPGA_REG16_SETBIT(FPGA_PWM_SETEX, FPGA_PWM_B_SETEX_EN_DISOCPWM, sMh_PlcAdvancedWorks.flags.b.bDisableOCPwmout);
 
-  // se viene disabilitato l'intervento automatico sulla selezione two steps
-  // allora permette al PLC di impostare manualmente
+  // if automatic two steps selection is disabled, then it is allowed to be manually set by the plc
   if(sMh_PlcAdvancedWorks.flags.b.bDisable2StepAuto)
   {
     UWORD uwPwmSet=0x0000;
@@ -2648,25 +2698,23 @@ static void MotorDataBkGd(void)
   // refresh propagation delays
   SetPDDelays(sMh_PlcAdvancedWorks.uwCurrPDTime, sMh_PlcAdvancedWorks.uwVoltPDTime);
 
-#if !defined(_HW_AXS_DAYCO22KW)
-  // refresh user Vdc setup
-  if(sMh_PlcAdvancedWorks.flags.b.bUserVdcBusSet)
-  {
-    SWORD swCv=(SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)sMh_PlcAdvancedWorks.swVdcbusSet<<16)) ;
+//#if !defined(_HW_AXS_DAYCO22KW)
+  if (!sMotorHandlerRun.flags.b.bDSPAdvance)
+  { // refresh user Vdc setup
+    if(sMh_PlcAdvancedWorks.flags.b.bUserVdcBusSet)
+    {
+      SWORD swCv=(SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)sMh_PlcAdvancedWorks.swVdcbusSet<<16)) ;
 
-//    _atomic_(0);
-    sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_FIX;
-    sMotorHandlerRun.swUsrVdcVal = swCv;
-//    _endatomic_();
+      sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_FIX;
+      sMotorHandlerRun.swUsrVdcVal = swCv;
+    }
+    else
+    {
+      sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_ADC;
+      sMotorHandlerRun.swUsrVdcVal = 0;
+    }
   }
-  else
-  {
-//    _atomic_(0);
-    sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_ADC;
-    sMotorHandlerRun.swUsrVdcVal = 0;
-//    _endatomic_();
-  }
-#endif
+//#endif
 }
 
 //***************************************************************************
@@ -4010,6 +4058,9 @@ BOOL Mh_PlcDSPLoad(HPUBYTE hpubBin, UWORD uwSize)
    hpubDSPCustomAddr=hpubBin;
    uwDSPCustomSize  =uwSize;
 
+   if(hpubBin==NULL)
+       bDSPAdvance = (BOOL)uwSize;
+
    return TRUE;
 }
 
@@ -4037,8 +4088,8 @@ BOOL Mh_PlcDSPConfig(BOOL bAdvance)
         // must be executed only at preboot
     if(!bSysStatBooting)
         return FALSE;
-/*
+
     bDSPAdvance = bAdvance;
-*/
+
     return TRUE;
 }

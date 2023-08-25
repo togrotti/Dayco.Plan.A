@@ -22,75 +22,75 @@ VAR_GLOBAL CONSTANT
     (* ------------------------------------------------------ *)
     {G:"Plc"}
 
-    cstPlcTaskCfgAuto : USINT := 0;
-    cstPlcTaskCfgOff : USINT := 1;
-    cstPlcTaskCfgPlc : USINT := 2;
+    cstPlcTaskCfgAuto      : USINT := 0;
+    cstPlcTaskCfgOff       : USINT := 1;
+    cstPlcTaskCfgPlc       : USINT := 2;
 
     (* ------------------------------------------------------ *)
     {G:"System"}
 
-    cstSysTimer100ns : USINT := 1;
-    cstSysTimer125us : USINT := 2;
-    cstSysTimer1ms : USINT := 3;
+    cstSysTimer100ns       : USINT := 1;
+    cstSysTimer125us       : USINT := 2;
+    cstSysTimer1ms         : USINT := 3;
 
-    cstSysEmcyStopFatal : UINT := 1;
+    cstSysEmcyStopFatal    : UINT := 1;
     cstSysEmcyStopNonFatal : UINT := 2;
 
-    cstSysCoreSpeedComp : USINT := 0;
-    cstSysCoreSpeedPerf : USINT := 1;
+    cstSysCoreSpeedComp    : USINT := 0;
+    cstSysCoreSpeedPerf    : USINT := 1;
 
     (* ------------------------------------------------------ *)
     {G:"Encoders"}
 
-    cstEndatSelMain : UINT := 0;
-    cstEndatSelAux : UINT := 1;
+    cstEndatSelMain                 : UINT := 0;
+    cstEndatSelAux                  : UINT := 1;
+  
+    cstEndatErrMaskTimeout          : UDINT := 16#80000000;
+    cstEndatErrMaskCRCError         : UDINT := 16#40000000;
+    cstEndatErrMaskNoModule         : UDINT := 16#01000000;
 
-    cstEndatErrMaskTimeout : UDINT := 16#80000000;
-    cstEndatErrMaskCRCError : UDINT := 16#40000000;
-    cstEndatErrMaskNoModule : UDINT := 16#01000000;
+    cstEncStatusRelativeValid       : USINT := 16#01;
+    cstEncStatusElecAngleValid      : USINT := 16#02;
+    cstEncStatusFatalFaultValid     : USINT := 16#04;
+    cstEncStatusNonFatalFaultValid  : USINT := 16#08;
+    cstEncStatusAbsoluteValid       : USINT := 16#10;
+    cstEncStatusAbsoluteWaiting     : USINT := 16#20;
+    cstEncStatusEfsReady : USINT    := 16#40;
+    cstEncStatusSnapshotValid       : USINT := 16#80;
+  
+    cstEncTypeNull                  : UINT := 0;
+    cstEncTypeAbsHall               : UINT := 1;
+    cstEncTypeAbsAnalog             : UINT := 3;
+    cstEncTypeAbsEndat              : UINT := 4;
+    cstEncTypeRelBackEMF            : UINT := 5;
+    cstEncTypeRelIncremental        : UINT := 6;
+    cstEncTypeRelIncrSimulation     : UINT := 8;
+    cstEncTypeB1AbsEndat            : UINT := 10;
+    cstEncTypeAbsHiperface          : UINT := 11;
+    cstEncTypeAbsNikon              : UINT := 12;
+    cstEncTypeAbsTamagawa           : UINT := 13;
+  
+    cstEncEfsTypeDisabled           : USINT := 0;
+    cstEncEfsTypeIdRamp             : USINT := 1;
+    cstEncEfsTypeIdRampAndPosLoop   : USINT := 2;
+    cstEncEfsTypeIdRampAndLocalPI   : USINT := 3;
 
-    cstEncStatusRelativeValid : USINT := 16#01;
-    cstEncStatusElecAngleValid : USINT := 16#02;
-    cstEncStatusFatalFaultValid : USINT := 16#04;
-    cstEncStatusNonFatalFaultValid : USINT := 16#08;
-    cstEncStatusAbsoluteValid : USINT := 16#10;
-    cstEncStatusAbsoluteWaiting : USINT := 16#20;
-    cstEncStatusEfsReady : USINT := 16#40;
-    cstEncStatusSnapshotValid : USINT := 16#80;
-
-    cstEncTypeNull : UINT := 0;
-    cstEncTypeAbsHall : UINT := 1;
-    cstEncTypeAbsAnalog : UINT := 3;
-    cstEncTypeAbsEndat : UINT := 4;
-    cstEncTypeRelBackEMF : UINT := 5;
-    cstEncTypeRelIncremental : UINT := 6;
-    cstEncTypeRelIncrSimulation : UINT := 8;
-    cstEncTypeB1AbsEndat : UINT := 10;
-    cstEncTypeAbsHiperface : UINT := 11;
-    cstEncTypeAbsNikon : UINT := 12;
-    cstEncTypeAbsTamagawa : UINT := 13;
-
-    cstEncEfsTypeDisabled : USINT := 0;
-    cstEncEfsTypeIdRamp : USINT := 1;
-    cstEncEfsTypeIdRampAndPosLoop : USINT := 2;
-    cstEncEfsTypeIdRampAndLocalPI : USINT := 3;
-
-    cstEncOptEnSinCosHw : UINT := 1; {HIDDEN:ON}
-    cstEncOptSetupVEncoder : UINT := 2; {HIDDEN:ON}
+    cstEncOptEnSinCosHw             : UINT := 1; {HIDDEN:ON}
+    cstEncOptSetupVEncoder          : UINT := 2; {HIDDEN:ON}
 
     (* ------------------------------------------------------ *)  
     {G:"Torque Loop"}
     
-    cstILoopFiltSize : UINT := 4;
+    cstILoopFiltSize         : UINT := 4;
 
-    cstILoopFiltSysEnable : UDINT := 16#FFFFFFFF;
+    cstILoopFiltSysEnable    : UDINT := 16#FFFFFFFF;
     
-    cstILoopFiltTypeNone : USINT := 0;
-    cstILoopFiltTypeLowPass : USINT := 1;
-    cstILoopFiltTypeNotch : USINT := 2;
-    cstILoopFiltTypeBiQuad : USINT := 3;
+    cstILoopFiltTypeNone     : USINT := 0;
+    cstILoopFiltTypeLowPass  : USINT := 1;
+    cstILoopFiltTypeNotch    : USINT := 2;
+    cstILoopFiltTypeBiQuad   : USINT := 3;
 
-    (* ------------------------------------------------------ *)  
+    (* ------------------------------------------------------ *) 
     {G:"Power Stage"} 
 
     cstPStageBridgeLayoutUVW : UINT := 0;
@@ -814,30 +814,28 @@ VAR_GLOBAL
     (* ------------------------------------------------------ *)
     {G:"Plc"}
 
-    wksPlcSlowTaskCopyOutImmediate AT %MX1000.0 : BOOL; { DE:"Copy output data of slow task immediately at the end of execution time" }
-    wksPlcPwrDisOnOverTime         AT %MX1000.1 : BOOL; { DE:"If enabled, in case of task overtime all power outputs are immediately set in safe state" }
-    wksPlcEnableSysHMIDownload     AT %MX1000.2 : BOOL; { HIDDEN:ON}
-    wksPlcSlowTaskPeriod           AT %MB1001.0 : UINT; { DE:"Slow task execution period [msec]" }
-    varPlcSlowTaskExecutionTime    AT %MB1002.0 : UINT; { DE:"Slow task execution time monitoring [1/10 msec]" }
-    wksPlcTaskCfg                  AT %MB1003.0 : DRVTSKCTRL_PLC_CONFIG; { DE:"Tasks configuration parameters" }
+    wksPlcSlowTaskCopyOutImmediate     AT %MX1000.0 : BOOL; { DE:"Copy output data of slow task immediately at the end of execution time" }
+    wksPlcPwrDisOnOverTime             AT %MX1000.1 : BOOL; { DE:"If enabled, in case of task overtime all power outputs are immediately set in safe state" }
+    wksPlcEnableSysHMIDownload         AT %MX1000.2 : BOOL; { HIDDEN:ON}
+    wksPlcSlowTaskPeriod               AT %MB1001.0 : UINT; { DE:"Slow task execution period [msec]" }
+    varPlcSlowTaskExecutionTime        AT %MB1002.0 : UINT; { DE:"Slow task execution time monitoring [1/10 msec]" }
+    wksPlcTaskCfg                      AT %MB1003.0 : DRVTSKCTRL_PLC_CONFIG; { DE:"Tasks configuration parameters" }
 
     (* ------------------------------------------------------ *)
     {G:"Modbus"}
-    parSerialDisModbusOverCAN         AT %MX350.1: BOOL; { DE:"Disable modbus over CAN (free aux CAN port)" }
+    parSerialDisModbusOverCAN          AT %MX350.1: BOOL; { DE:"Disable modbus over CAN (free aux CAN port)" }
 
     (* ------------------------------------------------------ *)
-
     {G:"CANOpen"} 
-    varCANOpenNMTStatus AT %MB300.0 : USINT; { DE:"NMT State machine actual status" }
-    parCANOpen AT %MB303.0 : PAR_CANOPEN; { DE: "CANOpen parameters" }
-    varCANOpenRxPdoCnt AT %MW304.0 : ARRAY[ 0..7 ] OF UINT; { DE:"Rx PDO received COB counter" }
+    varCANOpenNMTStatus                AT %MB300.0 : USINT; { DE:"NMT State machine actual status" }
+    parCANOpen                         AT %MB303.0 : PAR_CANOPEN; { DE: "CANOpen parameters" }
+    varCANOpenRxPdoCnt                 AT %MW304.0 : ARRAY[ 0..7 ] OF UINT; { DE:"Rx PDO received COB counter" }
 
     (* ------------------------------------------------------ *)
-
     {G:"CAN"} 
-    parCAN AT %MB301.0 : PAR_CAN; { DE: "Can bus parameters" }
-    varCanDrvStatusNode0 AT %MB302.0 : UINT; { DE:"CAN driver line 0 actual status" }
-    varCanDrvStatusNode1 AT %MB302.2 : UINT; { DE:"CAN driver line 1 actual status" }
+    parCAN                             AT %MB301.0 : PAR_CAN; { DE: "Can bus parameters" }
+    varCanDrvStatusNode0               AT %MB302.0 : UINT; { DE:"CAN driver line 0 actual status" }
+    varCanDrvStatusNode1               AT %MB302.2 : UINT; { DE:"CAN driver line 1 actual status" }
 
     (* ------------------------------------------------------ *)
     {G:"EtherCAT"} 
@@ -929,12 +927,12 @@ TYPE
     
     (*-------------MH_FILTERPARS------------*)
     PAR_MH_FILTPARS : STRUCT
-        Type            : UDINT; { DE:"Filter type selector" }
-        MainFrequency   : REAL;  { DE:"Frequency main, filter dependant" }
-        MainDampFactor  : REAL;  { DE:"Damping factor main, filter dependant" }
-        SecFrequency    : REAL;  { DE:"Frequency secondary, filter dependant" }
-        SecDampFactor   : REAL;  { DE:"Damping factor secondary, filter dependant" }
-    END_STRUCT;
+        Type              : UDINT; { DE:"Filter type selector" }
+        MainFrequency     : REAL;  { DE:"Frequency main, filter dependant" }
+        MainDampFactor    : REAL;  { DE:"Damping factor main, filter dependant" }
+        SecFrequency      : REAL;  { DE:"Frequency secondary, filter dependant" }
+        SecDampFactor     : REAL;  { DE:"Damping factor secondary, filter dependant" }
+    END_STRUCT;           
 
     (*----------MH_MOTORDATA_PARAM----------*)
     PAR_MOTHLR : STRUCT
@@ -1349,60 +1347,62 @@ TYPE
 
     (*------------------CANOPENCM_PARAM--------------------*)
     PAR_CAN_FLAGS : STRUCT
-        ReSyncEnable : BOOL; { DE:"Enable pwm synchronization with fieldbus" }
-        SyncEvOnPeriodicCob : BOOL; { DE:"Enable CANOpen SYNC event from system periodic COB sending" }
-        DelayedTxPDO : BOOL; { DE:"Enable one realtime task delayed Tx PDO processing" }
-        DisableNmtResetNode : BOOL; { DE:"Disable NMT command: Reset Node" }
+        ReSyncEnable         : BOOL; { DE:"Enable pwm synchronization with fieldbus" }
+        SyncEvOnPeriodicCob  : BOOL; { DE:"Enable CANOpen SYNC event from system periodic COB sending" }
+        DelayedTxPDO         : BOOL; { DE:"Enable one realtime task delayed Tx PDO processing" }
+        DisableNmtResetNode  : BOOL; { DE:"Disable NMT command: Reset Node" }
     END_STRUCT;    
 
     PAR_CAN : STRUCT
-        CanController                 : INT; { DE:"Can controller selection" }
-        Dummy                         : UINT ; {HIDDEN:ON}              
-        DisableCanAlarmMask           : UDINT; { DE:"Can Alarms Disable Mask" }
-        Flags                         : PAR_CAN_FLAGS; { DE:"" }
+        CanController        : INT; { DE:"Can controller selection" }
+        Dummy                : UINT ; {HIDDEN:ON} (* Arm alignment *)             
+        DisableCanAlarmMask  : UDINT; { DE:"Can Alarms Disable Mask" }
+        Flags                : PAR_CAN_FLAGS; { DE:"" }
     END_STRUCT;
 
     (*---------------------DS301_PARAM---------------------*)
     PAR_CANOPEN : STRUCT
-        Dummy1 : USINT ; { DE:"" }
-        LssNodeId : USINT ; { DE:"Node ID" }
-        LssTimingIndex : USINT ; { DE:"Baudrate" }
-        Dummy2 : USINT ; { DE:"" }
-        tSyncCob : UDINT ; { DE:"COB-ID used by SYNC COB" }
-        EmcyCOB : UDINT ; { DE:"COB-ID used by Emergency COB" }
-        EmcyInhibitTime : UINT ; { DE:"[100usec] Emergency COB Inhibit Time" }
-        GuardTime : UINT ; { DE:"[ms] Guard Time" }
-        HeartbeatTime : UINT ; { DE:"[ms] Heartbeat" }
-        LifeTimeFactor : USINT ; { DE:"Life Time Factor" }
-        Dummy3 : USINT ; { DE:"" }
-        CommCyclePeriod : UDINT ; { DE:"[usec] Communication Cycle Period" }
+        Dummy1               : USINT ; {HIDDEN:ON}
+        LssNodeId            : USINT ; { DE:"Node ID" }
+        LssTimingIndex       : USINT ; { DE:"Baudrate" }
+        Dummy2               : USINT ; {HIDDEN:ON} (* Arm alignment *)
+        tSyncCob             : UDINT ; { DE:"COB-ID used by SYNC COB" }
+        EmcyCOB              : UDINT ; { DE:"COB-ID used by Emergency COB" }
+        EmcyInhibitTime      : UINT ;  { DE:"[100usec] Emergency COB Inhibit Time" }
+        GuardTime            : UINT ;  { DE:"[ms] Guard Time" }
+        HeartbeatTime        : UINT ;  { DE:"[ms] Heartbeat" }
+        LifeTimeFactor       : USINT ; { DE:"Life Time Factor" }
+        Dummy3               : USINT ; {HIDDEN:ON} (* Arm alignment *)
+        CommCyclePeriod      : UDINT ; { DE:"[usec] Communication Cycle Period" }
     END_STRUCT;
 
     (*-----------------------CANDRV_COB-----------------------*)
     CANDRV_COB_FLAGS : STRUCT
-        RxCob : BOOL; { DE:"New COB received" }
-        OverRun : BOOL; { DE:"Rx overrun, previous data lost" }
-        RTR : BOOL; { DE:"RTR RX cob" }
-        RxHiPriority : BOOL; { DE:"High priority rx cob" }
-        TxCob : BOOL; { DE:"Tx COB sent" }
-        Dummy0 : BOOL; { DE:"" }
-        Inhibited : BOOL; { DE:"Tx COB inhibited" }
-        Dummy1 : BOOL; { DE:"" }
-	Dummy2 : BOOL; { DE:"" }
-	Dummy3 : BOOL; { DE:"" }
-	Dummy4 : BOOL; { DE:"" }
-	Dummy5 : BOOL; { DE:"" }
-	Dummy6 : BOOL; { DE:"" }
-
+        RxCob                : BOOL; { DE:"New COB received" }
+        OverRun              : BOOL; { DE:"Rx overrun, previous data lost" }
+        RTR                  : BOOL; { DE:"RTR RX cob" }
+        RxHiPriority         : BOOL; { DE:"High priority rx cob" }
+        TxCob                : BOOL; { DE:"Tx COB sent" }
+        Dummy0               : BOOL; {HIDDEN:ON} (* TxBlock *)
+        Inhibited            : BOOL; { DE:"Tx COB inhibited" }
+        Dummy1               : BOOL; {HIDDEN:ON} (* TxReq *)
+        Dummy2               : BOOL; {HIDDEN:ON} (* TxBlockErr *)
+        Dummy3               : BOOL; {HIDDEN:ON} (* TxUpdating *)
+        Dummy4               : BOOL; {HIDDEN:ON} (* TxQueuing *)
+        Dummy5               : BOOL; {HIDDEN:ON} (* RxVHPR *) 
+        Dummy6               : BOOL; {HIDDEN:ON} (* TxWCallback *) 
+        Dummy7               : BOOL; {HIDDEN:ON} (* Arm alignment *)
+        Dummy8               : BOOL; {HIDDEN:ON} (* Arm alignment *) 
+        Dummy9               : BOOL; {HIDDEN:ON} (* Arm alignment *) 
     END_STRUCT;
 
     CANDRV_COB : STRUCT
-        Flags                         : CANDRV_COB_FLAGS; { DE:"" }
-        CobID                         : UDINT; { DE:"COB ID" }
-        Length                        : UINT; { DE:"Data length in bytes" }
-        Data                          : ARRAY [0..7] OF USINT; { DE:"Data" }
-        Inhibit                       : UINT; { DE:"Inhibit time [100us] if Tx COB, timestamp if Rx COB" }
-        Dummy                         : UDINT; { DE:"" }
+        Flags                : CANDRV_COB_FLAGS; { DE:"" }
+        CobID                : UDINT; { DE:"COB ID" }
+        Length               : UINT;  { DE:"Data length in bytes" }
+        Data                 : ARRAY [0..7] OF USINT; { DE:"Data" }
+        Inhibit              : UINT;  { DE:"Inhibit time [100us] if Tx COB, timestamp if Rx COB" }
+        Dummy                : UDINT; { DE:"" }
     END_STRUCT;
 
     (* ------------------------------------------------------ *)
@@ -1418,7 +1418,11 @@ TYPE
     PAR_ECAT : STRUCT
         Flags           : PAR_ECAT_FLAGS; { DE:"" }
         CfgStationAlias : UINT; { DE:"Configured station alias" }
-
+(*
+        ExecDelay  : INT;   { DE:"by master" }
+        Port0Delay : INT;    { DE:"" }
+        Port0Delay : INT;    { DE:"" }
+*)
     END_STRUCT;
 
     (* ------------------------------------------------------ *)
