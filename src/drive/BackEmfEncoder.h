@@ -19,10 +19,32 @@
 /* ================================ #define ================================ */
 
 /* ============================== structures =============================== */
+#if (CFG_ENC_BEMF_DITEN_PARAM)
+typedef struct {
+	UWORD elThet;
+	ULONG mechThet;
+	SWORD elSpeed;
+	SLONG mechSpeed;
+	SLONG revolutionCounter;
+} S_OBS_PLL_OUT;
+
+typedef struct {
+	ULONG pll_kp;
+	ULONG pll_ki;
+	ULONG pll_tfilter;
+	ULONG obs_gamma1;
+	ULONG obs_gamma2;
+	ULONG obs_a;
+	ULONG id_inj_maxValuePercent;
+	ULONG id_inj_accRateInSec;
+	ULONG id_inj_minSpeedWithoutInjection;
+} OBS_GAINS_COCKPIT;
+#endif // cfg_enc_bemf_diten
+
 typedef struct {
     MH_POWERSTAGESTATUS *psPowerStageStatus;
-    GLB_KINEMATIC_DATA *psRef ;      // per prendere la velocità di riferimento dell'anello di controllo (serve per OpenLoop e per segno SpeedEmf)
-    MH_BACKEMF_DATA *psBackEmfData ; // dati dal MotorHandler (Atan e SquareRoot)
+    GLB_KINEMATIC_DATA *psRef ;      // to get speedref from SpeedLoop (needed for OpenLoop and SpeedEmf sign)
+    MH_BACKEMF_DATA *psBackEmfData ; // data from MotorHandler (Atan e SquareRoot)
     const MH_HANDLERS *psMotorHandlers ;
     SWORD *psVdcBusFiltered;
 } BE_EMFENC__IN ;
@@ -41,12 +63,16 @@ typedef struct {
 } __attribute__((aligned(4))) flags ;
 #endif
 
-    UWORD   uwSnsrlessState ;       // Stato Sensorless
-    UWORD   uwAntiglitchCounter ;   // contatore intervento antiglitch
-    ULONG   ulMagicNumber ;         // numero magico (derivato da Kt Motore): se zero => Alarm
-    SLONG   slMechSpeedDeltaAngle ; // velocita' ottenuta come delta di angoli
-    FLOAT   flValuedKt ;            // Kt stimato (solo in pieno sensorless)
-    SLONG   slMechMaxSpeed ;        // velocita' massima stimata a partire da DcBus e Kt in unita' interne
+    UWORD   uwSnsrlessState ;       // Sensorless StateMachine
+    UWORD   uwAntiglitchCounter ;   // antiglitch algorithm counter
+    ULONG   ulMagicNumber ;         // magic number (calculated from motor Kt: if zero => Alarm
+    SLONG   slMechSpeedDeltaAngle ; // speed calculated as angles difference (DeltaAngle)
+    FLOAT   flValuedKt ;            // evaluated Kt (ONLY in full sensorless)
+    SLONG   slMechMaxSpeed ;        // evaluated max speed on the basis of DcBus and Kt (internal unit)
+
+#if (CFG_ENC_BEMF_DITEN_PARAM)
+    S_OBS_PLL_OUT diten_obs_pll_out;
+#endif
 } BE_EMFENC_DIAG_OUT ;
 
 typedef struct {
@@ -60,7 +86,6 @@ typedef struct {
             BOOL bUseDeltaAngleSpeed ; // flag: full sensorless use delta angles speed NOT emf
             BOOL bStopMotorKtEval ;    // flag: do not evaluate motor Kt
         } b ;
-//        UWORD w ;
 #ifdef _INFINEON_
     } flags ;
 #else
@@ -76,6 +101,10 @@ typedef struct {
     UWORD   uwKtRefresh ;                       // refresh time of valued motor Kt
     ULONG   ulDisableBackEmfAlarmMask ;
     UWORD   uwIdOpenLoop;                       // [0:1000=0:MOTPRM_PARAMETERS.flCurrentPeak]
+
+#if (CFG_ENC_BEMF_DITEN_PARAM)
+    OBS_GAINS_COCKPIT diten_obs_gains;
+#endif
 }BE_EMFENC_PARAM ;
 
 /* =========================== global  variables =========================== */
@@ -87,6 +116,7 @@ extern const BE_EMFENC_PARAM huge sBe_EmfEncDefParam ;
 #else
 extern const BE_EMFENC_PARAM sBe_EmfEncDefParam ;
 #endif // _infineon_
+
 /* =============================== functions =============================== */
 BOOL Be_BackEmfHandlerEncInit(ENCMGR_SPACEFEEDBACK *, SBYTE *) ;
 BOOL Be_ParametersCheck(void) ; 

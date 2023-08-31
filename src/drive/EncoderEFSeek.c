@@ -22,6 +22,19 @@
 #include "common\Int64Functions.h"
 #include "common\DspFunctions.h"
 
+/////////////////////////////////////////////////////////////////////////////
+// Compiler Option
+/*
+#if defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
+#pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
+*/
 //****************************************************************************
 // Defines
 
@@ -284,7 +297,7 @@ SWORD EfsProcess(EFS_RUNTIME * psRuntime, UWORD * puwElecAngleCorrection)
             }
 
                 // if zero, procedure has yet to be started, then wait for speed
-            if(psRuntime->psIRefOut->slIdRef==0 && psRuntime->psIRefOut->slIqRef==0 && labs(psRuntime->psFeedback->sEncData.slSpeed) > psRuntime->slSpeedThreshold)
+            if( (psRuntime->psIRefOut->slIdRef==0) && (psRuntime->psIRefOut->slIqRef==0) && (labs(psRuntime->psFeedback->sEncData.slSpeed) > psRuntime->slSpeedThreshold) )
                 return EFS_RV_INPROGRESS;
 
                 // if with position control loop

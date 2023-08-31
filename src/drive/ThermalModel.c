@@ -10,9 +10,6 @@
 /* Description :                                                            */
 /*                                                                          */
 /****************************************************************************/
-//#pragma GCC optimize (0)  // debug code
-#pragma GCC optimize (2)  // code optmized
-
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +42,21 @@
 #include "drive\HardwareUnitID.h"
 
 #include "drive\MotorHandler.h"
+
+/////////////////////////////////////////////////////////////////////////////
+// Compiler Option
+/*
+#if defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
+#pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
+*/
+#pragma GCC optimize (2)
 
 /* ================================ #define ================================ */
 // Avoids warning C47: unreferenced parameter

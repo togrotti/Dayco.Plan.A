@@ -11,9 +11,6 @@
 /*               realtime)                                                  */
 /*                                                                          */
 /****************************************************************************/
-// Compiler Option
-#pragma GCC optimize (2)
-
 #include "common\CommonDefines.h"
 #include "system\SystemStatus.h"
 
@@ -26,6 +23,18 @@
 #include "common\CommonUtility.h"
 //#include "FatalErrorCodes.h"
 #include "drive\HardwareConfig.h"
+
+// Compiler Option
+#if defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
+#pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
+
 
 //***************************************************************************
 // Local prototypes;

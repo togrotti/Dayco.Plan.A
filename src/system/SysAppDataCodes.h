@@ -108,7 +108,6 @@
 #define DATACODE_PARAM_STGAP4S_CONFIG               131
 #endif
 
-
 //****************************************************************************
 // DO NOT USE data codes
 

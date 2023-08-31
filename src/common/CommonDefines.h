@@ -40,9 +40,9 @@
 /////////////////////////////////////////////////////////////////////////////
 //
 
-#define SWORD_MAX_VALUE         (65535)
+#define SWORD_MAX_VALUE         ( 65535)
 #define SWORD_MIN_VALUE         (-65535)
-#define SLONG_MAX_VALUE         (2147483647L)
+#define SLONG_MAX_VALUE         ( 2147483647L)
 #define SLONG_MIN_VALUE         (-2147483647L)
 #define ULONG_MAX_VALUE         (4294967295UL)
 #define FLOAT_SQRT_OF_TWO       1.4142135623730950488016887242097f
@@ -50,9 +50,9 @@
 #define FLOAT_PI                3.1415926535897932384626433832795f
 #define FLOAT_2POWER32          4294967296.0f
 
-#define INT64_MAX_VALUE			(9.223372036854775807E+18LL)  // 2^63 - 1
-#define INT64_MIN_VALUE			(-9.223372036854775807E+18LL) // -(2^63 - 1)
-#define UINT64_MAX_VALUE		(1.8446744073709551615E+19ULL) // 2^64 - 1
+#define INT64_MAX_VALUE			( 9.223372036854775807E+18LL)   //   2^63 - 1
+#define INT64_MIN_VALUE			(-9.223372036854775807E+18LL)   // -(2^63 - 1)
+#define UINT64_MAX_VALUE		( 1.8446744073709551615E+19ULL) //   2^64 - 1
 /////////////////////////////////////////////////////////////////////////////
 //
 

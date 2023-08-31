@@ -34,6 +34,10 @@
 #include "drive\TAMAGAWAEncoder.h"
 #include "drive\BissEncoder.h"
 
+#if CFG_ENC_BEMF_DITEN
+#include "drive\MotorHandler.h"
+#endif // cfg_enc_bemf_diten
+
 #include "common\TaskScheduler.h"
 #include "common\Int64Functions.h"
 #include "common\DspFunctions.h"
@@ -49,7 +53,15 @@
 
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
+#if defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
 #pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
 
 //****************************************************************************
 // Defines
@@ -755,8 +767,14 @@ BOOL initcore(void)
                 sEncMgrRun.pfMainRelEACorrect=&Be_SetElecAngle;
                 sEncMgrRun.pfMainRelAPCorrect=&Be_SetAbsPos;
                 sEncMgrRun.pfMainRelGetSnapshot=NULL;
-                sEncMgrRun.sFlags.b.bBEMFHook=TRUE;
                 sEm_EncMngrOut.flags.b.bRequireIRefHook=TRUE;
+
+#if (FALSE) // CFG_ENC_BEMF_DITEN  //crs
+                sEncMgrRun.sFlags.b.bBEMFHook=FALSE; //here I set that Hook is not required.
+#else
+                sEncMgrRun.sFlags.b.bBEMFHook=TRUE;
+#endif // cfg_enc_bemf_diten
+
                 bMainRelValid=TRUE;
             }
             else

@@ -86,7 +86,9 @@ const TASKSCHEDULER_TASK_INIT psSysAppTaskCollection[]=
 	TASK_ENTRY(HwConfInit, 0),
 
 #ifndef _HW_AXS
+#if CFG_ECAT
 	TASK_ENTRY(EcatCM_Init, ECATCM_INIT_ALWAYS),
+#endif
 #ifdef _HW_DC
 	TASK_ENTRY(EpmcCM_Init, EPMCCM_INIT_ALWAYS),
 #endif // _hw_dc
@@ -185,7 +187,9 @@ const TASKSCHEDULER_TASK_INIT psSysAppTaskCollection[]=
 #endif // cfg_candrv_cmdmgr
 
 #ifndef _HW_AXS
+#if CFG_ECAT
 	TASK_ENTRY(EcatCM_Init, ECATCM_INIT_SYNCPDOEVENT),
+#endif // cfg_ecat
 #endif // _hw_axs
 #endif // ! _app_limited
     TASK_ENTRY(SoftScopeInit, 0),

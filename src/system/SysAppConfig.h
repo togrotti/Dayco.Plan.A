@@ -122,7 +122,8 @@
 #define CFG_ENC_BISS              0
 #endif
 
-
+#define CFG_ENC_BEMF_DITEN        1
+#define CFG_ENC_BEMF_DITEN_PARAM  1
 //***************************************************************************
 // Define Modbus
 
@@ -140,7 +141,7 @@
 
 //***************************************************************************
 // Define EtherCAT
-#if !defined(_HW_AXS) // AxN & AxD
+#if !defined(_HW_AXS) // AxN & AxN-DC
 #define CFG_ECAT	1
 #else // _hw_axs
 #define CFG_ECAT	0

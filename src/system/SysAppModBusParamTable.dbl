@@ -796,7 +796,23 @@ const MODBUSCOMDB_ENTRY hpsModBusParamTable[]=
 // _crs_dbg_
 #endif
     // 28300 to 28354: do not use
-
+#if (CFG_ENC_BEMF_DITEN_PARAM)
+	{28500, #%p 0x4100 },
+	{28501, #%p 0x4101 },
+	{28502, #%p 0x4102 },
+	{28503, #%p 0x4103 },
+	{28504, #%p 0x4104 },
+	{28505, #%p 0x4105 },
+	{28506, #%p 0x4106 },
+	{28507, #%p 0x4107 },
+	{28508, #%p 0x4108 },
+	{28509, #%p 0x4109 },
+	{28510, #%p 0x410A },
+	{28511, #%p 0x410B },
+	{28512, #%p 0x410C },
+	{28513, #%p 0x410D },
+#endif // cfg_enc_bemf_diten
+					
     /* ######### DS402 ######### */
     {29000 /*7148*/, #%p 0x1000 }, // ControlWord (RW)
     {29001 /*7149*/, #%p 0x1001 }, // StatusWord (RO)

@@ -27,11 +27,28 @@
 #include "common\CommonMotorHandler.h"
 #include "common\CommonEncoderManager.h"
 #include "drive\BackEmfEncoder.h"
+
+#if CFG_ENC_BEMF_DITEN
+#include "drive\MotorHandler.h"     // to catch sMh_MotorDataOut structure: slIuFb, slIvFb, slIwFb, swVuOut, swVvOut;
+                                    // swVuEffective, swVvEffective, swVwEffective when available
+									// pay attention that it works only with in 1 bridge drive!
+#include "drive\MotionController.h" // to catch sEm_Fbk2CntrLoop.ubStatus
+#include "drive\EncoderEFSeek.h"    // to catch sEfsParam.ubProcType
+#endif // cfg_enc_bemf_iten
+
 #include "drive\Deflux.h" // per prendere la velocita' di ginocchio
 
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
-#pragma GCC optimize (2)
+#ifdef _CRS_DBG
+#if CRS_DBGDSK
+	#pragma GCC optimize (0)
+#else
+	#pragma GCC optimize (2)
+#endif
+#else
+	#pragma GCC optimize (2)
+#endif
 
 // ================================ #define ================================ 
 #define SNSRLESS_DISABLED       0
@@ -79,6 +96,28 @@
 #define MAXMECHSPDCONVFACTOR_IU         (MAXMECHSPDCONVFACTOR_RADSEC * FLOAT_RADSEC2INTERNALUNIT)   // internal unit (increment x tick)
 
 #define CURRENT_RAMP_TIME                (5 * 8)    // 5ms
+
+#if CFG_ENC_BEMF_DITEN_PARAM
+#define DITEN_OBS_SPEED_GAIN			85469.23
+#define DITEN_OBS_POSITION_GAIN			683565275.57
+#define DITEN_OBS_EL_POSITION_GAIN		10430.37
+
+#define DITEN_OBS_PLL_KP_GAIN			0.01
+#define DITEN_OBS_PLL_KI_GAIN			0.01
+#define DITEN_OBS_PLL_TF_GAIN			0.0001
+#define DITEN_OBS_A_GAIN				0.01
+#define DITEN_OBS_G1_GAIN				0.00001
+#define DITEN_OBS_G2_GAIN				0.00001
+#define DITEN_OBS_INJ_MAXVALUE_GAIN		0.01
+#define DITEN_OBS_INJ_ACCRATE_GAIN		0.01
+#define DITEN_OBS_MIN_SPEED_GAIN		0.01
+
+#define DITEN_270DEG_IN_RADIANT        (FLOAT)(270.0 * FLOAT_PI / 180.0)
+#define DITEN_OBS_SERVOTIME            (FLOAT)(1.0 / FLOAT_1SECOND_IN_TICKS)
+#define C_2D3                          (FLOAT)(2.0 / 3.0)
+#define C_1DSQRT3                      (FLOAT)(1.0 / FLOAT_SQRT_OF_THREE)
+#endif // cfg_enc_bemf_diten
+
 // ============================== structures =============================== 
 
 typedef struct {
@@ -220,11 +259,98 @@ typedef struct {
 
 } EMFENC_RUNTIME ;
 
+#if CFG_ENC_BEMF_DITEN
+typedef struct {
+	float gamma1;
+	float gamma2;
+	float a;
+	float tfilter;
+} S_OBSERVER_PARAMETER;
+
+typedef struct {
+	float flux[4];
+	float deflux[4];
+	float q1[2];
+	float q2[2];
+	float q12q[2];
+	float yq;
+	float omegaq1;
+	float omegaq2;
+
+	float yq_i;
+	float omegaq1_i;
+	float omegaq2_i;
+
+	float x1;
+	float x2;
+	float thet;
+	float t_idr;
+} S_OBSERVER_VARIABLE;
+
+typedef struct {
+	float elAngleDelayed;
+	int revolutionCounter;
+	int mAngleAdder;
+} S_OBSERVER_MECH_OUT;
+
+typedef struct {
+	S_OBSERVER_PARAMETER parameter;
+	S_OBSERVER_VARIABLE	 variable;
+	S_OBSERVER_MECH_OUT MechOut;
+} S_OBSERVER;
+
+typedef struct {
+	float kp;
+	float ki;
+	float tfilter;
+} S_PLL_PARAMETER;
+
+typedef struct {
+	float cos_teta;
+	float sin_teta;
+	float cos_tetaest;
+	float sin_tetaest;
+	float epsilon;
+	float tetaest;
+	float integral;
+	float omegaest;
+	float omegafiltr[2];
+	int wrap;
+} S_PLL_VARIABLE;
+
+typedef struct {
+	S_PLL_PARAMETER parameter;
+	S_PLL_VARIABLE  variable;
+} S_PLL;
+
+typedef struct {
+	float maxValuePercentOfRated;
+	float accRateInSecToRated;
+	float minSpeedWithoutInjection;
+} OBS_ID_INJECT_PARAMS;
+
+typedef struct {
+	OBS_ID_INJECT_PARAMS params;
+	float current_value;
+	float target_value;
+} OBS_ID_INJECT;
+#endif // cfg_enc_bemf_diten
+
+#if CFG_ENC_BEMF_DITEN
+typedef struct {
+	OBS_ID_INJECT	id_inject;
+	S_OBSERVER		diten_observer;
+	S_PLL			diten_pll;
+	S_OBS_PLL_OUT 	diten_obs_pll_out;
+	SWORD 			swTestCounter ;
+	FLOAT 			flHookTimer ;
+} DITEN_RUNTIME ;
+#endif // cfg_enc_bemf_diten
+
 // =========================== global  variables ===========================
 BE_EMFENC__IN       sBe_EmfEncIn ;
 BE_EMFENC_DIAG_OUT  sBe_EmfEncDiagOut ;
 BE_EMFENC_PARAM     sBe_EmfEncParam ;
-
 
 // default parameters
 #ifdef _INFINEON_
@@ -242,16 +368,45 @@ const BE_EMFENC_PARAM sBe_EmfEncDefParam =
     0,    // antiglitch fault disabled
     15,   // valued Kt refresh
     0l,
+
+#if (CFG_ENC_BEMF_DITEN_PARAM)
+    300,  // 30% of MOTPRM_PARAMETERS.flCurrentPeak
+
+	// diten
+    80000,   // kp/DITEN_OBS_PLL_KP_GAIN
+    1000000, // ki/DITEN_OBS_PLL_KI_GAIN
+    4,       // tf/DITEN_OBS_PLL_TFILTER_GAIN
+    500000,  // g1/DITEN_OBS_G1_GAIN
+    50000,   // g2/DITEN_OBS_G2_GAIN
+    10000,   // alpha/DITEN_OBS_A_GAIN
+	1000,    // id_inj_maxValuePercent/DITEN_OBS_INJ_MAXVALUE_GAIN
+	100,     //id_inj_accRateInSec/DITEN_OBS_INJ_ACCRATE_GAIN
+	1600     //id_inj_minSpeedWithoutInjection/ DITEN_OBS_MIN_SPEED_GAIN
+#else
     300   // 30% of MOTPRM_PARAMETERS.flCurrentPeak
+#endif // cfg_enc_bemf_diten
+
 };
 
 #if CFG_ENC_BMF
 // =========================== local  variables ===========================
 static EMFENC_RUNTIME   sEmfEncRun ;
 
+#if CFG_ENC_BEMF_DITEN
+DITEN_RUNTIME sDitenRun ;
+#endif // cfg_enc_bemf_diten
+
 // =============================== functions ===============================
 static ULONG BackEmfEncInit(ENCMGR_SPACEFEEDBACK *psEncOut, SBYTE * psbEncMgrFault) ;
 static ULONG calcbasemagicnumber(FLOAT flKT);
+
+#if CFG_ENC_BEMF_DITEN
+static BOOL Diten_Init(S_OBSERVER *observer, S_PLL *pll, MOTPRM_PARAMETERS *parameters, MH_MOTORDATA_OUT *currVolts);
+static BOOL Diten_Task8KHz(S_OBSERVER *observer, S_PLL *pll, MOTPRM_PARAMETERS *parameters, MH_MOTORDATA_OUT *currVolts);
+static void Diten_Observer_Run(void);
+static void Diten_8kHz(void);
+#endif // cfg_enc_bemf_diten
+
 static BOOL BackEmfHandler8KHz(void) ;
 static void BackEmfHandlerBkGd(void) ;
 static void BackEmfEncOpl8KHz(void) ;                        
@@ -378,6 +533,11 @@ static ULONG BackEmfEncInit(ENCMGR_SPACEFEEDBACK *psEncOut, SBYTE * psbEncMgrFau
     INT64_ASSIGN(sEmfEncRun.psBackEmfOut->sEncData.sqPostn, 0L, 0UL) ;  // reset position only at boot
     sEmfEncRun.uwSyncLostHysteresis = 0 ;
 
+#if CFG_ENC_BEMF_DITEN
+	sDitenRun.swTestCounter = 0 ;
+	sDitenRun.flHookTimer   = 0.0 ;
+#endif
+
     return FALSE ;
 }
 
@@ -487,9 +647,21 @@ static ULONG calcbasemagicnumber(FLOAT flKT)
 // #########################################################################
 static BOOL BackEmfHandler8KHz(void)
 {
+#if CFG_ENC_BEMF_DITEN
     if(sBe_EmfEncIn.psPowerStageStatus->b.bVoltageEnabled)
-    {   // PWM acceso, comincio lo show..
+    {   // PWM switched on, let's start the show..
+    	Diten_8kHz() ;
+    }
+    else
+    {   //  keep Diten "resetted"
+		Diten_Init(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut) ;
+		sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_EFS_READY);
+    }
+	BackEmfEncMechOut8KHz() ; // calculate mechanical output
 
+#else
+    if(sBe_EmfEncIn.psPowerStageStatus->b.bVoltageEnabled)
+    {   // PWM switched on, let's start the show..
         // segno preso dal riferimento di velocita' solo quando il rotore e' dichiarato orientato
 		// attenzione che non lo resetto perche' così con il rientro al volo dovrei rientrare già con il segno giusto
         if (sEmfEncRun.flags.b.bRotorZeroFound)
@@ -520,7 +692,7 @@ static BOOL BackEmfHandler8KHz(void)
      
         BackEmfEncOut8KHz(EMFENC_RESET) ; // reset
     }
-
+#endif // cfg_enc_bemf_diten
     return TRUE ;
 }
 
@@ -554,7 +726,7 @@ static void BackEmfHandlerBkGd(void)
 //      sEmfEncRun.swElecEmfEncTurns = numero di giri elettrici necessari per ricostruire la posizione elettrica OpenLoop.
 //      
 //  Variabili Output: 
-//      sEmfEncRun.sOpl.slSpeedOPL = velocità  (meccanica) OpenLoop 
+//      sEmfEncRun.sOpl.slSpeedOPL = velocita' (meccanica) OpenLoop 
 //      sEmfEncRun.sOpl.slPostnOPL = posizione (elettrica) OpenLoop 
 //      
 //  Parametri:
@@ -576,11 +748,11 @@ static void BackEmfEncOpl8KHz(void)
 // ===========================================================
 //  Variabili che vengono dall'esterno (aggiornate al servo i):
 //      sMotor.swBackEmfAtan, sMotor.swBackEmfSqrt
-//      sEmfEncRun.sOpl.slSpeedOPL = stSpeed.slRef = mi serve per mettere il segno alla velocità emf    
+//      sEmfEncRun.sOpl.slSpeedOPL = stSpeed.slRef = mi serve per mettere il segno alla velocita' emf
 //  
 //  Valori che vengono dal servo i-1:
 //      slEmfAbsSpdFiltered = serve per il filtro
-//      sEmfEncOut.slMechSpeed = velocità meccanica in uscita dal modulo backemf e che entra nell'anello di controllo. 
+//      sEmfEncOut.slMechSpeed = velocita' meccanica in uscita dal modulo backemf e che entra nell'anello di controllo.
 //   
 //  Variabili di scambio Manager<->Encoder:     
 //      sEmfEncRun.sEmf.slAbsMechSpeed = valore assoluto di sEmfEncOut.slMechSpeed (aggiornata al servo i-1)
@@ -814,8 +986,8 @@ static void BackEmfMngrMix8KHz(void)
 //      swTurnsOut            = numero di giri elettrici per sincronizzare posizione elettrica EMF ed OL
 //      sqMechAbsPosition.hi  = numero di giri meccanici
 //      sqMechAbsPosition.lo  = angolo meccanico 
-//      slMechSpeed           = velocità meccanica (ottenuta dalla radice quadrata)
-//      slMechSpeedDeltaAngle = velocità meccanica (ottenuta dal delta degli angoli)        
+//      slMechSpeed           = velocita' meccanica (ottenuta dalla radice quadrata)
+//      slMechSpeedDeltaAngle = velocita' meccanica (ottenuta dal delta degli angoli)
 //      slMechAccel           = accelerazione meccanica (sempre zero!)
 //      uwElecAngle           = angolo elettrico da mandare all'FPGA
 //
@@ -826,7 +998,21 @@ static void BackEmfMngrMix8KHz(void)
 //      ulMechOffset     = offset 
 void BackEmfEncMechOut8KHz(void)
 {
-    ULONG ulMechEmfEncAngle ;
+#if CFG_ENC_BEMF_DITEN
+	ULONG ulMechEmfEncAngle_1 = sEmfEncRun.psBackEmfOut->sEncData.sqPostn.lo ;
+
+	// all necessary information from observer is set as a BackEmf feedback out.
+	sEmfEncRun.psBackEmfOut->sEncData.sqPostn.hi = sBe_EmfEncDiagOut.diten_obs_pll_out.revolutionCounter ;
+	sEmfEncRun.psBackEmfOut->sEncData.sqPostn.lo = sBe_EmfEncDiagOut.diten_obs_pll_out.mechThet;
+	sEmfEncRun.psBackEmfOut->sEncData.slSpeed    = sBe_EmfEncDiagOut.diten_obs_pll_out.mechSpeed;
+	sEmfEncRun.psBackEmfOut->uwElecAngle         = sBe_EmfEncDiagOut.diten_obs_pll_out.elThet;
+	sEmfEncRun.psBackEmfOut->swElecSpeed         = sBe_EmfEncDiagOut.diten_obs_pll_out.elSpeed;
+	sEmfEncRun.psBackEmfOut->sEncData.slAccel    = 0; // for the moment no acceleration
+
+    // SpeedEmf from DeltaAngle
+    sBe_EmfEncDiagOut.slMechSpeedDeltaAngle = (SLONG)(sEmfEncRun.psBackEmfOut->sEncData.sqPostn.lo - ulMechEmfEncAngle_1) ;
+#else
+	ULONG ulMechEmfEncAngle ;
     ULONG ulElecEmfEncAngle_1, ulMechEmfEncAngle_1 ;
 
     SQWRD sqPostnOPL, sqPostnEmf, sqPostnMix ;
@@ -924,6 +1110,7 @@ void BackEmfEncMechOut8KHz(void)
 
     /* -- Current Electrical Speed  = MechSpeed * MotorPolePairs -- */
     sEmfEncRun.psBackEmfOut->swElecSpeed = (SWORD)_sint32_scale_32(sEmfEncRun.psBackEmfOut->sEncData.slSpeed, sEmfEncRun.uwPolePairs) ;
+#endif
 }
 
 
@@ -1151,7 +1338,39 @@ BOOL Be_Hook8KHz(GLB_IREF * psIRefIn, GLB_IREF * psIRefOut)
 {    
     SQWRD sqCur2Use, sqHookId2Use, sqUserId2Use ;
     GLB_IREF sIRefs, * psROut=NULL;
-  
+
+#if CFG_ENC_BEMF_DITEN
+    // se NULL allora e' reset da enc mgr, out contiene riferimenti attuali
+    if(psIRefIn==NULL)
+    {
+        sEmfEncRun.flags.b.bHookInTransition=TRUE;
+        return TRUE;
+    }
+    else
+        sEmfEncRun.flags.b.bHookInTransition=FALSE;
+
+    // crea uscita locale
+    if(sEmfEncRun.flags.b.bHookInTransition)
+    {
+        psROut=psIRefOut;
+        psIRefOut=&sIRefs;
+    }
+
+
+    if (sEmfEncRun.flags.b.bHookInTransition)
+    {
+    	psROut->slIdRef =  (SLONG)(sDitenRun.id_inject.current_value * 10000) ;
+    	psROut->slIqRef = 0 ;
+    }
+    else
+    {
+        psIRefOut->slIdRef = psIRefIn->slIdRef +  (SLONG)(sDitenRun.id_inject.current_value * 10000) ;
+        psIRefOut->slIqRef = psIRefIn->slIqRef ;
+    }
+
+
+
+#else
     // se NULL allora e' reset da enc mgr, out contiene riferimenti attuali
     if(psIRefIn==NULL)
     {
@@ -1165,6 +1384,7 @@ BOOL Be_Hook8KHz(GLB_IREF * psIRefIn, GLB_IREF * psIRefOut)
         psROut=psIRefOut;
         psIRefOut=&sIRefs;
     }
+
 
     // Output delle correnti: Id           
     _sint64_mul_32_16(&sqHookId2Use, &sEmfEncRun.slMotorCurrentPeak,  &sEmfEncRun.swWeightOPL) ; 
@@ -1235,7 +1455,7 @@ BOOL Be_Hook8KHz(GLB_IREF * psIRefIn, GLB_IREF * psIRefOut)
         if(bEndRamp)
             sEmfEncRun.flags.b.bHookInTransition=FALSE;
     }
-
+#endif
     return TRUE ;
 }
 
@@ -1245,30 +1465,30 @@ BOOL Be_Hook8KHz(GLB_IREF * psIRefIn, GLB_IREF * psIRefOut)
 // ========================== Anti  Glitch Filter ==========================
 // =========================================================================
 //    Variabili aggiornate al servo i:
-//      uwValue      = uwEmfAtanAngle   
+//      uwValue      = uwEmfAtanAngle
 //      slEncPostnOL = usata come angolo di uscita di atan quando il filtro antiglitch non è attivo
-//    
+//
 //    Variabili aggiornate al servo i-1:
 //      uwValue_1          = uwEmfAtanAngle_1
-//      slEncOutMechSpd    = velocità meccanica in uscita dal modulo backemf e che entra nell'anello di controllo. 
+//      slEncOutMechSpd    = velocità meccanica in uscita dal modulo backemf e che entra nell'anello di controllo.
 //      slEncOutAbsMechSpd = valore assoluto di slEncOutMechSpd (calcolato 'fuori' perche' serve anche altrove)
-// 
-//    Variabili che escono:     
+//
+//    Variabili che escono:
 //      uwEmfAtanAngle (eventualmente) antiglitchato
-//               
+//
 //    Parametri:
 //      sEmfEncParam.slEmfEncGlitchFilterThreshold = soglia per far attivare il filtro antiglitch
-//      sEmfEncParam.uwMotorPolePairs = coppie polari motore 
+//      sEmfEncParam.uwMotorPolePairs = coppie polari motore
 static UWORD AtanAntiglitchFilter8KHz(UWORD uwValue, UWORD uwValue_1, SLONG slEncMechSpd, SLONG slEncAbsMechSpd, SLONG slEncPostnOL)
-{ 
+{
     SWORD swSpdInst, swSpdAvg, swDelta, swSpdLimL, swSpdLimH ;
     UWORD uwRetVal ;
 
-    // no antiglitch filter if emf is very low 
+    // no antiglitch filter if emf is very low
     // se slAbsMechSpeed e' maggiore della soglia antiglitch, allora regressione atan
     // è fatta sul valore dell'arcotangente, altrimenti è fatta sull'angolo openloop
     if (slEncAbsMechSpd > sEmfEncRun.slEmfEncGlitchFilterThreshold)
-    {  
+    {
         swSpdInst = (SWORD)uwValue - (SWORD)uwValue_1 ;
         swSpdAvg  = (SWORD)((slEncMechSpd * sEmfEncRun.uwPolePairs) >> 16) ;
         swDelta   = swSpdInst - swSpdAvg ;
@@ -1278,7 +1498,7 @@ static UWORD AtanAntiglitchFilter8KHz(UWORD uwValue, UWORD uwValue_1, SLONG slEn
 
             sBe_EmfEncDiagOut.uwAntiglitchCounter++ ;
 
-            swSpdLimL = swSpdAvg / 2 ; 
+            swSpdLimL = swSpdAvg / 2 ;
             swSpdLimH = swSpdAvg + swSpdLimL ;
 
             if(((swDelta < 0) && (swSpdAvg > 0)) || ((swDelta > 0) && (swSpdAvg < 0)))
@@ -1287,28 +1507,28 @@ static UWORD AtanAntiglitchFilter8KHz(UWORD uwValue, UWORD uwValue_1, SLONG slEn
                 uwRetVal = (UWORD)((SWORD)uwValue_1 + swSpdLimH) ;
         }
         else
-        {  // antiglitch non deve correggere: decremento il contatore (in maniera meno rapida se sono in pieno sensorless) 
+        {  // antiglitch non deve correggere: decremento il contatore (in maniera meno rapida se sono in pieno sensorless)
            if (slEncAbsMechSpd > sEmfEncRun.slSpeedSensorless)
-           {    // controllo piu' stretto    
-                if(sBe_EmfEncDiagOut.uwAntiglitchCounter >= 4)  
+           {    // controllo piu' stretto
+                if(sBe_EmfEncDiagOut.uwAntiglitchCounter >= 4)
                     sBe_EmfEncDiagOut.uwAntiglitchCounter -= 4 ;
                 else
-                    sBe_EmfEncDiagOut.uwAntiglitchCounter = 0 ;           
+                    sBe_EmfEncDiagOut.uwAntiglitchCounter = 0 ;
            }
            else
            {    // controllo piu' blando
-                if(sBe_EmfEncDiagOut.uwAntiglitchCounter >= 256)  
+                if(sBe_EmfEncDiagOut.uwAntiglitchCounter >= 256)
                     sBe_EmfEncDiagOut.uwAntiglitchCounter -= 256 ;
                 else
-                    sBe_EmfEncDiagOut.uwAntiglitchCounter = 0 ;   
-           }        
+                    sBe_EmfEncDiagOut.uwAntiglitchCounter = 0 ;
+           }
 
-            uwRetVal = uwValue ;                
-        }                                       
+            uwRetVal = uwValue ;
+        }
     }
     else
         uwRetVal = (UWORD)(slEncPostnOL >> 8) ; // NOTE: uwEmfAtanAngle = openloop angle
-        
+
     return uwRetVal ;
 }
 
@@ -1366,7 +1586,7 @@ static void MotorKtEvaluation(void)
 
             // aggiorno dolcemente il Kt
             if (sEmfEncRun.sKtEval.uwOneSecBkgdCntr < sBe_EmfEncParam.uwKtRefresh)
-            {   
+            {
                 sBe_EmfEncDiagOut.flValuedKt += sEmfEncRun.sKtEval.flIncrementoKt ;
                 ulMagicNumber = (ULONG)(FLOAT_KT_CONVFACTOR / sBe_EmfEncDiagOut.flValuedKt) ;
                 atomic_write(&sBe_EmfEncDiagOut.ulMagicNumber, &ulMagicNumber, sizeof(ULONG)) ;
@@ -1376,13 +1596,13 @@ static void MotorKtEvaluation(void)
         if (sEmfEncRun.sKtEval.uwOneSecBkgdCntr == sBe_EmfEncParam.uwKtRefresh)
         {   // e' il momento di stimare il Kt..
             // Kt = (MAGICNUMBER_CONVFACTOR * uwSQRooT) / slMechSpeedDeltaAngle
-            flValuedKt = (FLOAT_KT_CONVFACTOR * sEmfEncRun.sKtEval.flSQRootSum / (FLOAT)sEmfEncRun.sKtEval.ulKtCounter) / (sEmfEncRun.sKtEval.flMechSpeedDeltaAngleSum / (FLOAT)sEmfEncRun.sKtEval.ulKtCounter) ;            
-          
+            flValuedKt = (FLOAT_KT_CONVFACTOR * sEmfEncRun.sKtEval.flSQRootSum / (FLOAT)sEmfEncRun.sKtEval.ulKtCounter) / (sEmfEncRun.sKtEval.flMechSpeedDeltaAngleSum / (FLOAT)sEmfEncRun.sKtEval.ulKtCounter) ;
+
             // controllo se il Kt e' nel range valido
             if ((flValuedKt < sEmfEncRun.sKtEval.flKtMin) || (flValuedKt > sEmfEncRun.sKtEval.flKtMax))
             {   // mi sto smagnetizzando: fault (se non openloop)
                 sBe_EmfEncDiagOut.flValuedKt = flValuedKt ;
-                sEmfEncRun.sKtEval.flIncrementoKt = 0.0 ; 
+                sEmfEncRun.sKtEval.flIncrementoKt = 0.0 ;
 
                 sEmfEncRun.ulAlarm2Send |= SYSTEMALARMS_SUBCODE_BACKEMF_KT_OUTOFRANGE ;
 
@@ -1397,21 +1617,21 @@ static void MotorKtEvaluation(void)
                         sEmfEncRun.ubEmfEncStatus = EMFENC_FAULT ;
                         SysLogMgm_PostAlarm(SYSTEMALARMS_BIT_BE_BACKEMF_FAIL, SYSTEMALARMS_SUBCODE_BACKEMF_KT_OUTOFRANGE, TRUE) ;
                         sEmfEncRun.sErrorSent.b.bKtOutOfRange = TRUE ;
-                    }    
+                    }
                 }
             }
             else
             {
-                    // resetto il warning 
+                    // resetto il warning
                 atomic_long_clear_bits( &ulSystemWarnings, SYSTEMWARNINGS_KT_OUTOFRANGE );
 
-                // faccio i dovuti controlli sul Kt appena stimato prima di iniziare ad aggiornare il numero magico           
-                ulMagicNumber = (ULONG)(FLOAT_KT_CONVFACTOR / flValuedKt) ; 
-    
+                // faccio i dovuti controlli sul Kt appena stimato prima di iniziare ad aggiornare il numero magico
+                ulMagicNumber = (ULONG)(FLOAT_KT_CONVFACTOR / flValuedKt) ;
+
                 if((ulMagicNumber == 0) || (ulMagicNumber >= 0x10000))
-                {   // fault (se non openloop): il numero magico deve essere SEMPRE compreso tra (zero ; 65535] 
+                {   // fault (se non openloop): il numero magico deve essere SEMPRE compreso tra (zero ; 65535]
                     sBe_EmfEncDiagOut.flValuedKt = flValuedKt ;
-                    sEmfEncRun.sKtEval.flIncrementoKt = 0.0 ;                       
+                    sEmfEncRun.sKtEval.flIncrementoKt = 0.0 ;
 
                     if (sEmfEncRun.flags.b.bOpenLoopOnly)
                     {   // sono in anello aperto: warning
@@ -1424,25 +1644,25 @@ static void MotorKtEvaluation(void)
                             sEmfEncRun.ubEmfEncStatus = EMFENC_FAULT ;
                             SysLogMgm_PostAlarm(SYSTEMALARMS_BIT_BE_BACKEMF_FAIL, SYSTEMALARMS_SUBCODE_BACKEMF_INV_MAGICNUMBER, TRUE) ;
                             sEmfEncRun.sErrorSent.b.bInvalidMagicNumber = TRUE ;
-                        }    
+                        }
                     }
                 }
-                else  
+                else
                 {
                     atomic_long_clear_bits( &ulSystemWarnings, SYSTEMWARNINGS_INV_MAGICNUMBER );
 
                     if (sEmfEncRun.flags.b.bOpenLoopOnly)
                     {   // se anello aperto, nessun 'dolce' aggiornamento
                         sBe_EmfEncDiagOut.flValuedKt = flValuedKt ;
-                        sEmfEncRun.sKtEval.flIncrementoKt = 0.0 ; 
+                        sEmfEncRun.sKtEval.flIncrementoKt = 0.0 ;
                     }
                     else
-                    {  // tutto ok, mi preparo per aggiornare dolcemente (ogni secondo) il Kt del motore (calcolo l'incremento)                 
+                    {  // tutto ok, mi preparo per aggiornare dolcemente (ogni secondo) il Kt del motore (calcolo l'incremento)
                        sEmfEncRun.sKtEval.flIncrementoKt = (flValuedKt - sBe_EmfEncDiagOut.flValuedKt) / ((FLOAT)sBe_EmfEncParam.uwKtRefresh) ;
                     }
                 }
             }
-            
+
             // ..e resettare le variabili
             sEmfEncRun.sKtEval.ulKtCounter = 0 ;
             sEmfEncRun.sKtEval.uwOneSecBkgdCntr = 0 ;
@@ -1466,9 +1686,7 @@ static void MotorKtEvaluation(void)
         sEmfEncRun.sKtEval.flMechSpeedDeltaAngleSum = 0.0 ;
         sEmfEncRun.sKtEval.flIncrementoKt = 0.0 ;
     }
-
 }
-
 
 // #########################################################################
 // =========================================================================
@@ -1483,20 +1701,20 @@ static void CalculateThreshold(void)
 //    slTmp = (SLONG)(MAXMECHSPDCONVFACTOR_IU * (FLOAT) * sBe_EmfEncIn.psVdcBusFiltered / sBe_EmfEncDiagOut.flValuedKt) ; // internal unit
 //    atomic_write(&sBe_EmfEncDiagOut.slMechMaxSpeed, &slTmp, sizeof(SLONG));
 
-    // uso la velocita' di ginocchio calcolato dall'algoritmo del deflussaggio 
+    // uso la velocita' di ginocchio calcolato dall'algoritmo del deflussaggio
     atomic_write(&sBe_EmfEncDiagOut.slMechMaxSpeed, &sDflx_Out.slDflxKneeSpd, sizeof(SLONG));
 
     // soglie per il mix
-    slTmp = (SLONG)((FLOAT)sBe_EmfEncDiagOut.slMechMaxSpeed * sEmfEncRun.sPercentage.flSsnrlssSpeed) ; 
+    slTmp = (SLONG)((FLOAT)sBe_EmfEncDiagOut.slMechMaxSpeed * sEmfEncRun.sPercentage.flSsnrlssSpeed) ;
     atomic_write(&sEmfEncRun.slSpeedSensorless, &slTmp, sizeof(SLONG));
-    
+
     slTmp = (SLONG)((FLOAT)sBe_EmfEncDiagOut.slMechMaxSpeed * sEmfEncRun.sPercentage.flSsnrlssThreshold1) ;
     atomic_write(&sEmfEncRun.slSpeedThreshold1, &slTmp, sizeof(SLONG));
-    
+
     slTmp = (SLONG)((FLOAT)sBe_EmfEncDiagOut.slMechMaxSpeed * sEmfEncRun.sPercentage.flSsnrlssThreshold0) ;
     atomic_write(&sEmfEncRun.slSpeedThreshold0, &slTmp, sizeof(SLONG));
 
-    // soglia per il filtro antiglitch 
+    // soglia per il filtro antiglitch
     slTmp = (SLONG)((FLOAT)sBe_EmfEncDiagOut.slMechMaxSpeed * sEmfEncRun.sPercentage.flEmfEncAGlitchFilter) ;
     atomic_write(&sEmfEncRun.slEmfEncGlitchFilterThreshold, &slTmp, sizeof(SLONG));
 
@@ -1511,4 +1729,389 @@ static void CalculateThreshold(void)
     // pendenza della retta del 'mix' [A = (slSpeedThreshold1, 0); B = (slSpeedSensorless, 1)]
     sEmfEncRun.swSpeedSlope = (SWORD)((FLOAT)SLONG_MAX_VALUE / ((FLOAT)sEmfEncRun.slSpeedSensorless - (FLOAT)sEmfEncRun.slSpeedThreshold1)) ;
 }
+
+
+// #########################################################################
+// =========================================================================
+// =============================== BEMF DITEN===============================
+// =========================================================================
+#if CFG_ENC_BEMF_DITEN
+BOOL Diten_Init(S_OBSERVER *observer, S_PLL *pll, MOTPRM_PARAMETERS *parameters, MH_MOTORDATA_OUT *currVolts)
+{
+	UWORD uwPolePairs = parameters->uwPoleNumbers / 2 ;
+
+	// observer init parameters
+	observer->parameter.gamma1 = (FLOAT)(sBe_EmfEncDefParam.diten_obs_gains.obs_gamma1 * DITEN_OBS_G1_GAIN); //guadagno osservatore. settare indicativamente a (0.033/phi)
+	observer->parameter.gamma2 = (FLOAT)(sBe_EmfEncDefParam.diten_obs_gains.obs_gamma2 * DITEN_OBS_G2_GAIN); //guadagno osservatore. settare indicativamente a (0.033/phi)
+	observer->parameter.a      = (FLOAT)(sBe_EmfEncDefParam.diten_obs_gains.obs_a      * DITEN_OBS_A_GAIN) ; //parametro alfa del filtro [alfa*s/(s+alfa)]
+
+	// observer init variables
+	observer->variable.flux[0]   = parameters->flKT * 0.5773 / (FLOAT)uwPolePairs ;//-parameters->flInductance * flIa; //e1
+	observer->variable.flux[1]   = 0.0 ; //-parameters->flInductance * flIb; //e2
+	observer->variable.flux[2]   = 0.0 ; //q1+L*i1
+	observer->variable.flux[3]   = 0.0 ; //q2+L*i2
+	observer->variable.deflux[0] = 0.0 ; //de1
+	observer->variable.deflux[1] = 0.0 ; //de2
+	observer->variable.deflux[2] = 0.0 ; //dq1
+	observer->variable.deflux[3] = 0.0 ; //dq2
+	observer->variable.q1[0]     = 0.0 ; //q1 current step
+	observer->variable.q1[1]     = 0.0 ; //q1 previous step
+	observer->variable.q2[0]     = 0.0 ; //q2 current step
+	observer->variable.q2[1]     = 0.0 ; //q2 previous step
+	observer->variable.q12q[0]   = 0.0 ; //q12q current step
+	observer->variable.q12q[1]   = 0.0 ; //q12q previous step
+	observer->variable.yq        = 0.0 ; //uscita filtro yq
+	observer->variable.omegaq1   = 0.0 ; //uscita filtro omegaq1
+	observer->variable.omegaq2   = 0.0 ; //uscita filtro omegaq2
+	observer->variable.x1        = 0.0 ; //x1
+	observer->variable.x2        = 0.0 ; //x2
+	observer->variable.thet      = DITEN_270DEG_IN_RADIANT ;
+	observer->variable.t_idr     = 0.0 ;
+
+	observer->variable.omegaq1_i = 0.0 ;
+	observer->variable.omegaq2_i = 0.0 ;
+	observer->variable.yq_i      = 0.0 ;
+
+	observer->MechOut.elAngleDelayed    = DITEN_270DEG_IN_RADIANT ;
+	observer->MechOut.revolutionCounter = 0;
+	observer->MechOut.mAngleAdder       = 0;
+
+	//PLL parameters
+	/*
+	pll->parameter.kp = 800;
+	pll->parameter.ki = 10000;
+	pll->parameter.tfilter = 0.0125;
+	*/
+	pll->parameter.kp      = (FLOAT)(DITEN_OBS_PLL_KP_GAIN * sBe_EmfEncDefParam.diten_obs_gains.pll_kp);
+	pll->parameter.ki      = (FLOAT)(DITEN_OBS_PLL_KI_GAIN * sBe_EmfEncDefParam.diten_obs_gains.pll_ki);
+	pll->parameter.tfilter = (FLOAT)(DITEN_OBS_PLL_TF_GAIN * sBe_EmfEncDefParam.diten_obs_gains.pll_tfilter);
+
+	//PLL variables
+	pll->variable.cos_teta      = 0.0 ;
+	pll->variable.sin_teta      = 0.0 ;
+	pll->variable.cos_tetaest   = 0.0 ;
+	pll->variable.sin_tetaest   = 0.0 ;
+	pll->variable.epsilon       = 0.0 ;
+	pll->variable.tetaest       = 0.0 ;
+	pll->variable.integral      = 0.0 ;
+	pll->variable.omegaest      = 0.0 ;
+	pll->variable.omegafiltr[0] = 0.0 ;
+	pll->variable.omegafiltr[1] = 0.0 ;
+	pll->variable.wrap          = 0.0 ;
+
+	sBe_EmfEncDiagOut.diten_obs_pll_out.elSpeed   = 0 ;
+	sBe_EmfEncDiagOut.diten_obs_pll_out.mechSpeed = 0 ;
+	sBe_EmfEncDiagOut.diten_obs_pll_out.elThet    = (UWORD)(observer->variable.thet * DITEN_OBS_EL_POSITION_GAIN);
+	sBe_EmfEncDiagOut.diten_obs_pll_out.mechThet  = (ULONG)((observer->MechOut.mAngleAdder * (FLOAT_2PI / (FLOAT)uwPolePairs) + observer->variable.thet / (FLOAT)uwPolePairs) * DITEN_OBS_POSITION_GAIN);
+	sBe_EmfEncDiagOut.diten_obs_pll_out.revolutionCounter = 0 ;
+
+	sDitenRun.id_inject.params.minSpeedWithoutInjection = (FLOAT)(DITEN_OBS_MIN_SPEED_GAIN    * sBe_EmfEncDefParam.diten_obs_gains.id_inj_minSpeedWithoutInjection);
+	sDitenRun.id_inject.params.accRateInSecToRated      = (FLOAT)(DITEN_OBS_INJ_ACCRATE_GAIN  * sBe_EmfEncDefParam.diten_obs_gains.id_inj_accRateInSec);
+	sDitenRun.id_inject.params.maxValuePercentOfRated   = (FLOAT)(DITEN_OBS_INJ_MAXVALUE_GAIN * sBe_EmfEncDefParam.diten_obs_gains.id_inj_maxValuePercent / 100.0);
+
+//	sDitenRun.id_inject.current_value = sDitenRun.id_inject.params.maxValuePercentOfRated * parameters->flCurrentNominal;
+	sDitenRun.id_inject.current_value = 0.0 ;
+	sDitenRun.id_inject.target_value  = sDitenRun.id_inject.params.maxValuePercentOfRated * parameters->flCurrentNominal ;
+
+	return TRUE ;
+}
+
+/*
+ * The function contains observer equations for position estimation + PLL for speed estimation
+ */
+BOOL Diten_Task8KHz(S_OBSERVER *observer, S_PLL *pll, MOTPRM_PARAMETERS * parameters, MH_MOTORDATA_OUT * currVolts)
+{
+	FLOAT flVu, flVv, flVw, flV3Harm ;
+	FLOAT flIu, flIv, flIw ;
+
+	FLOAT flVa, flVb ;
+	FLOAT flIa, flIb ;
+
+	UWORD uwPolePairs = parameters->uwPoleNumbers / 2 ;
+
+	FLOAT flPsim = parameters->flKT * C_1DSQRT3 / (FLOAT)uwPolePairs;
+	FLOAT flTsample = DITEN_OBS_SERVOTIME ;
+
+	flIu = (float)currVolts->slIuFb * 0.0001;
+	flIv = (float)currVolts->slIvFb * 0.0001;
+	flIw = (float)currVolts->slIwFb * 0.0001;
+
+#if CFG_VMOTOR_READ
+	flVu = (FLOAT)currVolts->swVuEffective * 0.1 ;
+	flVv = (FLOAT)currVolts->swVvEffective * 0.1 ;
+	flVw = (FLOAT)currVolts->swVwEffective * 0.1 ;
+	flV3Harm = (flVu + flVv + flVw) / 3.0 ;
+
+	// 3a harm compensation
+	flVu = flVu - flV3Harm ;
+	flVv = flVv - flV3Harm ;
+	flVw = flVw - flV3Harm ;
+#else
+	flVu = (float)currVolts->swVuEstimated * 0.1;
+	flVv = (float)currVolts->swVvEstimated * 0.1;
+	flVw = - flVu - flVv;
+#endif
+
+	// Alfa = (2/3) * (U - V/2 - W/2) = 0.666 * (U - V/2 - W/2)
+	// Beta = (V - W) / SQRT(3) 0.666 * (0.866 * V - 0.866 * W)
+	// 0.666 = 2/3 = C_2D3
+	// 0.866 = sqrt(3.0) / 2 = C_SQRT3D2
+	// 0.666 * 0.866 = C_1DSQRT(3)
+	flIa = C_2D3     * (flIu - 0.5 * flIv - 0.5 * flIw) ;
+	flIb = C_1DSQRT3 * (flIv - flIw) ;
+
+	flVa = C_2D3     * (flVu - 0.5 * flVv - 0.5 * flVw) ;
+	flVb = C_1DSQRT3 * (flVv - flVw) ;
+
+	observer->parameter.tfilter = 1 - observer->parameter.a * flTsample;  	//parametro denominatore del filtro precendente in seguito a discretizzazione
+
+	observer->variable.q12q[0] =  observer->variable.q1[0]   * observer->variable.q1[0] +observer->variable.q2[0]   *observer->variable.q2[0];
+	observer->variable.yq      = -observer->variable.q12q[0] * observer->parameter.a    +observer->variable.q12q[1] *observer->parameter.a + observer->parameter.tfilter * observer->variable.yq;
+	observer->variable.q12q[1] =  observer->variable.q12q[0] ;
+
+	//filtro omegaq1
+	observer->variable.omegaq1 = 2 * observer->variable.q1[0] * observer->parameter.a - 2 * observer->variable.q1[1] * observer->parameter.a + observer->parameter.tfilter * observer->variable.omegaq1;
+	observer->variable.q1[1]   = observer->variable.q1[0] ;
+
+	//filtro omegaq2
+	observer->variable.omegaq2 = 2 * observer->variable.q2[0] * observer->parameter.a - 2 * observer->variable.q2[1] * observer->parameter.a + observer->parameter.tfilter * observer->variable.omegaq2;
+	observer->variable.q2[1]   = observer->variable.q2[0] ;
+
+	//e1 ed e2 derivate (de1, de2)//
+	observer->variable.deflux[0] = (observer->parameter.gamma2 * observer->variable.omegaq1 * (observer->variable.yq - observer->variable.omegaq1 * observer->variable.flux[0] - observer->variable.omegaq2 * observer->variable.flux[1]));
+	observer->variable.deflux[1] = (observer->parameter.gamma2 * observer->variable.omegaq2 * (observer->variable.yq - observer->variable.omegaq1 * observer->variable.flux[0] - observer->variable.omegaq2 * observer->variable.flux[1]));
+
+	//q1 e q2 derivate  (dq1, dq2)//
+	observer->variable.deflux[2] = (flVa - parameters->flResistance * flIa + observer->parameter.gamma1 * observer->variable.flux[0] * (observer->variable.flux[0] * observer->variable.flux[0] + observer->variable.flux[1]*observer->variable.flux[1] - flPsim * flPsim));
+	observer->variable.deflux[3] = (flVb - parameters->flResistance * flIb + observer->parameter.gamma1 * observer->variable.flux[1] * (observer->variable.flux[0] * observer->variable.flux[0] + observer->variable.flux[1]*observer->variable.flux[1] - flPsim * flPsim));
+
+	//integrale
+	observer->variable.flux[0] = observer->variable.flux[0] + observer->variable.deflux[0] * flTsample;
+	observer->variable.flux[1] = observer->variable.flux[1] + observer->variable.deflux[1] * flTsample;
+	observer->variable.flux[2] = observer->variable.flux[2] + observer->variable.deflux[2] * flTsample;
+	observer->variable.flux[3] = observer->variable.flux[3] + observer->variable.deflux[3] * flTsample;
+
+	//aggiunta termine -L*i a q1 e q2
+	observer->variable.q1[0] = observer->variable.flux[2] - parameters->flInductance * flIa;
+	observer->variable.q2[0] = observer->variable.flux[3] - parameters->flInductance * flIb;
+
+	//uscite
+	observer->variable.x1 = observer->variable.flux[0] + observer->variable.q1[0];
+	observer->variable.x2 = observer->variable.flux[1] + observer->variable.q2[0];
+
+	observer->variable.thet = atan2(observer->variable.x2, observer->variable.x1);
+
+	//<<<<<<<<<<<<<<PLL>>>>>>>>>>>>>>>>>>>>//
+	pll->variable.cos_teta    = cos(observer->variable.thet);
+	pll->variable.sin_teta    = sin(observer->variable.thet);
+	pll->variable.cos_tetaest = cos(pll->variable.tetaest);
+	pll->variable.sin_tetaest = sin(pll->variable.tetaest);
+
+	pll->variable.epsilon  = pll->variable.sin_teta * pll->variable.cos_tetaest - pll->variable.cos_teta * pll->variable.sin_tetaest;
+	pll->variable.integral = pll->variable.integral + pll->parameter.ki * pll->variable.epsilon * 0.5 * flTsample;
+	pll->variable.omegaest = pll->variable.integral + pll->parameter.kp * pll->variable.epsilon;
+	pll->variable.tetaest  = pll->variable.tetaest  + pll->variable.omegaest * flTsample;
+
+	//filtro omega in uscita
+	pll->variable.omegafiltr[0] = pll->variable.omegafiltr[1] * (1 - flTsample / pll->parameter.tfilter) + pll->variable.omegaest * flTsample / pll->parameter.tfilter;
+	pll->variable.omegafiltr[1] = pll->variable.omegafiltr[0];
+
+	/*
+	 *  It looks like 0 angle of dq reference frame corresponds to -q axis.
+	 *  Observer estimates angle considering that 0 angle in dq reference  frame is aligned with d axis
+	 *  So it is required to add 270 degrees to estimated position value after calculation
+	 * */
+	observer->variable.thet += DITEN_270DEG_IN_RADIANT ;
+
+	/*
+	 *  Output range of atan2 is [-pi, pi]. FPGA and control require the angle to be of unsigned type (ULONG or UWORD).
+	 *  So in the next section observer->variable.thet is scaled to be from [0 2*pi].
+	 * */
+	if (observer->variable.thet > FLOAT_2PI)
+	{
+		observer->variable.thet -= FLOAT_2PI;
+	}
+
+	if (observer->variable.thet < 0.0)
+	{
+		observer->variable.thet += FLOAT_2PI;
+	}
+
+	/*
+	 *  The section presents recalculation from electrical angle to mechanical angle.
+	 *  Recalculation is based on number of pole pairs of the motor.
+	 *  It is necessary to detect direction of rotation. Depending on direction of rotation and once angle
+	 *  crosses 2*pi value or 0 value, mAngleAdder is increased or decreased by 1. if value of mAngleAdder exceeds
+	 *  range [0, motor_pole_pairs - 1], revolution counter value is changed.
+	 *  mechanical angle is composed as mechThet = mAngleAdder * 2 * pi / motor_pole_pairs + elThet / motor_pole_pairs.
+	 * */
+	if (abs(observer->variable.thet-observer->MechOut.elAngleDelayed)>5*FLOAT_PI/6)
+	{
+		if (observer->variable.thet < observer->MechOut.elAngleDelayed)
+		{
+			observer->MechOut.mAngleAdder += 1;
+		}
+
+		if (observer->variable.thet > observer->MechOut.elAngleDelayed)
+		{
+			observer->MechOut.mAngleAdder -= 1;
+		}
+
+		if (observer->MechOut.mAngleAdder == (SWORD)uwPolePairs)
+		{
+			observer->MechOut.mAngleAdder = 0;
+			observer->MechOut.revolutionCounter += 1;
+		}
+
+		if (observer->MechOut.mAngleAdder == -1)
+		{
+			observer->MechOut.mAngleAdder = (SWORD)uwPolePairs - 1;
+			observer->MechOut.revolutionCounter -= 1;
+		}
+	}
+
+	observer->MechOut.elAngleDelayed = observer->variable.thet;
+
+	/*
+	 * Structure diten_obs_pll_out stored scaled output values of the observer based on the requirements of control and fpga.
+	 */
+	sBe_EmfEncDiagOut.diten_obs_pll_out.mechSpeed = (SLONG)(pll->variable.omegafiltr[0] * DITEN_OBS_SPEED_GAIN /(FLOAT)uwPolePairs);
+	sBe_EmfEncDiagOut.diten_obs_pll_out.elSpeed   = (SWORD)_sint32_scale_32(sBe_EmfEncDiagOut.diten_obs_pll_out.mechSpeed, uwPolePairs);
+	sBe_EmfEncDiagOut.diten_obs_pll_out.elThet    = (UWORD)(observer->variable.thet * DITEN_OBS_EL_POSITION_GAIN);
+	sBe_EmfEncDiagOut.diten_obs_pll_out.mechThet  = (ULONG)((observer->MechOut.mAngleAdder * (FLOAT_2PI/(FLOAT)uwPolePairs) + observer->variable.thet/(FLOAT)uwPolePairs) * DITEN_OBS_POSITION_GAIN);
+	sBe_EmfEncDiagOut.diten_obs_pll_out.revolutionCounter = (SLONG)observer->MechOut.revolutionCounter;
+
+	return TRUE ;
+}
+
+void Diten_Observer_Run(void)
+{
+	FLOAT flId2InjectStep ;
+
+	Diten_Task8KHz(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut); // observer calculation
+
+	/*
+	 * The constant current is injected in the first second after start and if estimated speed if below a certain threshold.
+	 * If the speed goes higher than a threshold, id current is injected for one more second.
+	 * Speed threshold value, id constant value and id acceleration rate can be changed via cockpit.
+	 * At the moment speed threshold is 16 rad/s (5% of rated speed), acceleration rate 1s to a rated value, id value 10% of rated current.
+	 */
+	if ((sDitenRun.flHookTimer < 1.0) || (fabs((float)sBe_EmfEncDiagOut.diten_obs_pll_out.mechSpeed / DITEN_OBS_SPEED_GAIN) < sDitenRun.id_inject.params.minSpeedWithoutInjection)) // check if id current injection is required
+	{
+		if ((fabs((float)sBe_EmfEncDiagOut.diten_obs_pll_out.mechSpeed / DITEN_OBS_SPEED_GAIN) < sDitenRun.id_inject.params.minSpeedWithoutInjection)) // if injection is required and threshold is higher than estimated speed value the timer value has to be set to zero
+		{
+			sDitenRun.flHookTimer = 0.0 ; // set of the timer to zero (to hold id current for 1s after) if the speed is lower than a threshold.
+		}
+		sDitenRun.id_inject.target_value = sDitenRun.id_inject.params.maxValuePercentOfRated * sGlbMotorParameters.flCurrentNominal; //target value of id current
+	}
+	else
+		sDitenRun.id_inject.target_value = 0;
+
+	// if statements below serve to set id reference, since id reference can be changed only with limited acceleration
+	flId2InjectStep = sGlbMotorParameters.flCurrentNominal / sDitenRun.id_inject.params.accRateInSecToRated * DITEN_OBS_SERVOTIME ;
+
+	if (fabs(sDitenRun.id_inject.current_value - sDitenRun.id_inject.target_value) > flId2InjectStep)
+	{
+		if (sDitenRun.id_inject.current_value > sDitenRun.id_inject.target_value)
+			sDitenRun.id_inject.current_value -= flId2InjectStep ;
+		else if (sDitenRun.id_inject.current_value < sDitenRun.id_inject.target_value)
+			sDitenRun.id_inject.current_value += flId2InjectStep ;
+	}
+
+	/*
+	 * Here id reference value is set. sMh_MotorDataUsrInIRef.slIdRef is used to set id value from cockpit.
+	 * I am not sure if it is the best way to set id, but it works.
+	 */
+//	sMh_MotorDataUsrInIRef.slIdRef = (SLONG)(sDitenRun.id_inject.current_value * 10000);
+	sDitenRun.flHookTimer += DITEN_OBS_SERVOTIME ;
+}
+
+void Diten_8kHz(void)
+{
+	if (sEfsParam.ubProcType) //check if field orientation procedure is on.
+		//The problem was that if it is on, observer started to estimate right after the procedure starts, but not after it is finished.
+		//So I have to consider two options:
+		// - if field orientaion is off - start estimation when sMotCtrl_UsrControl.uwControlWord is not 0
+		// - if field orientaion is on  - start estimation when the procedure is finished.
+	{
+		sDitenRun.swTestCounter++ ;
+#if (FALSE)
+//		if ((sMotCtrl_UsrControl.uwControlWord == 0) || !(sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID)) //here I check sEm_Fbk2CntrLoop.ubStatus to see if field orientation procedure is finished
+//		if ((!sBe_EmfEncIn.psPowerStageStatus->b.bVoltageEnabled) || !(sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID)) //here I check sEm_Fbk2CntrLoop.ubStatus to see if field orientation procedure is finished
+//		if ((!sBe_EmfEncIn.psPowerStageStatus->b.bFullyActive) || !(sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID)) //here I check sEm_Fbk2CntrLoop.ubStatus to see if field orientation procedure is finished
+		if ((!sBe_EmfEncIn.psPowerStageStatus->b.bReferenceEnabled) || !(sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID)) //here I check sEm_Fbk2CntrLoop.ubStatus to see if field orientation procedure is finished
+		{
+			Diten_Init(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut) ;
+			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_EFS_READY);
+
+			sDitenRun.swTestCounter = 0 ;
+			sDitenRun.flHookTimer = 0.0 ; // is used of injection of constant id current. The current is inject the first second after start. so it is important to set it to zero if sMotCtrl_UsrControl.uwControlWord = 0
+			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_DISABLED ;
+		}
+		else if (sDitenRun.swTestCounter > 5) // delay in 5 sample times is done to start estimation after id current transient (after field orientation its value is 30% of rated value)
+		{	// PWM enabled and ElecAngle valid
+			sDitenRun.swTestCounter = 5 ;
+			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_RELATIVE_VALID | ENCMGR_EFS_READY | ENCMGR_ELE_ANGLE_VALID) ;
+			Diten_Observer_Run(); // the function that contain the observer and manages id current injection
+			sBe_EmfEncDiagOut.uwSnsrlessState == SNSRLESS_FULL ;
+		}
+#else
+		if ((sBe_EmfEncIn.psPowerStageStatus->b.bReferenceEnabled) && (sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID))
+		{
+			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_RELATIVE_VALID | ENCMGR_EFS_READY | ENCMGR_ELE_ANGLE_VALID) ;
+			Diten_Observer_Run(); // the function that contain the observer and manages id current injection
+			sEmfEncRun.ubEmfEncStatus = EMFENC_OK ;
+			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_FULL ;
+		}
+		else
+		{
+			Diten_Init(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut) ;
+			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_EFS_READY);
+
+			sDitenRun.swTestCounter = 0 ;
+			sDitenRun.flHookTimer = 0.0 ; // is used of injection of constant id current. The current is inject the first second after start. so it is important to set it to zero if sMotCtrl_UsrControl.uwControlWord = 0
+
+			sEmfEncRun.ubEmfEncStatus = EMFENC_ZEROOUT ;
+			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_DISABLED ;
+		}
+#endif
+
+	}
+	else //field orientation procedure is off
+	{
+		sDitenRun.swTestCounter = 0 ;
+
+//		if (sMotCtrl_UsrControl.uwControlWord == 0)
+		if(!sBe_EmfEncIn.psPowerStageStatus->b.bVoltageEnabled)
+//		if(!sBe_EmfEncIn.psPowerStageStatus->b.bFullyActive)
+		{	// PWM disabled: keep observer resetted (Diten_Init)
+			Diten_Init(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut) ;
+			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_EFS_READY);
+			sDitenRun.flHookTimer = 0.0 ;
+
+			sEmfEncRun.ubEmfEncStatus = EMFENC_ZEROOUT ;
+			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_DISABLED ;
+		}
+		else
+		{	// PWM enabled: run observer
+			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_RELATIVE_VALID | ENCMGR_EFS_READY | ENCMGR_ELE_ANGLE_VALID) ;
+			Diten_Observer_Run();
+
+			sEmfEncRun.ubEmfEncStatus = EMFENC_OK ;
+			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_FULL ;
+		}
+	}
+
+	// all necessary information from observer is set as a BackEmf feedback out.
+/*
+	sEmfEncRun.psBackEmfOut->sEncData.sqPostn.hi = sBe_EmfEncDiagOut.diten_obs_pll_out.revolutionCounter ;
+	sEmfEncRun.psBackEmfOut->sEncData.sqPostn.lo = sBe_EmfEncDiagOut.diten_obs_pll_out.mechThet;
+	sEmfEncRun.psBackEmfOut->sEncData.slSpeed = sBe_EmfEncDiagOut.diten_obs_pll_out.mechSpeed;
+	sEmfEncRun.psBackEmfOut->uwElecAngle      = sBe_EmfEncDiagOut.diten_obs_pll_out.elThet;
+	sEmfEncRun.psBackEmfOut->swElecSpeed      = sBe_EmfEncDiagOut.diten_obs_pll_out.elSpeed;
+	sEmfEncRun.psBackEmfOut->sEncData.slAccel = 0;//_sint32_asl12(sEmfEncRun.psBackEmfOut->sEncData.slSpeed - slMechSpeed_1) ;
+	// Dmytro: sEmfEncRun.psBackEmfOut->sEncData.slAccel is zero for the other sensorless observer, so I also set it to zero.
+*/
+}
+#endif // cfg_enc_bemf_diten
 #endif

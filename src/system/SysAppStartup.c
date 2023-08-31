@@ -9,8 +9,6 @@
 /* Description : Main entry point of System Application                     */
 /*                                                                          */
 /****************************************************************************/
-#pragma GCC optimize (2)
-
 #include "system\SysAppGlobals.h"
 #include "system\SysAppTaskCollection.h"
 #include "system\SysAppHwOptReq.h"
@@ -31,6 +29,17 @@
 #include "common\ParametersCheck.h"
 #include "common\FlashManager.h"
 
+/////////////////////////////////////////////////////////////////////////////
+// Compiler Option
+#if defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
+#pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
 //****************************************************************************
 // Defines
 

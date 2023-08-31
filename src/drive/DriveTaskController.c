@@ -9,10 +9,6 @@
 /* Description : Task configuration for drive controller                    */
 /*                                                                          */
 /****************************************************************************/
-// Compiler Option
-//#pragma GCC optimize (0) // _crs_dbg
-#pragma GCC optimize (2)
-
 #include "common\CommonDefines.h"
 #include "common\CommonUtility.h"
 #include "system\SysAppGlobals.h"
@@ -48,6 +44,20 @@
 #include "common\ParametersCheck.h"
 #include "common\ParametersCheckCodes.h"
 
+/////////////////////////////////////////////////////////////////////////////
+// Compiler Option
+/*
+#if defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
+#pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
+*/
+#pragma GCC optimize (2)
 //***************************************************************************
 // Globals
 

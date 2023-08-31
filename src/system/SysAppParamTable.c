@@ -1105,9 +1105,26 @@ const COMMONPARAMDB_ENTRY psCommonParamTable[]=
     {0x4198, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_UBYTE, 0, 1, WRDENY_DEFAULT, &stgap4sCONFIG_VALUES.Reg.DIAG1CFGB, NULL},
     {0x4199, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_UBYTE, 0, 1, WRDENY_DEFAULT, &stgap4sCONFIG_VALUES.Reg.DIAG2CFGA, NULL},
     {0x4200, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_UBYTE, 0, 1, WRDENY_DEFAULT, &stgap4sCONFIG_VALUES.Reg.DIAG2CFGB, NULL},
-#endif
+#else
+#if (CFG_ENC_BEMF_DITEN_PARAM)
+    {0x4100, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_PARAMSAVE, &sBe_EmfEncDefParam.diten_obs_gains.pll_kp, NULL},
+    {0x4101, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_PARAMSAVE, &sBe_EmfEncDefParam.diten_obs_gains.pll_ki, NULL},
+    {0x4102, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_PARAMSAVE, &sBe_EmfEncDefParam.diten_obs_gains.pll_tfilter, NULL},
+    {0x4103, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_PARAMSAVE, &sBe_EmfEncDefParam.diten_obs_gains.obs_a, NULL},
+    {0x4104, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_PARAMSAVE, &sBe_EmfEncDefParam.diten_obs_gains.obs_gamma1, NULL},
+    {0x4105, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_PARAMSAVE, &sBe_EmfEncDefParam.diten_obs_gains.obs_gamma2, NULL},
 
+    {0x4106, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_SWORD, 0, 1, WRDENY_DEFAULT, &sBe_EmfEncDiagOut.diten_obs_pll_out.elSpeed, NULL},
+    {0x4107, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_UWORD, 0, 1, WRDENY_DEFAULT, &sBe_EmfEncDiagOut.diten_obs_pll_out.elThet, NULL},
+    {0x4108, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_SLONG, 0, 1, WRDENY_DEFAULT, &sBe_EmfEncDiagOut.diten_obs_pll_out.mechSpeed, NULL},
+    {0x4109, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_DEFAULT, &sBe_EmfEncDiagOut.diten_obs_pll_out.mechThet, NULL},
+    {0x410A, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_SLONG, 0, 1, WRDENY_DEFAULT, &sBe_EmfEncDiagOut.diten_obs_pll_out.revolutionCounter, NULL},
 
+	{0x410B, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_PARAMSAVE, &sBe_EmfEncDefParam.diten_obs_gains.id_inj_accRateInSec, NULL},
+    {0x410C, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_PARAMSAVE, &sBe_EmfEncDefParam.diten_obs_gains.id_inj_maxValuePercent, NULL},
+    {0x410D, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_ULONG, 0, 1, WRDENY_PARAMSAVE, &sBe_EmfEncDefParam.diten_obs_gains.id_inj_minSpeedWithoutInjection, NULL},
+#endif // cfg_enc_bemf_diten
+#endif // _HW_AXS_CABI35KW
 
         //****************************************************************************
         // Drive Task Configuration
