@@ -339,8 +339,9 @@ SWORD EfsProcess(EFS_RUNTIME * psRuntime, UWORD * puwElecAngleCorrection)
                 psRuntime->uwTickCnt--;
                 return EFS_RV_INPROGRESS;
             }
-            psRuntime->uwTickCnt=REALTIME_TASK_FREQ/1000-1;
+            psRuntime->uwTickCnt=REALTIME_TASK_FREQ/1000-1; // reload TickCnt
 
+            	// 1st RAMP: Iq from 0->IqRamp2reach, Id = 0
                 // update first ramp tick counter and quadrature current
             if(psRuntime->uwIdRampQTicksCounter)
             {
@@ -350,6 +351,7 @@ SWORD EfsProcess(EFS_RUNTIME * psRuntime, UWORD * puwElecAngleCorrection)
                 return EFS_RV_INPROGRESS;
             }
 
+            	// 2nd RAMP: Iq from IqRamp2reach to 0, Id from 0 to IdRamp2reach
                 // update second ramp tick counter and both quadrature and direct current
             if(psRuntime->uwIdRampTicksCounter)
             {
@@ -362,6 +364,7 @@ SWORD EfsProcess(EFS_RUNTIME * psRuntime, UWORD * puwElecAngleCorrection)
                 return EFS_RV_INPROGRESS;
             }
 
+            	// steady state: keep Id current constant for uwIdSteadyTicksCounter time
                 // update steady tick counter
             if(psRuntime->uwIdSteadyTicksCounter)
             {
@@ -369,16 +372,15 @@ SWORD EfsProcess(EFS_RUNTIME * psRuntime, UWORD * puwElecAngleCorrection)
                 return EFS_RV_INPROGRESS;
             }
 
+            	// calculate the offset and check if the rotor has moved
                 // at the end of procedure check delta electrical angle,
                 // if under threshold then procedure fails (only if relative valid)
             sEfsOut.uwPhasingQuality=abs(uwElecAngle-psRuntime->uwEAngleSnapshot);
-            if((psRuntime->psFeedback->ubStatus&ENCMGR_RELATIVE_VALID) &&
-               sEfsOut.uwPhasingQuality<EFS_VL_ELECANGLE_MIN)
-
+            if((psRuntime->psFeedback->ubStatus&ENCMGR_RELATIVE_VALID) && sEfsOut.uwPhasingQuality<EFS_VL_ELECANGLE_MIN)
                 return EFS_RV_FAULT;
 
                 // procedure terminated
-            *puwElecAngleCorrection=*puwElecAngleCorrection;
+            *puwElecAngleCorrection=*puwElecAngleCorrection; // set correction in encoder manager
 
                 // if with position control loop
             if(psRuntime->ubProcType==EFS_TYPE_IDR_AND_PLOOP)

@@ -34,10 +34,6 @@
 #include "drive\TAMAGAWAEncoder.h"
 #include "drive\BissEncoder.h"
 
-#if CFG_ENC_BEMF_DITEN
-#include "drive\MotorHandler.h"
-#endif // cfg_enc_bemf_diten
-
 #include "common\TaskScheduler.h"
 #include "common\Int64Functions.h"
 #include "common\DspFunctions.h"
@@ -758,23 +754,17 @@ BOOL initcore(void)
             break;
 
         case ENCODER_TYPE_REL_BACK_EMF:
-#if CFG_ENC_BMF
+#if CFG_ENC_BEMF
             if(Be_ParametersCheck())
             {
-                setvencoder();	// crs
+                setvencoder();	// allow encoder voltage
                 assert(psRelSel);
                 bRetVal=Be_BackEmfHandlerEncInit(psRelSel, &sEncMgrRun.sbExportFault);
                 sEncMgrRun.pfMainRelEACorrect=&Be_SetElecAngle;
                 sEncMgrRun.pfMainRelAPCorrect=&Be_SetAbsPos;
                 sEncMgrRun.pfMainRelGetSnapshot=NULL;
-                sEm_EncMngrOut.flags.b.bRequireIRefHook=TRUE;
-
-#if (FALSE) // CFG_ENC_BEMF_DITEN  //crs
-                sEncMgrRun.sFlags.b.bBEMFHook=FALSE; //here I set that Hook is not required.
-#else
                 sEncMgrRun.sFlags.b.bBEMFHook=TRUE;
-#endif // cfg_enc_bemf_diten
-
+                sEm_EncMngrOut.flags.b.bRequireIRefHook=TRUE;
                 bMainRelValid=TRUE;
             }
             else
@@ -1465,9 +1455,9 @@ static BOOL hook8kHz(void)
         uwRetVal=EfsProcess(&sEncMgrRun.sEfsRun, &uwElecAngle);
 
         if(uwRetVal==EFS_RV_INPROGRESS)
-        {
+        { // until EFS is in progress, exit here
             sEm_Fbk2CntrLoop.uwElecAngle=uwElecAngle;
-            return TRUE;
+            return TRUE;  // EFS status (from EfsProcess) is in progress, EXIT HERE
         }
 
             // if terminated and valid send corrections
@@ -1487,8 +1477,9 @@ static BOOL hook8kHz(void)
         sEm_Fbk2CntrLoop.uwElecAngle=*sEncMgrRun.puwElecAngle2Use ;
         sEm_Fbk2CntrLoop.ubStatus|=ENCMGR_ELE_ANGLE_VALID;
 
-#if CFG_ENC_BMF
+#if CFG_ENC_BEMF
             // if BEMF hook active then notify current transition
+        	// set NULL pointer: in this way backemf knows EFS has ended
         if(sEncMgrRun.sFlags.b.bBEMFHook)
             Be_Hook8KHz(NULL, &sEm_EncMngrOut.sIRefOut);
 #endif
@@ -1501,13 +1492,14 @@ static BOOL hook8kHz(void)
             sEncMgrRun.sErrorSent.b.bEfsFault=TRUE;
         }
 #endif
-        return TRUE;
+        return TRUE; // when EFS is in progress, EXIT HERE
     }
 
+    	// ****** EFS procedure is no more in progress ******
         // copy in PSTAGE control to out, as BEMF do not use it
     sEm_EncMngrOut.sPowerStageCtrlOut=*sEm_EncMngrIn.sPowerStageCtrlIn;
 
-#if CFG_ENC_BMF
+#if CFG_ENC_BEMF
         // if BEMF hook active
     if(sEncMgrRun.sFlags.b.bBEMFHook)
     {
@@ -1562,7 +1554,7 @@ static void slowtask(void)
     Ic_EncoderParametersCheck(INCREMENTAL_SEL_AUX);
     Ic_SimulationParametersCheck(sEm_EncMngrParam.uwMainRelSel==ENCODER_TYPE_REL_INCREMENTAL);
 #endif
-#if CFG_ENC_BMF
+#if CFG_ENC_BEMF
     Be_ParametersCheck();
 #endif
 

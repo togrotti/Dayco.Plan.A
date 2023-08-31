@@ -102,7 +102,7 @@
 #define CFG_ENC_SINCOS            1
 #define CFG_ENC_INCR              1
 #define CFG_ENC_HALL              1
-#define CFG_ENC_BMF               1
+#define CFG_ENC_BEMF              1
 #define CFG_ENC_EFS               1
 #define CFG_ENC_ENDAT             1
 #define CFG_ENC_HIP               1
@@ -113,7 +113,7 @@
 #define CFG_ENC_SINCOS            1
 #define CFG_ENC_INCR              1
 #define CFG_ENC_HALL              0
-#define CFG_ENC_BMF               1
+#define CFG_ENC_BEMF              1
 #define CFG_ENC_EFS               1
 #define CFG_ENC_ENDAT             1
 #define CFG_ENC_HIP               0
@@ -164,8 +164,12 @@
 //***************************************************************************
 #define CRS_DBGDSK        0
 // Manage fast task overtime
+#if defined(_CRS_DBG)
 #if CRS_DBGDSK
 #define	CFG_FASTTASKOVERTIMEDISABLE 1
+#else
+#define	CFG_FASTTASKOVERTIMEDISABLE 0
+#endif
 #else
 #define	CFG_FASTTASKOVERTIMEDISABLE 0
 #endif

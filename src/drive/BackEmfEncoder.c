@@ -23,6 +23,7 @@
 #include "common\Int64Functions.h"
 #include "common\ParametersCheck.h"
 #include "common\ParametersCheckCodes.h"
+#include "common\DspFunctions.h"
 
 #include "common\CommonMotorHandler.h"
 #include "common\CommonEncoderManager.h"
@@ -32,7 +33,6 @@
 #include "drive\MotorHandler.h"     // to catch sMh_MotorDataOut structure: slIuFb, slIvFb, slIwFb, swVuOut, swVvOut;
                                     // swVuEffective, swVvEffective, swVwEffective when available
 									// pay attention that it works only with in 1 bridge drive!
-#include "drive\MotionController.h" // to catch sEm_Fbk2CntrLoop.ubStatus
 #include "drive\EncoderEFSeek.h"    // to catch sEfsParam.ubProcType
 #endif // cfg_enc_bemf_iten
 
@@ -45,10 +45,10 @@
 	#pragma GCC optimize (0)
 #else
 	#pragma GCC optimize (2)
-#endif
+#endif // crs_dbgdsk
 #else
 	#pragma GCC optimize (2)
-#endif
+#endif // _crs_dbg
 
 // ================================ #define ================================ 
 #define SNSRLESS_DISABLED       0
@@ -334,9 +334,7 @@ typedef struct {
 	float current_value;
 	float target_value;
 } OBS_ID_INJECT;
-#endif // cfg_enc_bemf_diten
 
-#if CFG_ENC_BEMF_DITEN
 typedef struct {
 	OBS_ID_INJECT	id_inject;
 	S_OBSERVER		diten_observer;
@@ -357,7 +355,7 @@ BE_EMFENC_PARAM     sBe_EmfEncParam ;
 const BE_EMFENC_PARAM huge sBe_EmfEncDefParam =
 #else
 const BE_EMFENC_PARAM sBe_EmfEncDefParam =
-#endif
+#endif // _infineon
 {
     {0,0,0,1,0},    // antiglitch enabled, DeltaAngleSpeed
     9000, // BackOnTheFly: 90.00% speed max
@@ -388,7 +386,7 @@ const BE_EMFENC_PARAM sBe_EmfEncDefParam =
 
 };
 
-#if CFG_ENC_BMF
+#if CFG_ENC_BEMF
 // =========================== local  variables ===========================
 static EMFENC_RUNTIME   sEmfEncRun ;
 
@@ -651,14 +649,16 @@ static BOOL BackEmfHandler8KHz(void)
     if(sBe_EmfEncIn.psPowerStageStatus->b.bVoltageEnabled)
     {   // PWM switched on, let's start the show..
     	Diten_8kHz() ;
+        BackEmfMngrBackOnTheFly8KHz() ; // back on the fly/rotor direction
+        BackEmfEncMechOut8KHz() ;
+        BackEmfEncOut8KHz(sEmfEncRun.ubEmfEncStatus) ; // check what to do with the output
     }
     else
     {   //  keep Diten "resetted"
-		Diten_Init(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut) ;
-		sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_EFS_READY);
-    }
-	BackEmfEncMechOut8KHz() ; // calculate mechanical output
 
+        sEmfEncRun.flags.b.bRotorZeroFound = FALSE ; //  rotor has not been yet directed
+	    BackEmfEncOut8KHz(EMFENC_RESET) ; // reset
+    }
 #else
     if(sBe_EmfEncIn.psPowerStageStatus->b.bVoltageEnabled)
     {   // PWM switched on, let's start the show..
@@ -1120,7 +1120,8 @@ void BackEmfEncMechOut8KHz(void)
 // ========================================================================= 
 static void BackEmfMngrBackOnTheFly8KHz(void)
 { 
-    // trying to load all the filters while the drive is enabling   
+#if (!CFG_ENC_BEMF_DITEN)
+	// trying to load all the filters while the drive is enabling
     // Softstart NOT ended or Application NOT enabled: exit and keep output value to zero   
     if (!(sBe_EmfEncIn.psPowerStageStatus->b.bFullyActive && sBe_EmfEncIn.psPowerStageStatus->b.bReferenceEnabled))
     {
@@ -1129,7 +1130,6 @@ static void BackEmfMngrBackOnTheFly8KHz(void)
         sEmfEncRun.uwEmfSpeedTimer = EMFSPEED_MEASURE_TIMEOUT ; // set the timeout to measure speed
         return ;
     }
-
 
     if (!sEmfEncRun.flags.b.bEmfSpeedMeasured)
     {
@@ -1162,7 +1162,7 @@ static void BackEmfMngrBackOnTheFly8KHz(void)
             return ;
         }    
     }
-
+#endif // !cfg_enc_bemf_diten
     if(!sEmfEncRun.flags.b.bRotorZeroFound) // this flag could be set TRUE only or by BackOnTheFly or DirectSensorless
     { 
         if(sEmfEncRun.psBackEmfOut->ubStatus & ENCMGR_ELE_ANGLE_VALID)
@@ -1327,6 +1327,10 @@ static void BackEmfEncZeroOut(void)
     sEmfEncRun.psBackEmfOut->sEncData.slAccel = 0L ;
     sEmfEncRun.psBackEmfOut->uwElecAngle = 0 ;
     sEmfEncRun.psBackEmfOut->swElecSpeed = 0 ;
+
+#if CFG_ENC_BEMF_DITEN
+	Diten_Init(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut) ;
+#endif
 }
 
 
@@ -1340,9 +1344,10 @@ BOOL Be_Hook8KHz(GLB_IREF * psIRefIn, GLB_IREF * psIRefOut)
     GLB_IREF sIRefs, * psROut=NULL;
 
 #if CFG_ENC_BEMF_DITEN
-    // se NULL allora e' reset da enc mgr, out contiene riferimenti attuali
+    // if psIRefIn = NULL it means that EncMngr keep in reset (efs is in progress and/or elec angle is not valid)
+    // psIRefOut is the output current reference to use
     if(psIRefIn==NULL)
-    {
+    {   // efs is in progress and/or elec angle is not valid
         sEmfEncRun.flags.b.bHookInTransition=TRUE;
         return TRUE;
     }
@@ -1358,17 +1363,15 @@ BOOL Be_Hook8KHz(GLB_IREF * psIRefIn, GLB_IREF * psIRefOut)
 
 
     if (sEmfEncRun.flags.b.bHookInTransition)
-    {
+    {   // efs is in progress and/or elec angle is not valid
     	psROut->slIdRef =  (SLONG)(sDitenRun.id_inject.current_value * 10000) ;
     	psROut->slIqRef = 0 ;
     }
     else
-    {
-        psIRefOut->slIdRef = psIRefIn->slIdRef +  (SLONG)(sDitenRun.id_inject.current_value * 10000) ;
+    {   // efs is not in progress and elec angle is valid
+        psIRefOut->slIdRef = psIRefIn->slIdRef + (SLONG)(sDitenRun.id_inject.current_value * 10000) ;
         psIRefOut->slIqRef = psIRefIn->slIqRef ;
     }
-
-
 
 #else
     // se NULL allora e' reset da enc mgr, out contiene riferimenti attuali
@@ -1813,6 +1816,9 @@ BOOL Diten_Init(S_OBSERVER *observer, S_PLL *pll, MOTPRM_PARAMETERS *parameters,
 	sDitenRun.id_inject.current_value = 0.0 ;
 	sDitenRun.id_inject.target_value  = sDitenRun.id_inject.params.maxValuePercentOfRated * parameters->flCurrentNominal ;
 
+	sDitenRun.swTestCounter = 0 ;
+	sDitenRun.flHookTimer = 0.0 ; // is used of injection of constant id current. The current is inject the first second after start. so it is important to set it to zero if sMotCtrl_UsrControl.uwControlWord = 0
+
 	return TRUE ;
 }
 
@@ -2018,11 +2024,6 @@ void Diten_Observer_Run(void)
 			sDitenRun.id_inject.current_value += flId2InjectStep ;
 	}
 
-	/*
-	 * Here id reference value is set. sMh_MotorDataUsrInIRef.slIdRef is used to set id value from cockpit.
-	 * I am not sure if it is the best way to set id, but it works.
-	 */
-//	sMh_MotorDataUsrInIRef.slIdRef = (SLONG)(sDitenRun.id_inject.current_value * 10000);
 	sDitenRun.flHookTimer += DITEN_OBS_SERVOTIME ;
 }
 
@@ -2035,83 +2036,36 @@ void Diten_8kHz(void)
 		// - if field orientaion is on  - start estimation when the procedure is finished.
 	{
 		sDitenRun.swTestCounter++ ;
-#if (FALSE)
-//		if ((sMotCtrl_UsrControl.uwControlWord == 0) || !(sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID)) //here I check sEm_Fbk2CntrLoop.ubStatus to see if field orientation procedure is finished
-//		if ((!sBe_EmfEncIn.psPowerStageStatus->b.bVoltageEnabled) || !(sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID)) //here I check sEm_Fbk2CntrLoop.ubStatus to see if field orientation procedure is finished
-//		if ((!sBe_EmfEncIn.psPowerStageStatus->b.bFullyActive) || !(sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID)) //here I check sEm_Fbk2CntrLoop.ubStatus to see if field orientation procedure is finished
-		if ((!sBe_EmfEncIn.psPowerStageStatus->b.bReferenceEnabled) || !(sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID)) //here I check sEm_Fbk2CntrLoop.ubStatus to see if field orientation procedure is finished
-		{
-			Diten_Init(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut) ;
-			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_EFS_READY);
 
-			sDitenRun.swTestCounter = 0 ;
-			sDitenRun.flHookTimer = 0.0 ; // is used of injection of constant id current. The current is inject the first second after start. so it is important to set it to zero if sMotCtrl_UsrControl.uwControlWord = 0
-			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_DISABLED ;
-		}
-		else if (sDitenRun.swTestCounter > 5) // delay in 5 sample times is done to start estimation after id current transient (after field orientation its value is 30% of rated value)
-		{	// PWM enabled and ElecAngle valid
-			sDitenRun.swTestCounter = 5 ;
-			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_RELATIVE_VALID | ENCMGR_EFS_READY | ENCMGR_ELE_ANGLE_VALID) ;
-			Diten_Observer_Run(); // the function that contain the observer and manages id current injection
-			sBe_EmfEncDiagOut.uwSnsrlessState == SNSRLESS_FULL ;
-		}
-#else
-		if ((sBe_EmfEncIn.psPowerStageStatus->b.bReferenceEnabled) && (sEm_Fbk2CntrLoop.ubStatus & ENCMGR_ELE_ANGLE_VALID))
+		if ((sBe_EmfEncIn.psPowerStageStatus->b.bFullyActive) && sEmfEncRun.flags.b.bRotorZeroFound)
 		{
-			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_RELATIVE_VALID | ENCMGR_EFS_READY | ENCMGR_ELE_ANGLE_VALID) ;
 			Diten_Observer_Run(); // the function that contain the observer and manages id current injection
-			sEmfEncRun.ubEmfEncStatus = EMFENC_OK ;
 			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_FULL ;
 		}
 		else
 		{
 			Diten_Init(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut) ;
-			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_EFS_READY);
-
-			sDitenRun.swTestCounter = 0 ;
-			sDitenRun.flHookTimer = 0.0 ; // is used of injection of constant id current. The current is inject the first second after start. so it is important to set it to zero if sMotCtrl_UsrControl.uwControlWord = 0
-
-			sEmfEncRun.ubEmfEncStatus = EMFENC_ZEROOUT ;
 			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_DISABLED ;
 		}
-#endif
-
 	}
-	else //field orientation procedure is off
+	else //field orientation procedure is off: set manually the encoder status
 	{
 		sDitenRun.swTestCounter = 0 ;
+		sEmfEncRun.flags.b.bRotorZeroFound = TRUE ;
 
-//		if (sMotCtrl_UsrControl.uwControlWord == 0)
 		if(!sBe_EmfEncIn.psPowerStageStatus->b.bVoltageEnabled)
-//		if(!sBe_EmfEncIn.psPowerStageStatus->b.bFullyActive)
 		{	// PWM disabled: keep observer resetted (Diten_Init)
 			Diten_Init(&sDitenRun.diten_observer, &sDitenRun.diten_pll, &sGlbMotorParameters, &sMh_MotorDataOut) ;
-			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_EFS_READY);
-			sDitenRun.flHookTimer = 0.0 ;
-
 			sEmfEncRun.ubEmfEncStatus = EMFENC_ZEROOUT ;
 			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_DISABLED ;
 		}
 		else
 		{	// PWM enabled: run observer
-			sEmfEncRun.psBackEmfOut->ubStatus = (ENCMGR_RELATIVE_VALID | ENCMGR_EFS_READY | ENCMGR_ELE_ANGLE_VALID) ;
 			Diten_Observer_Run();
-
 			sEmfEncRun.ubEmfEncStatus = EMFENC_OK ;
 			sBe_EmfEncDiagOut.uwSnsrlessState = SNSRLESS_FULL ;
 		}
 	}
-
-	// all necessary information from observer is set as a BackEmf feedback out.
-/*
-	sEmfEncRun.psBackEmfOut->sEncData.sqPostn.hi = sBe_EmfEncDiagOut.diten_obs_pll_out.revolutionCounter ;
-	sEmfEncRun.psBackEmfOut->sEncData.sqPostn.lo = sBe_EmfEncDiagOut.diten_obs_pll_out.mechThet;
-	sEmfEncRun.psBackEmfOut->sEncData.slSpeed = sBe_EmfEncDiagOut.diten_obs_pll_out.mechSpeed;
-	sEmfEncRun.psBackEmfOut->uwElecAngle      = sBe_EmfEncDiagOut.diten_obs_pll_out.elThet;
-	sEmfEncRun.psBackEmfOut->swElecSpeed      = sBe_EmfEncDiagOut.diten_obs_pll_out.elSpeed;
-	sEmfEncRun.psBackEmfOut->sEncData.slAccel = 0;//_sint32_asl12(sEmfEncRun.psBackEmfOut->sEncData.slSpeed - slMechSpeed_1) ;
-	// Dmytro: sEmfEncRun.psBackEmfOut->sEncData.slAccel is zero for the other sensorless observer, so I also set it to zero.
-*/
 }
 #endif // cfg_enc_bemf_diten
-#endif
+#endif // cfg_enc_bemf
