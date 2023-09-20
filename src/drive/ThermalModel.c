@@ -107,7 +107,9 @@
 
 #endif // _infineon_
 
+#if !defined(_HW_AXS_DAYCO22KW)
 #define DACFULLSCALE_CORRECTED      (DACFULLSCALE * CORRECTION_FACTOR_XE)
+#endif
 
 #define V_NORMALIZATION             600.0  /* V: Voltage where losses are calculated */
 #define TWO_MILLISECONDS            (2 * 8) /* = 125us * 16 */

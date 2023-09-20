@@ -13,7 +13,7 @@
 [INSTRUCTION] (IREF_D - IFB_ID)       * P_KI + S_KI_D | LMT T_LMTLIM
 [INSTRUCTION] [LMT]   + C_ZERO                        | --> S_KI_D
 [INSTRUCTION] (IREF_D - T_FLTIFB_ID)  * P_KP + [ALU]  | LMT T_LMTLIM
-//[INSTRUCTION] [LMT]   + C_ZERO        | << P_OUTSHIFT | --> T_VOUT_D
+//[INSTRUCTION] [LMT]   + C_ZERO        | << P_OUTSHIFT    | --> T_VOUT_D
 // manage Vout_D user initialization value
 [INSTRUCTION] [LMT]   + C_ZERO          | << P_OUTSHIFT    | --> T_VOUT_B
 [INSTRUCTION] (P_INTSTS_D + P_INTSTS_D) * C_1D2 + T_VOUT_B | --> T_VOUT_D
@@ -21,14 +21,10 @@
 [INSTRUCTION] (IREF_FQ - IFB_IQ)      * P_KI + S_KI_Q | LMT T_LMTLIM
 [INSTRUCTION] [LMT]    + C_ZERO                       | --> S_KI_Q
 [INSTRUCTION] (IREF_FQ - T_FLTIFB_IQ) * P_KP + [ALU]  | LMT T_LMTLIM
-//[INSTRUCTION] [LMT]    + C_ZERO       | << P_OUTSHIFT | --> T_VOUT_Q
+//[INSTRUCTION] [LMT]    + C_ZERO       | << P_OUTSHIFT    | --> T_VOUT_Q
 // manage Vout_Q user initialization value
 [INSTRUCTION] [LMT]   + C_ZERO          | << P_OUTSHIFT    | --> T_VOUT_B
 [INSTRUCTION] (P_INTSTS_Q + P_INTSTS_Q) * C_1D2 + T_VOUT_B | --> T_VOUT_Q
-
-// Dbg
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_D | --> INTSTS_D
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_Q | --> INTSTS_Q
 
 //********************************************
 // inverse clark+park
@@ -67,7 +63,7 @@
 // P_VDC_SET=+1/2 => use VDC_A
 // P_VDC_SET=-1/2 => Dayco: VdcBus from fw updated at 8kHz
 [INSTRUCTION] (C_1D2 + P_VDC_SEL) * VDC_A        + C_ZERO
-[INSTRUCTION] (C_1D2 - P_VDC_SEL) * P_VDC_SETVAL + [ALU] | --> VDC_OUT
+[INSTRUCTION] (C_1D2 - P_VDC_SEL) * P_VDC_SETVAL + [ALU]   | --> VDC_OUT
 
 //********************************************
 // no Vd and Vq FPGA filter
@@ -82,8 +78,14 @@
 
 //********************************************
 // zeroes arm_comp user offset
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO | --> VDC_ARMC
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO  | --> VDC_ARMC
 
 //********************************************
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO | --> DONE
+// Dbg (to be removed?)
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_D  | --> INTSTS_D
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_Q  | --> INTSTS_Q
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VDC_OUT | --> VDC_OUTADC
+
+//********************************************
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO  | --> DONE
 

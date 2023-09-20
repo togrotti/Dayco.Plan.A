@@ -134,9 +134,11 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
   {  // Id and Iq filtered by DSP: conversion from FPGA unit to internal unit
     sMh_MotorDataOut.slIdFb = (SLONG)((FLOAT)sMotorHandlerRun.swIdFb * sMotorHandlerRun.flRatioI_EQ_RMS) ;
     sMh_MotorDataOut.slIqFb = (SLONG)((FLOAT)sMotorHandlerRun.swIqFb * sMotorHandlerRun.flRatioI_EQ_RMS) ;
-  
+
+#if defined(_CRS_DBG)
     sMh_MotorDataOut.slDspIntSts_D = sMotorHandlerRun.slDspIntSts_D ;
     sMh_MotorDataOut.slDspIntSts_Q = sMotorHandlerRun.slDspIntSts_Q ;
+#endif
   }
 //#endif
 

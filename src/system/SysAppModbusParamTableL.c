@@ -800,7 +800,23 @@ const MODBUSCOMDB_ENTRY hpsModBusParamTable[]=
 // _crs_dbg_
 #endif
     // 28300 to 28354: do not use
-
+#if (CFG_ENC_BEMF_DITEN_PARAM)
+// 	{28500, #%p Requested index 0x4100 not found in the common database },
+// 	{28501, #%p Requested index 0x4101 not found in the common database },
+// 	{28502, #%p Requested index 0x4102 not found in the common database },
+// 	{28503, #%p Requested index 0x4103 not found in the common database },
+// 	{28504, #%p Requested index 0x4104 not found in the common database },
+// 	{28505, #%p Requested index 0x4105 not found in the common database },
+// 	{28506, #%p Requested index 0x4106 not found in the common database },
+// 	{28507, #%p Requested index 0x4107 not found in the common database },
+// 	{28508, #%p Requested index 0x4108 not found in the common database },
+// 	{28509, #%p Requested index 0x4109 not found in the common database },
+// 	{28510, #%p Requested index 0x410A not found in the common database },
+// 	{28511, #%p Requested index 0x410B not found in the common database },
+// 	{28512, #%p Requested index 0x410C not found in the common database },
+// 	{28513, #%p Requested index 0x410D not found in the common database },
+#endif // cfg_enc_bemf_diten
+					
     /* ######### DS402 ######### */
     {29000 /*7148*/, &psCommonParamTable[454] }, // ControlWord (RW)
     {29001 /*7149*/, &psCommonParamTable[455] }, // StatusWord (RO)

@@ -37,8 +37,8 @@
 [REGISTER]  T_IFBEQ_V   0x118
 [REGISTER]  T_IFBEQ_W   0x120
 [REGISTER]  C_1D4       0x128  // 1/4 (to be removed?)
-[REGISTER]  C_1D8       0x130  // 1/8 (to be removed?)
-[REGISTER]  C_7D8       0x138  // 7/8 (to be removed?)
+[REGISTER]  C_1D8       0x130  // crs for DspAdvanced  
+[REGISTER]  C_7D8       0x138  // crs for DspAdvanced  
 [REGISTER]  T_VOUT_D    0x140  // output of I_PI_D loop (crs for DspAdvanced)
 [REGISTER]  T_VOUT_Q    0x148  // output of I_PI_Q loop (crs for DspAdvanced)
 [REGISTER]  T_FLTIFB_ID 0x150  // filtered ID @1MHz (crs for DspAdvanced)

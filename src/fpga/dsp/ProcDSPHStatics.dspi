@@ -5,7 +5,7 @@
 // Fixed-address DSPH in/out direct bus for
 // static data used by the standard firmware
 //********************************************
-// INTSTS_D and INTSTS_Q for Debug
+// INTSTS_D, INTSTS_Q and VDC_OUTADC for Debug
 
 [REGISTER]  IFB_ID      0x050  
 [REGISTER]  IFB_AD      0x058
@@ -15,6 +15,7 @@
 [REGISTER]  VOUT_Q      0x078
 [REGISTER]  INTSTS_D    0x160
 [REGISTER]  INTSTS_Q    0x168  
+[REGISTER]  VDC_OUTADC  0x170 
 
 [INPUT]     IREF_FQ     0x09
 [INPUT]     K_SIN       0x15 
@@ -28,3 +29,4 @@
 [OUTPUT]    VOUT_V      0x05
 [OUTPUT]    INTSTS_D    0x06
 [OUTPUT]    INTSTS_Q    0x07  
+[OUTPUT]    VDC_OUTADC  0x08

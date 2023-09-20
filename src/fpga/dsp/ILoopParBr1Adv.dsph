@@ -32,16 +32,15 @@
 //[INSTRUCTION] (C_ZERO + C_1D8) * IFB_IQ      + C_ZERO
 //[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_IQ + [ALU] | --> T_FLTIFB_IQ
 
-// no Id and Iq FPGA filter for ILoopPI
+// no Id and Iq FPGA filter for ILoopPI (used average values)
 [INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_ID | --> T_FLTIFB_ID 
 [INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_IQ | --> T_FLTIFB_IQ 
 
-// value to cockpit 
-// Id and Iq without FPGA filter
+// value to cockpit: Id and Iq without FPGA filter
 //[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_FLTIFB_ID | --> IFB_AD 
 //[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_FLTIFB_IQ | --> IFB_AQ 
 
-// Id and Iq with FPGA filter 
+// value to cockpit: Id and Iq with FPGA filter 
 [INSTRUCTION] (IFB_AD     + C_ZERO) * C_1D125 + IFB_ID
 [INSTRUCTION] (P_CORR_ID  + C_ZERO) * C_1D125 + [ALU] | --> IFB_AD
 [INSTRUCTION] (IFB_AQ     + C_ZERO) * C_1D125 + IFB_IQ

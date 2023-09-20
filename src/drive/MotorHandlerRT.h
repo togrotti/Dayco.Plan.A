@@ -187,8 +187,10 @@ typedef struct {
   SWORD swDspIntegralVal_D ;
   SWORD swDspIntegralVal_Q ;
 
+#if defined(_CRS_DBG)
   SLONG slDspIntSts_D ; // Dbg
   SLONG slDspIntSts_Q ; // Dbg
+#endif
 //#endif // _hw_axs_dayco22kw
 } MHRT_RUNTIME ;
 

@@ -1429,6 +1429,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   AnProc_RGOutSet(FPGAIR_RGO_VOUT_V,&sRGODef);
 
 //#if defined(_HW_AXS_DAYCO22KW)
+#if defined(_CRS_DBG)
   if (sMotorHandlerRun.flags.b.bDSPAdvance)
   { // Dbg
     sRGODef.ubOpt=ANPROC_OF_DST_LONG;
@@ -1439,7 +1440,14 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
 
     sRGODef.pvDst=&sMotorHandlerRun.slDspIntSts_Q;
     AnProc_RGOutSet(FPGAIR_RGO_INTSTS_Q,&sRGODef);
+
+    // VdcBus A2D value (max = 16384, not 32768)
+    sRGODef.ubOpt=ANPROC_OF_DST_SHORT;
+    sRGODef.flScale=1.0;
+    sRGODef.pvDst=&sMh_MotorDataOut.swVdcOut_ADC;
+    AnProc_RGOutSet(FPGAIR_RGO_VDC_OUTADC,&sRGODef);
   }
+#endif
 //#endif
 
 

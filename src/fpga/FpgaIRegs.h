@@ -67,6 +67,7 @@
 #define FPGAIR_VOUT_Q                  120
 #define FPGAIR_INTSTS_D                352
 #define FPGAIR_INTSTS_Q                360
+#define FPGAIR_VDC_OUTADC              368
 #define FPGAIR_C_ZERO                  128
 #define FPGAIR_C_1DSQT3                136
 #define FPGAIR_C_SQT3D2                144
@@ -104,3 +105,4 @@
 #define FPGAIR_RGO_VOUT_Q              67
 #define FPGAIR_RGO_INTSTS_D            70
 #define FPGAIR_RGO_INTSTS_Q            71
+#define FPGAIR_RGO_VDC_OUTADC          72
