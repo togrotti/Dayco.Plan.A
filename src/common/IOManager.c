@@ -1120,8 +1120,6 @@ static void slowtaskmanagerrevGE102(void)
     sIOMgrAnalogMeasurements.uwSBrgTemp[1]   = Adc_GetAuxData(9);
     sIOMgrAnalogMeasurements.uwSBrgTemp[2]   = 0;
 
-//    sIOMgrAnalogMeasurements.uwSMotorKTYTemp = (UWORD)(Adc_GetAuxData(10) * 4.921/3); // Motor KTY: Vin = Vkty * 5.1K/(5.1K+20K)
-//    sIOMgrAnalogMeasurements.uwSMotorPTCTemp = (UWORD)(Adc_GetAuxData(6)  * 4.921/3); // Motor KTY: Vin = Vkty * 5.1K/(5.1K+20K)
     sIOMgrAnalogMeasurements.uwSMotorKTYTemp = (UWORD)(Adc_GetAuxData(10) * 1.0);
     sIOMgrAnalogMeasurements.uwSMotorPTCTemp = (UWORD)(Adc_GetAuxData(6)  * 1.0);
 

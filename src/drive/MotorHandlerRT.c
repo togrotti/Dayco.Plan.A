@@ -129,7 +129,6 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
   bSysStatPowerEnabled = sMh_MotorDataOut.sPowerStageSts.b.bVoltageEnabled ;
   bSysStatPowerReady   = sMh_MotorDataOut.sPowerStageSts.b.bFullyActive    ;
 
-//#if defined(_HW_AXS_DAYCO22KW)
   if (sMotorHandlerRun.flags.b.bDSPAdvance)
   {  // Id and Iq filtered by DSP: conversion from FPGA unit to internal unit
     sMh_MotorDataOut.slIdFb = (SLONG)((FLOAT)sMotorHandlerRun.swIdFb * sMotorHandlerRun.flRatioI_EQ_RMS) ;
@@ -140,7 +139,6 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
     sMh_MotorDataOut.slDspIntSts_Q = sMotorHandlerRun.slDspIntSts_Q ;
 #endif
   }
-//#endif
 
     /* check fault from PWM */
   if (FPGA_PWM_STATUS_FAULT_ACTIVE(uwPwmStatus))
@@ -211,13 +209,11 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
   sMh_MotorDataOut.swVwEffective = (SWORD)((FLOAT)sMh_MotorDataOut.swDcBusValue * (((SWORD)FPGA_VEST_W) / 2000.0F));
 #endif // cfg_vmotor_read
 
-//#if defined(_HW_AXS_DAYCO22KW)
   if (sMotorHandlerRun.flags.b.bDSPAdvance)
   {  // Vd and Vq filtered by DSP: conversion from FPGA unit to internal unit
     sMh_MotorDataOut.swVdOut = (SWORD)((FLOAT)sMotorHandlerRun.swVdOut * sMotorHandlerRun.flRatioV_DC_PEAK) ;
     sMh_MotorDataOut.swVqOut = (SWORD)((FLOAT)sMotorHandlerRun.swVqOut * sMotorHandlerRun.flRatioV_DC_PEAK) ;
   }
-//#endif
 
   sMh_MotorDataOut.swVuEstimated = sMh_MotorDataOut.swVuOut;
   sMh_MotorDataOut.swVvEstimated = sMh_MotorDataOut.swVvOut;
@@ -673,7 +669,6 @@ BOOL Mh_MotorDataToFpga8KHz(void)
 
     FPGA_CPUH_URAM_WR_SW(FPGAIR_IREF_D, sMh_MotorDataOut.sDSPOut.swId);
 
-//#if defined(_HW_AXS_DAYCO22KW)
     if (sMotorHandlerRun.flags.b.bDSPAdvance)
     {  // **************** VdcBus management for DSP modulator ****************
 	  if(sMotorHandlerRun.swUsrVdcSet == USRVDC_SET_FIX) // it is set ONLY at boot (Mh_MotorDataFromFpgaInit)
@@ -718,7 +713,7 @@ BOOL Mh_MotorDataToFpga8KHz(void)
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_ID, -sMotorHandlerRun.swIdFb);
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_IQ, -sMotorHandlerRun.swIqFb);
     }
-//#endif
+
     // revert to data flush mode
     FPGA_CPUH_RGUPD_SET_QUEUE = FALSE;
   }

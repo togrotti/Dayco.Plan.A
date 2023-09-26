@@ -10,13 +10,13 @@
 
 //********************************************
 // clark+park
-//[INSTRUCTION] ( IFB_IU     + IFB_IU)     * T_COSD3 + C_ZERO
-//[INSTRUCTION] ( T_SINDSQT3 - T_COSD3)    * IFB_IV  + [ALU]
-//[INSTRUCTION] (-T_COSD3    - T_SINDSQT3) * IFB_IW  + [ALU]  |--> IFB_ID 
+[INSTRUCTION] ( IFB_IU     + IFB_IU)     * T_COSD3 + C_ZERO
+[INSTRUCTION] ( T_SINDSQT3 - T_COSD3)    * IFB_IV  + [ALU]
+[INSTRUCTION] (-T_COSD3    - T_SINDSQT3) * IFB_IW  + [ALU]  |--> IFB_ID 
 
-//[INSTRUCTION] (-IFB_IU  - IFB_IU)        * T_SIND3 + C_ZERO
-//[INSTRUCTION] ( T_SIND3 + T_COSDSQT3)    * IFB_IV  + [ALU]
-//[INSTRUCTION] ( T_SIND3 - T_COSDSQT3)    * IFB_IW  + [ALU]  |--> IFB_IQ
+[INSTRUCTION] (-IFB_IU  - IFB_IU)        * T_SIND3 + C_ZERO
+[INSTRUCTION] ( T_SIND3 + T_COSDSQT3)    * IFB_IV  + [ALU]
+[INSTRUCTION] ( T_SIND3 - T_COSDSQT3)    * IFB_IW  + [ALU]  |--> IFB_IQ
 
 //[INSTRUCTION] ( IFB_AU     + IFB_AU)     * T_COSD3 + C_ZERO
 //[INSTRUCTION] ( T_SINDSQT3 - T_COSD3)    * IFB_AV  + [ALU]
@@ -28,23 +28,25 @@
 
 // IdFbImmediate and IqFbImmediate filtered with lowpass  
 // 7/8 to be used for the PI loop with immediate values
-//[INSTRUCTION] (C_ZERO + C_1D8) * IFB_ID      + C_ZERO
-//[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_ID + [ALU] | --> T_FLTIFB_ID 
-//[INSTRUCTION] (C_ZERO + C_1D8) * IFB_IQ      + C_ZERO
-//[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_IQ + [ALU] | --> T_FLTIFB_IQ
+[INSTRUCTION] (C_ZERO + C_1D8) * IFB_ID      + C_ZERO
+[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_ID + [ALU] | --> T_FLTIFB_ID 
+[INSTRUCTION] (C_ZERO + C_1D8) * IFB_IQ      + C_ZERO
+[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_IQ + [ALU] | --> T_FLTIFB_IQ
+//********************************************
 
-
-[INSTRUCTION] ( IFB_AU     + IFB_AU)     * T_COSD3 + C_ZERO
-[INSTRUCTION] ( T_SINDSQT3 - T_COSD3)    * IFB_AV  + [ALU]
-[INSTRUCTION] (-T_COSD3    - T_SINDSQT3) * IFB_AW  + [ALU]  |--> IFB_ID 
-
-[INSTRUCTION] (-IFB_AU  - IFB_AU)        * T_SIND3 + C_ZERO
-[INSTRUCTION] ( T_SIND3 + T_COSDSQT3)    * IFB_AV  + [ALU]
-[INSTRUCTION] ( T_SIND3 - T_COSDSQT3)    * IFB_AW  + [ALU]  |--> IFB_IQ
-
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_ID | --> T_FLTIFB_ID 
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_IQ | --> T_FLTIFB_IQ
-
+//********************************************
+// clark+park
+//[INSTRUCTION] ( IFB_AU     + IFB_AU)     * T_COSD3 + C_ZERO
+//[INSTRUCTION] ( T_SINDSQT3 - T_COSD3)    * IFB_AV  + [ALU]
+//[INSTRUCTION] (-T_COSD3    - T_SINDSQT3) * IFB_AW  + [ALU]  |--> IFB_ID 
+//
+//[INSTRUCTION] (-IFB_AU  - IFB_AU)        * T_SIND3 + C_ZERO
+//[INSTRUCTION] ( T_SIND3 + T_COSDSQT3)    * IFB_AV  + [ALU]
+//[INSTRUCTION] ( T_SIND3 - T_COSDSQT3)    * IFB_AW  + [ALU]  |--> IFB_IQ
+//
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_ID | --> T_FLTIFB_ID 
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_IQ | --> T_FLTIFB_IQ
+//********************************************
 
 // Id and Iq with FPGA filter 
 [INSTRUCTION] (IFB_AD     + C_ZERO) * C_1D125 + IFB_ID

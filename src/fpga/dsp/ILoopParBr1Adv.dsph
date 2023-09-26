@@ -11,9 +11,12 @@
 
 //********************************************
 // compute equivalent currents IFBEQ = (IFB + IFB_BR1)/2
-[INSTRUCTION] (IFB_AU + IFB_BR1_AU) * C_1D2 + C_ZERO |--> T_IFBEQ_U
-[INSTRUCTION] (IFB_AV + IFB_BR1_AV) * C_1D2 + C_ZERO |--> T_IFBEQ_V
-[INSTRUCTION] (IFB_AW + IFB_BR1_AW) * C_1D2 + C_ZERO |--> T_IFBEQ_W
+//[INSTRUCTION] (IFB_AU + IFB_BR1_AU) * C_1D2 + C_ZERO |--> T_IFBEQ_U
+//[INSTRUCTION] (IFB_AV + IFB_BR1_AV) * C_1D2 + C_ZERO |--> T_IFBEQ_V
+//[INSTRUCTION] (IFB_AW + IFB_BR1_AW) * C_1D2 + C_ZERO |--> T_IFBEQ_W
+[INSTRUCTION] (IFB_IU + IFB_BR1_IU) * C_1D2 + C_ZERO |--> T_IFBEQ_U
+[INSTRUCTION] (IFB_IV + IFB_BR1_IV) * C_1D2 + C_ZERO |--> T_IFBEQ_V
+[INSTRUCTION] (IFB_IW + IFB_BR1_IW) * C_1D2 + C_ZERO |--> T_IFBEQ_W
 
 //********************************************
 // clark+park
@@ -27,14 +30,14 @@
 
 // IdFbImmediate and IqFbImmediate filtered with lowpass  
 // 7/8 to be used for the PI loop with immediate values
-//[INSTRUCTION] (C_ZERO + C_1D8) * IFB_ID      + C_ZERO
-//[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_ID + [ALU] | --> T_FLTIFB_ID 
-//[INSTRUCTION] (C_ZERO + C_1D8) * IFB_IQ      + C_ZERO
-//[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_IQ + [ALU] | --> T_FLTIFB_IQ
+[INSTRUCTION] (C_ZERO + C_1D8) * IFB_ID      + C_ZERO
+[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_ID + [ALU] | --> T_FLTIFB_ID 
+[INSTRUCTION] (C_ZERO + C_1D8) * IFB_IQ      + C_ZERO
+[INSTRUCTION] (C_ZERO + C_7D8) * T_FLTIFB_IQ + [ALU] | --> T_FLTIFB_IQ
 
 // no Id and Iq FPGA filter for ILoopPI (used average values)
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_ID | --> T_FLTIFB_ID 
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_IQ | --> T_FLTIFB_IQ 
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_ID | --> T_FLTIFB_ID 
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_IQ | --> T_FLTIFB_IQ 
 
 // value to cockpit: Id and Iq without FPGA filter
 //[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_FLTIFB_ID | --> IFB_AD 

@@ -28,7 +28,7 @@
 
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
-/* #if defined(_CRS_DBG)
+#if defined(_CRS_DBG)
 #if CRS_DBGDSK
 #pragma GCC optimize (0) // crs_dbg
 #else
@@ -37,8 +37,6 @@
 #else
 #pragma GCC optimize (2)
 #endif
-*/
-#pragma GCC optimize (2)
 
 /* ================================ #define ================================ */
 #define RAMP_POSITIVE      1

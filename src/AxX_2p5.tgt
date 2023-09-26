@@ -341,10 +341,16 @@ VAR_GLOBAL
     varILoopIuFb                      AT %MB20.8  : DINT; { DE:"" }
     varILoopIvFb                      AT %MB20.12 : DINT; { DE:"" }
     varILoopIwFb                      AT %MB20.96 : DINT; { DE:"" }
+    varILoopIuFb_Imm                  AT %MB20.208 : DINT; { DE:"" }
+    varILoopIvFb_Imm                  AT %MB20.212 : DINT; { DE:"" }
+    varILoopIwFb_Imm                  AT %MB20.216 : DINT; { DE:"" }
  
     varILoopBr1IuFb                   AT %MB20.8  : DINT; { DE:"" }
     varILoopBr1IvFb                   AT %MB20.12 : DINT; { DE:"" }
     varILoopBr1IwFb                   AT %MB20.96 : DINT; { DE:"" }
+    varILoopBr1IuFb_Imm               AT %MB20.208 : DINT; { DE:"" }
+    varILoopBr1IvFb_Imm               AT %MB20.212 : DINT; { DE:"" }
+    varILoopBr1IwFb_Imm               AT %MB20.216 : DINT; { DE:"" }
 
     varILoopIqLimMax                  AT %MB20.44 : DINT; { DE:"" }
     varILoopIqLimMin                  AT %MB20.48 : DINT; { DE:"" }
@@ -366,10 +372,16 @@ VAR_GLOBAL
     varILoopBr2IuFb                   AT %MB20.160 : DINT; { DE:"" }
     varILoopBr2IvFb                   AT %MB20.164 : DINT; { DE:"" }
     varILoopBr2IwFb                   AT %MB20.168 : DINT; { DE:"" }
+    varILoopBr2IuFb_Imm               AT %MB20.220 : DINT; { DE:"" }
+    varILoopBr2IvFb_Imm               AT %MB20.224 : DINT; { DE:"" }
+    varILoopBr2IwFb_Imm               AT %MB20.228 : DINT; { DE:"" }
 
     varILoopBr3IuFb                   AT %MB20.180 : DINT; { DE:"" }
     varILoopBr3IvFb                   AT %MB20.184 : DINT; { DE:"" }
     varILoopBr3IwFb                   AT %MB20.188 : DINT; { DE:"" }
+    varILoopBr3IuFb_Imm               AT %MB20.232 : DINT; { DE:"" }
+    varILoopBr3IvFb_Imm               AT %MB20.236 : DINT; { DE:"" }
+    varILoopBr3IwFb_Imm               AT %MB20.240 : DINT; { DE:"" }
 
     varILoopIuOffsetDev               AT %MB20.106 : INT; { DE:"Offset deviation from theoretical value for Iu [1/1000]" }
     varILoopIvOffsetDev               AT %MB20.108 : INT; { DE:"Offset deviation from theoretical value for Iv [1/1000]" }
@@ -471,7 +483,7 @@ VAR_GLOBAL
 
     varPStageVEffectiveU              AT %MB20.200 : INT; { DE:"" }
     varPStageVEffectiveV              AT %MB20.202 : INT; { DE:"" } 
-    varPStageVEffectiveW              AT %MB20.204 : INT; { DE:"" }   
+    varPStageVEffectiveW              AT %MB20.204 : INT; { DE:"" }  
 
     plcPStagePowerEnable              AT %MX29.0: BOOL; { DE:"" }     
     plcPStageReferenceEnable          AT %MX29.1: BOOL; { DE:"" }     

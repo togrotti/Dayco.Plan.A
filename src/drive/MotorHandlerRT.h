@@ -175,7 +175,6 @@ typedef struct {
 
   UWORD uwSTODeactTOut;
 
-//#if defined(_HW_AXS_DAYCO22KW)
   SWORD swVdOut ;
   SWORD swVqOut ;
   FLOAT flRatioV_DC_PEAK ;
@@ -191,7 +190,7 @@ typedef struct {
   SLONG slDspIntSts_D ; // Dbg
   SLONG slDspIntSts_Q ; // Dbg
 #endif
-//#endif // _hw_axs_dayco22kw
+
 } MHRT_RUNTIME ;
 
 //***************************************************************************

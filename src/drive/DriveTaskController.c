@@ -46,7 +46,6 @@
 
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
-/*
 #if defined(_CRS_DBG)
 #if CRS_DBGDSK
 #pragma GCC optimize (0) // crs_dbg
@@ -56,8 +55,7 @@
 #else
 #pragma GCC optimize (2)
 #endif
-*/
-#pragma GCC optimize (2)
+
 //***************************************************************************
 // Globals
 

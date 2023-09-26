@@ -349,6 +349,9 @@ VAR_GLOBAL
     varILoopIuFb                      AT %MB20.8  : DINT; { DE:"" }
     varILoopIvFb                      AT %MB20.12 : DINT; { DE:"" }
     varILoopIwFb                      AT %MB20.96 : DINT; { DE:"" }
+    varILoopIuFb_Imm                  AT %MB20.208 : DINT; { DE:"" }
+    varILoopIvFb_Imm                  AT %MB20.212 : DINT; { DE:"" }
+    varILoopIwFb_Imm                  AT %MB20.216 : DINT; { DE:"" }
  
     varILoopIqLimMax                  AT %MB20.44 : DINT; { DE:"" }
     varILoopIqLimMin                  AT %MB20.48 : DINT; { DE:"" }
@@ -438,9 +441,6 @@ VAR_GLOBAL
     varPStageEmfSqRoot                AT %MB20.20 : UINT; { DE:"" }
     varPStageEmfAngle                 AT %MB20.22 : INT; { DE:"" }
     varPStageVdcBus                   AT %MB20.28 : INT; { DE:"" } 
-    varPStageVEffectiveU 		      AT %MB20.200 : INT; { DE:"" }
-    varPStageVEffectiveV			  AT %MB20.202 : INT; { DE:"" } 
-    varPStageVEffectiveW			  AT %MB20.204 : INT; { DE:"" }     
 
     varPStageVoltageEnabled           AT %MX26.0 : BOOL; { DE:"" }     
     varPStageFullyActive              AT %MX26.1 : BOOL; { DE:"" }     
@@ -465,6 +465,10 @@ VAR_GLOBAL
     varPStageDSPLoad                  AT %MB20.114 : USINT; { DE:"" }
     varPStageDSPCompatLevel           AT %MB20.116 : UINT; { DE:"DSP code compatibility level" }
     varPStagePOSTResultEx             AT %MB20.158 : UINT; { HIDDEN:ON }
+
+    varPStageVEffectiveU              AT %MB20.200 : INT; { DE:"" }
+    varPStageVEffectiveV              AT %MB20.202 : INT; { DE:"" } 
+    varPStageVEffectiveW              AT %MB20.204 : INT; { DE:"" }  
 
     plcPStagePowerEnable              AT %MX29.0: BOOL; { DE:"" }     
     plcPStageReferenceEnable          AT %MX29.1: BOOL; { DE:"" }     

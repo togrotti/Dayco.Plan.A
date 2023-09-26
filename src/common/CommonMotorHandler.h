@@ -214,6 +214,20 @@ typedef struct {
   SWORD swVwEffective;
 #endif 
 
+  SLONG slIuFb_Imm ;
+  SLONG slIvFb_Imm ;
+  SLONG slIwFb_Imm ;
+
+#ifdef _HW_DC
+  SLONG slBr1IuFb_Imm ;
+  SLONG slBr1IvFb_Imm ;
+  SLONG slBr1IwFb_Imm ;
+
+  SLONG slBr2IuFb_Imm ;
+  SLONG slBr2IvFb_Imm ;
+  SLONG slBr2IwFb_Imm ;
+#endif
+
 #if defined(_CRS_DBG)
   SLONG slDspIntSts_D ; // Dbg
   SLONG slDspIntSts_Q ; // Dbg
