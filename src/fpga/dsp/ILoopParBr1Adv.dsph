@@ -44,9 +44,9 @@
 //[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + T_FLTIFB_IQ | --> IFB_AQ 
 
 // value to cockpit: Id and Iq with FPGA filter 
-[INSTRUCTION] (IFB_AD     + C_ZERO) * C_1D125 + IFB_ID
+[INSTRUCTION] (IFB_ID     + C_ZERO) * C_1D125 + IFB_AD
 [INSTRUCTION] (P_CORR_ID  + C_ZERO) * C_1D125 + [ALU] | --> IFB_AD
-[INSTRUCTION] (IFB_AQ     + C_ZERO) * C_1D125 + IFB_IQ
+[INSTRUCTION] (IFB_IQ     + C_ZERO) * C_1D125 + IFB_AQ
 [INSTRUCTION] (P_CORR_IQ  + C_ZERO) * C_1D125 + [ALU] | --> IFB_AQ
 
 //********************************************

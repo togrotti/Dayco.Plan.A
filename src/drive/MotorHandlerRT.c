@@ -333,7 +333,9 @@ BOOL Mh_MotorDataToFpga8KHz(void)
                  // reset integral status (48bit)
                  FPGA_CPUH_DRAM_WR_SW(FPGAIR_S_KI_D, 0);
                  FPGA_CPUH_DRAM_WR_SW(FPGAIR_S_KI_Q, 0);
-
+#ifdef _CRS_DBG
+                 FPGA_CPUH_DRAM_WR_SW(FPGAIR_D_KI_Q, 0);
+#endif
                  // when DSPStandard the mode (swUsrVdcSet) and the value (swUsrVdcVal) are set in background and applied  only here (enable command rised edge): it is not possibile to change the value @runtime
                  // when DSPAdvanced the mode (swUsrVdcSet) is set at ONLY boot (Mh_MotorDataFromFpgaInit) and the value (swUsrVdcVal) can be changed @8kHz (and it is used FPGAIR_P_VDC_SETVAL instead of FPGAIR_P_VDC_VAL)
                  FPGA_CPUH_DRAM_WR_SW(FPGAIR_P_VDC_SEL, sMotorHandlerRun.swUsrVdcSet); // select if Vdc@1MHz (USRVDC_SET_ADC) or Vdc@8kHz (USRVDC_SET_FIX)

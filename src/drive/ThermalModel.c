@@ -1390,7 +1390,7 @@ static void MotorTemperature(void)
     {
 #if defined(_HW_AXS_DAYCO22KW)
 
-#ifdef _CRS_DBG
+#if (defined(_CRS_DBG) && defined(_CRS_DBG_A2DCOUNT))
     	sTm_ThModOut.uwPtcCount = sThModRun.sImageSlowTask.uwMotorKTY ;
     	sTm_ThModOut.uwKtyCount = sThModRun.sImageSlowTask.uwMotorPTC;
 #endif
@@ -1567,7 +1567,7 @@ static void IgbtTNtc(void)
     }
 #endif // _hw_axs_SAIETTA
 
-#ifdef _CRS_DBG
+#if (defined(_CRS_DBG) && defined(_CRS_DBG_A2DCOUNT))
 	sTm_ThModOut.uwNtcCount_0 = uwNtcAvrg ;
 	sTm_ThModOut.uwNtcCount_1 = uwBr1NtcAvrg;
 #endif // _crs_dbg

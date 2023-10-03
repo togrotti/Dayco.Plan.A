@@ -67,9 +67,19 @@ VAR_GLOBAL
     plcPStageAdvDspIntegralSet          AT %MX427.55: BOOL; { DE:"" }
     plcPStageAdvTransfModValue_V        AT %MW427.56: UINT; { DE:"" }
     plcPStageAdvTransfModValue_W        AT %MW427.58: UINT; { DE:"" }
-    plcPStageAdvDspIntegralVal_D        AT %MW427.60: INT;  { DE:"" }
-    plcPStageAdvDspIntegralVal_Q        AT %MW427.62: INT;  { DE:"" }
-   
+    plcPStageAdvDspIntegralVal_D        AT %MW427.60: INT;  { DE:"1e-1V" }
+    plcPStageAdvDspIntegralVal_Q        AT %MW427.62: INT;  { DE:"1e-1V" }
+    plcPStageAdvDsp_OutLimit            AT %MW427.64: INT;  { DE:"1e-1V" }
+    plcPStageAdvDsp_Fpga_Ki             AT %MW427.66: INT;  { DE:"FPGA internal measure units (16bit)" }
+    plcPStageAdvDsp_Fpga_Kp             AT %MW427.68: INT;  { DE:"FPGA internal measure units (16bit)" }
+    plcPStageAdvDsp_Fpga_IOutShift      AT %MW427.70: INT;  { DE:"FPGA internal measure units (16bit)" }
+    plcPStageAdvDsp_Fpga_ModOutLimit    AT %MW427.72: UINT; { DE:"FPGA internal measure units (16bit)" }
+
+    varPStageAdvDsp_Fpga_Ki             AT %MW20.142: INT;  { DE:"FPGA internal measure units (16bit)" }
+    varPStageAdvDsp_Fpga_Kp             AT %MW20.144: INT;  { DE:"FPGA internal measure units (16bit)" }
+    varPStageAdvDsp_Fpga_IOutShift      AT %MW20.146: INT;  { DE:"FPGA internal measure units (16bit)" }
+    varPStageAdvDsp_Fpga_ModOutLimit    AT %MW20.148: UINT; { DE:"FPGA internal measure units (16bit)" }
+
     wksPStageAdvIuScale                 AT %MB429.0  : INT; { DE:"value 1000 = gain 1.0" }
     wksPStageAdvIvScale                 AT %MB429.2  : INT; { DE:"value 1000 = gain 1.0" }
     wksPStageAdvIwScale                 AT %MB429.4  : INT; { DE:"value 1000 = gain 1.0" }

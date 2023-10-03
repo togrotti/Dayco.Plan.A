@@ -82,9 +82,9 @@
 
 //********************************************
 // Dbg (to be removed?)
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_D  | --> INTSTS_D
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_Q  | --> INTSTS_Q
-[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VDC_OUT | --> VDC_OUTADC
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_D  | --> INTSTS_D
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_Q  | --> INTSTS_Q
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VDC_OUT | --> VDC_OUTADC
 
 //********************************************
 [INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO  | --> DONE

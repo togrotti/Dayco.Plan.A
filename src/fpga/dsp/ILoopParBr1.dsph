@@ -21,14 +21,14 @@
 
 [INSTRUCTION] ( T_IFBEQ_U  + T_IFBEQ_U)  * T_COSD3    + C_ZERO
 [INSTRUCTION] ( T_SINDSQT3 - T_COSD3)    * T_IFBEQ_V  + [ALU]
-[INSTRUCTION] (-T_COSD3    - T_SINDSQT3) * T_IFBEQ_W  + [ALU]  |--> IFB_AD
+[INSTRUCTION] (-T_COSD3    - T_SINDSQT3) * T_IFBEQ_W  + [ALU] |--> IFB_AD
 
 [INSTRUCTION] (-T_IFBEQ_U - T_IFBEQ_U)   * T_SIND3    + C_ZERO
 [INSTRUCTION] ( T_SIND3   + T_COSDSQT3)  * T_IFBEQ_V  + [ALU]
-[INSTRUCTION] ( T_SIND3   - T_COSDSQT3)  * T_IFBEQ_W  + [ALU]  |--> IFB_AQ
+[INSTRUCTION] ( T_SIND3   - T_COSDSQT3)  * T_IFBEQ_W  + [ALU] |--> IFB_AQ
 
-[INSTRUCTION] (C_ZERO + C_ZERO)*C_ZERO + IFB_AD                |--> IFB_ID
-[INSTRUCTION] (C_ZERO + C_ZERO)*C_ZERO + IFB_AQ                |--> IFB_IQ
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_AD             |--> IFB_ID
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + IFB_AQ             |--> IFB_IQ
 
 //********************************************
 // common

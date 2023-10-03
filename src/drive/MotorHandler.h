@@ -177,8 +177,12 @@ typedef struct {
 
   UWORD uwTransfModValue_V;
   UWORD uwTransfModValue_W;
+
   SWORD swDspIntegralVal_D ;
   SWORD swDspIntegralVal_Q ;
+  SWORD swDspOutLimit ;
+  MH_DSPPARS sDspPar ; // fpga unit
+
 } MH_PLCADVANCED_WORKS ;
 
 typedef struct {

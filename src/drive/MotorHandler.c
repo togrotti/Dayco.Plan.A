@@ -1974,26 +1974,52 @@ static BOOL SetupILoopAutoGains(BOOL bFirstRun, UBYTE ubFrequencyRequest)
   {
     flModKi = sMh_MotorDataOut.flAutoModKi ;
     flModKp = sMh_MotorDataOut.flAutoModKp ;
-}
+  }
 
-    // compute output limiter from overvoltage threshold
-  sLocDSPPars.uwModOutLimit = UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK, (SLONG)sMh_MotorDataOut.sDriveLimit.swOverVoltage<<16) ;
 
-    // if changes from actual set or first run
-  if(sMotorHandlerRun.flModKi != flModKi || sMotorHandlerRun.flModKp != flModKp ||
-     sMh_MotorDataOut.sDSPPar.uwModOutLimit != sLocDSPPars.uwModOutLimit || bFirstRun)
-  {
-    sMotorHandlerRun.flModKi = flModKi ;
-    sMotorHandlerRun.flModKp = flModKp ;
+  if ((sMh_PlcAdvancedWorks.sDspPar.swKi != 0) && (sMh_PlcAdvancedWorks.sDspPar.swKp != 0))
+  { // user dsp gain value override (in fpga scale)
+	sLocDSPPars.swKi = sMh_PlcAdvancedWorks.sDspPar.swKi ;
+	sLocDSPPars.swKp = sMh_PlcAdvancedWorks.sDspPar.swKp ;
+	sLocDSPPars.swIOutShift = sMh_PlcAdvancedWorks.sDspPar.swIOutShift ;
+	sLocDSPPars.uwModOutLimit = sMh_PlcAdvancedWorks.sDspPar.uwModOutLimit ;
 
-    NormalizeTorqueLoopGains(flModKp, flModKi, &sLocDSPPars) ;
+	atomic_write(&sMh_MotorDataOut.sDSPPar, &sLocDSPPars, sizeof(MH_DSPPARS));
 
-    atomic_write(&sMh_MotorDataOut.sDSPPar, &sLocDSPPars, sizeof(MH_DSPPARS));
+	// set run vars to zero in order to force the parameters update when override is disabled
+	sMotorHandlerRun.flModKi = 0.0 ;
+	sMotorHandlerRun.flModKp = 0.0 ;
 
-    return TRUE;
+	return TRUE ;
   }
   else
-    return FALSE;
+  { // compute output limiter from overvoltage threshold
+	if ((BOOL)sMh_PlcAdvancedWorks.swDspOutLimit)
+	{ // user value override: uwDspOutLimit is in uC iu (1e-1V)
+	  sLocDSPPars.uwModOutLimit = UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK, (SLONG)sMh_PlcAdvancedWorks.swDspOutLimit <<16) ;
+	  // since uwModOutLimit can be only [0; 32767], so the value is clipped to the max value allowed
+	  if (sLocDSPPars.uwModOutLimit > 32767)
+		sLocDSPPars.uwModOutLimit = 32767 ;
+	}
+	else
+	  sLocDSPPars.uwModOutLimit = UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK, (SLONG)sMh_MotorDataOut.sDriveLimit.swOverVoltage<<16) ;
+
+	  // if changes from actual set or first run
+	  if((sMotorHandlerRun.flModKi != flModKi) || (sMotorHandlerRun.flModKp != flModKp) ||
+		 (sMh_MotorDataOut.sDSPPar.uwModOutLimit != sLocDSPPars.uwModOutLimit) || bFirstRun)
+	  {
+		sMotorHandlerRun.flModKi = flModKi ;
+		sMotorHandlerRun.flModKp = flModKp ;
+
+		NormalizeTorqueLoopGains(flModKp, flModKi, &sLocDSPPars) ;
+
+		atomic_write(&sMh_MotorDataOut.sDSPPar, &sLocDSPPars, sizeof(MH_DSPPARS));
+
+		return TRUE;
+	  }
+	  else
+		return FALSE;
+  }
 }
 
 //***************************************************************************

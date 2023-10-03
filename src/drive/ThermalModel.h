@@ -28,6 +28,7 @@
 #define TM_PLCOPT_DISABLE_FW_MOTORTEMP      5
 
 #define TM_PLCOPTKEY                        0x1ECD
+//#define _CRS_DBG_A2DCOUNT					1
 
 /* ============================== structures =============================== */
 typedef struct /* outvalue: to user/fieldbus */
@@ -106,7 +107,7 @@ typedef struct
   SWORD  swBrdTemp;
 #endif
 
-#ifdef _CRS_DBG
+#if (defined(_CRS_DBG) && defined(_CRS_DBG_A2DCOUNT))
   UWORD uwNtcCount_0 ;
   UWORD uwNtcCount_1 ;
   UWORD uwPtcCount ;
