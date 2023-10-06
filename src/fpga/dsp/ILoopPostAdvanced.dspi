@@ -10,17 +10,17 @@
 // I direct/quadrature PID
 [INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + P_OUTLIM   | << T_LMTSHIFT | --> T_LMTLIM
 
-[INSTRUCTION] (IREF_D - IFB_ID)       * P_KI + S_KI_D | LMT T_LMTLIM
-[INSTRUCTION] [LMT]   + C_ZERO                        | --> S_KI_D
-[INSTRUCTION] (IREF_D - T_FLTIFB_ID)  * P_KP + [ALU]  | LMT T_LMTLIM
+[INSTRUCTION] (IREF_D - IFB_ID)         * P_KI + S_KI_D    | LMT T_LMTLIM
+[INSTRUCTION] [LMT]   + C_ZERO                             | --> S_KI_D
+[INSTRUCTION] (IREF_D - T_FLTIFB_ID)    * P_KP + [ALU]     | LMT T_LMTLIM
 //[INSTRUCTION] [LMT]   + C_ZERO        | << P_OUTSHIFT    | --> T_VOUT_D
 // manage Vout_D user initialization value
 [INSTRUCTION] [LMT]   + C_ZERO          | << P_OUTSHIFT    | --> T_VOUT_B
 [INSTRUCTION] (P_INTSTS_D + P_INTSTS_D) * C_1D2 + T_VOUT_B | --> T_VOUT_D
 
-[INSTRUCTION] (IREF_FQ - IFB_IQ)      * P_KI + S_KI_Q | LMT T_LMTLIM
-[INSTRUCTION] [LMT]    + C_ZERO                       | --> S_KI_Q
-[INSTRUCTION] (IREF_FQ - T_FLTIFB_IQ) * P_KP + [ALU]  | LMT T_LMTLIM
+[INSTRUCTION] (IREF_FQ - IFB_IQ)        * P_KI + S_KI_Q    | LMT T_LMTLIM
+[INSTRUCTION] [LMT]    + C_ZERO                            | --> S_KI_Q
+[INSTRUCTION] (IREF_FQ - T_FLTIFB_IQ)   * P_KP + [ALU]     | LMT T_LMTLIM
 //[INSTRUCTION] [LMT]    + C_ZERO       | << P_OUTSHIFT    | --> T_VOUT_Q
 // manage Vout_Q user initialization value
 [INSTRUCTION] [LMT]   + C_ZERO          | << P_OUTSHIFT    | --> T_VOUT_B

@@ -986,6 +986,8 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
         return FALSE;    // just avoid warning C184
   }
 
+  sMotorHandlerRun.flRatioV_DC_PEAK = flRatioV_DC_PEAK ; // neeeded by Vd and Vq filter and Vmotor
+
     // check parameters validity  
   if(!ResetOnlyParametersCheck())
     return FALSE;
@@ -1405,7 +1407,6 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
 
   if (sMotorHandlerRun.flags.b.bDSPAdvance)
   {
-	sMotorHandlerRun.flRatioV_DC_PEAK = flRatioV_DC_PEAK ;
     sRGODef.flScale=1.0;
 
     sRGODef.pvDst=&sMotorHandlerRun.swVdOut;

@@ -197,7 +197,16 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
     return TRUE;
   }
 #if CFG_VMOTOR_READ
-  // update from voltage estimator [0.1V]
+  // Analog Scaling for Veffective [0.1V]
+#if (TRUE)
+  /*
+   * NOTE: 20231006:
+   * Voltage are integrated by FPGA and dead time are considered
+   */
+  sMh_MotorDataOut.swVuEffective = (SWORD)((SWORD)FPGA_VEST_U * sMotorHandlerRun.flRatioV_DC_PEAK) ;
+  sMh_MotorDataOut.swVvEffective = (SWORD)((SWORD)FPGA_VEST_V * sMotorHandlerRun.flRatioV_DC_PEAK) ;
+  sMh_MotorDataOut.swVwEffective = (SWORD)((SWORD)FPGA_VEST_W * sMotorHandlerRun.flRatioV_DC_PEAK) ;
+#else
   /*
    * NOTE 20230704:
    * 	DC Bus voltage in FPGA is fixed to value 2048d. This means
@@ -207,6 +216,7 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
   sMh_MotorDataOut.swVuEffective = (SWORD)((FLOAT)sMh_MotorDataOut.swDcBusValue * (((SWORD)FPGA_VEST_U) / 2000.0F));
   sMh_MotorDataOut.swVvEffective = (SWORD)((FLOAT)sMh_MotorDataOut.swDcBusValue * (((SWORD)FPGA_VEST_V) / 2000.0F));
   sMh_MotorDataOut.swVwEffective = (SWORD)((FLOAT)sMh_MotorDataOut.swDcBusValue * (((SWORD)FPGA_VEST_W) / 2000.0F));
+#endif // true
 #endif // cfg_vmotor_read
 
   if (sMotorHandlerRun.flags.b.bDSPAdvance)
