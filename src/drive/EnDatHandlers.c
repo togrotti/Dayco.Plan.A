@@ -19,8 +19,16 @@
 
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
-//#pragma GCC optimize (0)  // debug code
-#pragma GCC optimize (2)  // code optmized
+// Compiler Option
+#if defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
+#pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
 
 #if CFG_ENC_ENDAT
 //***************************************************************************
@@ -128,7 +136,9 @@ BOOL EndatEnterCommandMode(ENDAT_WORKS * psWorks)
     FPGA_ENDAT_SET_START(dwBaseAddress) = FALSE;
     FPGA_ENDAT_SET_MODE(dwBaseAddress) = FALSE;
     FPGA_ENDAT_SET_EXT(dwBaseAddress) = FALSE;
+#ifdef ENDAT22
     FPGA_ENDAT_SET_SYNCTRAN(dwBaseAddress) = FALSE; // crs-endat.22
+#endif // endat22
 
         // disable write protection
     FPGA_ENDAT_SET_WRPROT(dwBaseAddress) = FALSE;
@@ -172,6 +182,7 @@ BOOL EndatEnterPositionMode(ENDAT_WORKS * psWorks)
     while(FPGA_ENDAT_STAT_BUSY(FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_STATUS)));
 
         // setup for fast position transfer, according to calibration parameters
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
     if(psWorks->ubADInfo == ENDAT_ADINFO1_NOP || !psWorks->flags.b.bEndatEx || !psWorks->flags.b.bProt22) // crs-endat.22
         FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_CMDADR) = ENDAT_COMMAND_ENCODER_TO_SEND_POSITION_VALUES << 8;
     else
@@ -179,6 +190,9 @@ BOOL EndatEnterPositionMode(ENDAT_WORKS * psWorks)
         FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_CMDADR) = (ENDAT_CMD22_ENCODER_TO_SEND_POSITION_VALUES & 0x3F) << 8;
         FPGA_ENDAT_SET_EXT(dwBaseAddress) = TRUE;
     }	// crs-endat.22
+#else
+    FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_CMDADR) = ENDAT_COMMAND_ENCODER_TO_SEND_POSITION_VALUES << 8;
+#endif // endat22 && endat22_addinfo
 
     FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_CLOCKDIV)  = psWorks->uwClockDiv;
     FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_PROPCOMP)  = psWorks->uwPropComp;
@@ -188,8 +202,9 @@ BOOL EndatEnterPositionMode(ENDAT_WORKS * psWorks)
         // enable position mode
     FPGA_ENDAT_SET_MODE(dwBaseAddress) = TRUE;
     FPGA_ENDAT_SET_START(dwBaseAddress) = TRUE;
+#ifdef ENDAT22	
     FPGA_ENDAT_SET_SYNCTRAN(dwBaseAddress) = TRUE; // crs-endat.22
-
+#endif // endat22
         // and write protection
     FPGA_ENDAT_SET_WRPROT(dwBaseAddress) = TRUE;
 
@@ -262,6 +277,7 @@ static ULONG EndatExecuteTransaction(ENDAT_WORKS * psWorks, UBYTE ubCommand, UBY
         // if valid transaction
     if(FPGA_ENDAT_STAT_VALID(FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_STATUS)))
     {
+#ifdef ENDAT22
         if(psWorks->flags.b.bEndatEx) // crs-endat.22
         {
             ulResult = FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_PARAM) | ((ULONG)FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_CMDADR)<<16);
@@ -269,6 +285,7 @@ static ULONG EndatExecuteTransaction(ENDAT_WORKS * psWorks, UBYTE ubCommand, UBY
                 ulResult|=ENDAT_FUNCTION_ERROR_CRC_ERROR;
         }
         else // crs-endat.22
+#endif // endat22
         {   // get result
             ulResult=FPGA_BASEOFF_32(dwBaseAddress, FPGA_ENDAT_DATAOUT_LLSW);
  
@@ -306,6 +323,7 @@ static ULONG EndatEnableADInfo(ENDAT_WORKS * psWorks)
 }    
 
 //***************************************************************************
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
 // set additional info, if requested
 // crs-endat.22
 static ULONG EndatSetADInfo(ENDAT_WORKS * psWorks)
@@ -327,7 +345,7 @@ static ULONG EndatSetADInfo(ENDAT_WORKS * psWorks)
 
     return 0ul;
 }
-// crs-endat.22
+#endif // endat22 && endat22_addinfo
 
 //***************************************************************************
 // Read parameter
@@ -429,12 +447,12 @@ ULONG EndatReadParameter(ENDAT_WORKS * psWorks, UBYTE ubMemArea, UBYTE ubAddress
             // MSB part
         uwReadVal|=(UWORD)sRes.ubData[0]<<8;
 
-       // crs-endat.22
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
         	// restore realtime additional info if requested
        sRes.ulData=EndatSetADInfo(psWorks);
        if( sRes.ulData & ENDAT_FUNCTION_ERROR_MASK_ANY )
             return sRes.ulData;
-       // crs-endat.22
+#endif // endat22 && endat22_addinfo
 
         return (ULONG)uwReadVal;
     }
@@ -458,6 +476,7 @@ ULONG EndatWriteParameter(ENDAT_WORKS * psWorks, UBYTE ubMemArea, UBYTE ubAddres
     return ulResult;
 }
 
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
 //***************************************************************************
 // Enable/disable additional info on realtime position reading
 // crs-endat.22
@@ -468,7 +487,7 @@ BOOL EndatSetRealtimeADInfo(ENDAT_WORKS * psWorks, UBYTE ubADInfo)
     psWorks->ubADInfo = ubADInfo;
     return TRUE;
 }
-// crs-endat.22
+#endif // endat22 && endat22_addinfo
 
 //***************************************************************************
 // Reset Active Alarms
@@ -507,12 +526,12 @@ ULONG EndatResetActiveAlarms(ENDAT_WORKS * psWorks)
             // Reset will also cause no anymore additional info
         psWorks->flags.b.bAdInfoEnabled = FALSE;
 
-        // crs-endat.22
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
             // restore realtime additional info if requested
         ulResult=EndatSetADInfo(psWorks);
         if( ulResult & ENDAT_FUNCTION_ERROR_MASK_ANY )
             return ulResult;
-        // crs-endat.22
+#endif // endat22 && endat22_addinfo
     }
 
     return ulResult;
@@ -551,17 +570,18 @@ UWORD EndatInitializeEncoder(ULONG dwBaseAddress, UWORD uwClockFreq, ENDAT_WORKS
     psWorks->flags.b.bProt22=bProt22=FALSE;
     psWorks->flags.b.bAdInfoEnabled=FALSE;
 
-    // crs-endat.22
+#ifdef ENDAT22
         // reset all SYNC tran flag
     FPGA_ENDAT_SET_SYNCTRAN(dwBaseAddress) = FALSE;
 
         // get module implementation type
     psWorks->flags.b.bEndatEx = FPGA_ENDAT_STAT_ENDATEX(FPGA_BASEOFF_16(dwBaseAddress, FPGA_ENDAT_STATUS)) != 0;
-
+#if defined(ENDAT22_ADDINFO)
         // test if realtime ADInfo is supported by the module
     if(psWorks->ubADInfo != ENDAT_ADINFO1_NOP && !psWorks->flags.b.bEndatEx)
         return 22;
-    // crs-endat.22
+#endif  // endat22_addinfo
+#endif  // endat22
 
         // set command mode
     if(!EndatEnterCommandMode(psWorks))
@@ -604,11 +624,11 @@ UWORD EndatInitializeEncoder(ULONG dwBaseAddress, UWORD uwClockFreq, ENDAT_WORKS
     else
         bProt22=TRUE;
 
-    // crs-endat.22
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
         // if not protocol 2.2, ADInfo is not supported
     if(psWorks->ubADInfo != ENDAT_ADINFO1_NOP && !bProt22)
         return 23;
-    // crs-endat.22
+#endif // endat22 && endat22_addinfo
 
         // Read Transfer Format for Position Values
     ulResult=EndatReadParameter(psWorks, ENDAT_MEMAREA_MANUFACTURER_PARAM_A1, ENDAT_ADDRESS_TRANSFER_FORMAT_FOR_POSITION);
@@ -749,10 +769,10 @@ UWORD EndatInitializeEncoder(ULONG dwBaseAddress, UWORD uwClockFreq, ENDAT_WORKS
     uwCnt=1+uwTransferFormat+ENDAT_NBIT_MCT-psWorks->uwPropComp/(2*psWorks->uwClockDiv);
     psWorks->uwEarlyStop = uwCnt;
 
-    // crs-endat.22
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
     if(psWorks->ubADInfo != ENDAT_ADINFO1_NOP)
         psWorks->uwEarlyStop += ENDAT_NBIT_ADINFO + 1;
-    // crs-endat.22
+#endif // endat22 && endat22_addinfo
 
         // fillup position format
     psWorks->ubStepPerRevBits = (UBYTE)uwStepPerRevolutionBits;

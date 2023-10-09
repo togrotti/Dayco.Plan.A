@@ -616,7 +616,9 @@ PLC_ATTR_PLCIEC_FCNREC plcEmbeddedFunctions[] =
 #if CFG_ENC_ENDAT
     {"sysEndatResetEncoder",        (uint32_t)&PlcEndatResetEncoder},
     {"sysEndatResetActiveAlarms",   (uint32_t)&PlcEndatResetActiveAlarms},
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
     {"sysEndatAddInfoSetup",        (uint32_t)&PlcEndatAddInfoSetup},
+#endif // endat22 && endat22_addinfo
 #endif
 
     {"sysILoopDSPLoad",             (uint32_t)&Mh_PlcDSPLoad},

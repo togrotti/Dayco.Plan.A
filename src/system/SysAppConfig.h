@@ -122,8 +122,10 @@
 #define CFG_ENC_BISS              0
 #endif
 
-#define CFG_ENC_BEMF_DITEN        0
-#define CFG_ENC_BEMF_DITEN_PARAM  0
+#define ENDAT22                   1
+//#define ENDAT22_ADDINFO           1
+#define CFG_ENC_BEMF_DITEN        1
+#define CFG_ENC_BEMF_DITEN_PARAM  1
 //***************************************************************************
 // Define Modbus
 

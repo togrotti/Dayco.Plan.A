@@ -65,7 +65,7 @@ typedef struct
 
         // synchronous or direct inductance [H]
     FLOAT   flDirectInductance;
-}                                                     MOTPRM_PARAMETERS;
+} MOTPRM_PARAMETERS;
 
 //***************************************************************************
 // Old data structure

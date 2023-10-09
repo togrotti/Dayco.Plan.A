@@ -33,10 +33,14 @@ void ManagePLCDiagState(void);              /*  Manage of runtime state, prototy
 #endif
 
 #if CFG_ENC_ENDAT
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
 #define _PLC_NUM_ENCEND_FUNCTS  6  // crs-ok
 #else
+#define _PLC_NUM_ENCEND_FUNCTS  5  // crs-ok
+#endif // endat22 && endat22_addinfo
+#else
 #define _PLC_NUM_ENCEND_FUNCTS  0
-#endif
+#endif // cfg_enc_endat
 
 #if CFG_ENC_NIKON
 #define _PLC_NUM_ENCNIK_FUNCTS  4 // crs-ok

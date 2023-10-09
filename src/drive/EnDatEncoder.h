@@ -37,9 +37,11 @@ typedef struct {
     UBYTE ubProtocolVersion;      // xx.x
     UBYTE ubStepPerRevBits;
     UBYTE ubRevNumBits;
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
     UBYTE ubAddInfoVar; // crs-endat.22
     UWORD uwAddInfoVal; // crs-endat.22
     UWORD uwAddInfoCRCErrorCounter ; // crs-endat.22
+#endif // endat22 && endat22_addinfo
 } ENDAT_OUT ;
 
 //***************************************************************************
@@ -86,5 +88,7 @@ ULONG PlcEndatReadParameter(UWORD uwChannelSel, UBYTE ubMemArea, UBYTE ubAddress
 ULONG PlcEndatWriteParameter(UWORD uwChannelSel, UBYTE ubMemArea, UBYTE ubAddress, UWORD uwParam);
 ULONG PlcEndatResetEncoder(UWORD uwChannelSel) ;
 ULONG PlcEndatResetActiveAlarms(UWORD uwChannelSel);
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
 ULONG PlcEndatAddInfoSetup(UWORD uwChannelSel, UWORD uwAddInfoCode); // crs-endat.22
+#endif // endat22 && endat22_addinfo
 #endif

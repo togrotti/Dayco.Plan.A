@@ -38,8 +38,16 @@
 
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
-//#pragma GCC optimize (0)  // debug code
-#pragma GCC optimize (2)  // code optmized
+// Compiler Option
+#if defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
+#pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
 
 //****************************************************************************
 // General global variables
@@ -74,7 +82,9 @@ typedef struct {
             UWORD bAlarm        : 1 ;
             UWORD bCrc          : 1 ;
             UWORD bOverTime     : 1 ;
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
             UWORD bCrcAdi       : 1 ; // crs-endat.22
+#endif // endat22 && endat22_addinfo
         } b ;
         UWORD w ;
     } sErrorSent ;
@@ -87,7 +97,9 @@ typedef struct {
             UWORD bPlcReq       : 1; // b.3
             UWORD bPlcReqStat   : 1; // b.4
             UWORD bDisEndAlarm  : 1; // b.5
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
             UWORD bAddInfoEnable: 1; // b.6 // crs-endat.22
+#endif // endat22 && endat22_addinfo
         } b ;
         UWORD w ;
     } sCmd ;
@@ -111,9 +123,10 @@ typedef struct {
     ULONG ulMTurnStartPos;
     ULONG ulRevMask;
 
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
     UWORD uwAddInfo2Use ; // crs-endat.22
     SWORD swCrcErrorAdi ; // crs-endat.22
-    
+#endif // endat22 && endat22_addinfo
 } ENDAT_RUNTIME ;
   
 typedef struct
@@ -292,6 +305,19 @@ static BOOL coreinit(UWORD uwChannelSel, BOOL bEnable)
 static BOOL endathandlerinit(UWORD uwChannelSel, UWORD uwClockFreq, BOOL bFullInit)
 {
     UWORD uwRetVal,uwTimeOut;
+	
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
+        // setup endat additional info: mandatory to make it here
+    if(sRuntime[uwChannelSel].sCmd.b.bAddInfoEnable)
+    {
+        uwRetVal = EndatSetRealtimeADInfo(&sWorks[uwChannelSel], (UBYTE)sRuntime[uwChannelSel].uwAddInfo2Use) ;
+        if(!(BOOL)uwRetVal)
+        {
+            SysLogMgm_PostAlarm(SYSTEMALARMS_BIT_EN_ENDAT_FAIL, ulAlarmSubCode[uwChannelSel] | SYSTEMALARMS_SUBCODE_ENDAT_INIT_ADDINFO, FALSE);
+            return FALSE ;      
+        }
+    }
+#endif // endat22 && endat22_addinfo
         // Initialize EnDat Encoder
     uwTimeOut=timer_settimeout(uwSysTimers1ms, ENDAT_WAITE_TIMEOUT);
     for(;;)
@@ -352,7 +378,7 @@ static BOOL initruntime(UWORD uwChannelSel)
     sRuntime[uwChannelSel].psFeedbackOut->sEncData.slAccel = 0L ;
     sRuntime[uwChannelSel].psFeedbackOut->ubStatus = ENCMGR_NULL ;
 
-    // crs-endat.22
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
     // additional info mgmt
     if (!sRuntime[uwChannelSel].sCmd.b.bAddInfoEnable)
         sRuntime[uwChannelSel].uwAddInfo2Use = 0x0000 ;
@@ -362,7 +388,7 @@ static BOOL initruntime(UWORD uwChannelSel)
     sEn_DataOut[uwChannelSel].uwAddInfoVal = 0;
     sEn_DataOut[uwChannelSel].uwAddInfoCRCErrorCounter = 0;
     // crs-endat.22
-
+#endif // endat22 && endat22_addinfo
     return TRUE;
 }
 
@@ -568,8 +594,8 @@ static BOOL task8kHz(ENDAT_RUNTIME * psRuntime)
       return TRUE;
     }
    }
-   
-// crs-endat.22
+
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
   /* ============================================ *
    * ==== Additional Info runtime management ==== *
    * ============================================ */
@@ -610,11 +636,11 @@ static BOOL task8kHz(ENDAT_RUNTIME * psRuntime)
     psRuntime->psDataOut->ubAddInfoVar = 0 ;
     psRuntime->psDataOut->uwAddInfoVal = 0 ;
   }
+#endif // endat22 && endat22_addinfo
 
   /* ============================================ *
    * ==== Additional Info runtime management ==== *
    * ============================================ */
-// crs-endat.22
 
   /* if first run get abs pos */
   if(psFeedback->ubStatus == ENCMGR_NULL)
@@ -833,7 +859,7 @@ ULONG PlcEndatResetActiveAlarms(UWORD uwChannelSel)
 }
 
 //***************************************************************************
-// crs-endat22
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
 ULONG PlcEndatAddInfoSetup(UWORD uwChannelSel, UWORD uwAddInfoCode)
 {
     if (uwChannelSel == ENDAT_SEL_MAIN)
@@ -858,5 +884,5 @@ ULONG PlcEndatAddInfoSetup(UWORD uwChannelSel, UWORD uwAddInfoCode)
         return ENDAT_FUNCTION_ERROR_NOMODULE ; 
     }
 }
-// crs-endat22
-#endif
+#endif // endat22 && endat22_addinfo
+#endif // cfg_enc_endat

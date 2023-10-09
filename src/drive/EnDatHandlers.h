@@ -65,11 +65,15 @@ typedef struct
         {
             UWORD bProt22:1;
             UWORD bAdInfoEnabled:1;
+#ifdef ENDAT22
             UWORD bEndatEx:1; // crs-endat.22
+#endif // endat22
         } b;
         UWORD w;
     } flags;
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
     UBYTE ubADInfo; // crs-endat.22
+#endif // endat22 && endat22_addinfo
 } ENDAT_WORKS;
 
 //***************************************************************************
@@ -79,7 +83,9 @@ BOOL  EndatEnterCommandMode(ENDAT_WORKS * psWorks);
 BOOL  EndatEnterPositionMode(ENDAT_WORKS * psWorks);
 ULONG EndatReadParameter(ENDAT_WORKS * psWorks, UBYTE ubMemArea, UBYTE ubAddress);
 ULONG EndatWriteParameter(ENDAT_WORKS * psWorks, UBYTE ubMemArea, UBYTE ubAddress, UWORD uwParam);
+#if (defined(ENDAT22) && defined(ENDAT22_ADDINFO))
 BOOL  EndatSetRealtimeADInfo(ENDAT_WORKS * psWorks, UBYTE ubADInfo); // crs-endat.22
+#endif // endat22 && endat22_addinfo
 ULONG EndatResetActiveAlarms(ENDAT_WORKS * psWorks);
 UWORD EndatInitializeEncoder(ULONG dwBaseAddress, UWORD uwClockFreq, ENDAT_WORKS * psWorks, BOOL bCalcStartDelay);
 BOOL  EndatCheckParameters(UWORD uwClockFreq);
