@@ -89,7 +89,6 @@ setSymbol       ${app_project} release _AXX_SYSAPP;
 setSymbol       ${app_project} release _HW_DC;
 setSymbol       ${app_project} release _HW_AXS;
 setSymbol       ${app_project} release _HW_AXS_DAYCO22KW;
-setSymbol       ${app_project} release _DEBUG_TRACES;
 
 setBuildOptions ${app_project} debug;
 setSymbol       ${app_project} debug USE_STDINT_FOR_MISRA_C
@@ -102,7 +101,6 @@ setSymbol       ${app_project} debug _HW_DC;
 setSymbol       ${app_project} debug _APP_DEBUG;
 setSymbol       ${app_project} debug _HW_AXS;
 setSymbol       ${app_project} debug _HW_AXS_DAYCO22KW;
-setSymbol       ${app_project} debug _DEBUG_TRACES;
 
 # Set the active build configuration to debug.
 setActive ${app_project} debug;

@@ -1,0 +1,23 @@
+//********************************************
+// ILoopImlPsu.dsph
+//********************************************
+// Note
+// uso registro IFB_AQ per mettere il valore filtrato di IFB_IU
+// uso registro IREF_FQ per inviare il valore di riferimento al DSP
+// uso VOUT_Q per calcolare il duty cycle
+// in VDC_USO VDC_I (perche' altrimenti avrei casini sui valori AVG)
+//********************************************
+
+#INCLUDE "ILoopPre.dspi"
+
+//********************************************
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO  | --> IFB_AD 
+
+// lowpass filter 7/8
+[INSTRUCTION] (C_ZERO + C_1D8) * IFB_IU + C_ZERO    
+[INSTRUCTION] (C_ZERO + C_7D8) * IFB_AQ + [ALU]    | --> IFB_AQ 
+
+//********************************************
+// common
+
+#INCLUDE "ILoopPostImlPsu.dspi"

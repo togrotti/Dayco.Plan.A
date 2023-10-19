@@ -95,7 +95,6 @@
 #define FPGAIR_T_VOUT_Q                328
 #define FPGAIR_T_FLTIFB_ID             336
 #define FPGAIR_T_FLTIFB_IQ             344
-#define FPGAIR_D_KI_Q                  376
 
 // Outputs
 #define FPGAIR_RGO_VOUT_U              68

@@ -1,7 +1,7 @@
 /* ************************************************************************ * 
  * Project: AxM-E Control Board                                             * 
  *                                                                          * 
- * Copyright © 2005,2008, Phase Motion Control. All Rights Reserved.        * 
+ * Copyright Â© 2005,2008, Phase Motion Control. All Rights Reserved.        * 
  *                                                                          * 
  * Version     : 1.0                                                        * 
  * File        : BackEmfEncoder.h                                           * 

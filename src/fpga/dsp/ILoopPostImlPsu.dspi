@@ -1,0 +1,66 @@
+//********************************************
+// ILoopPostImlPsu.dspi
+//********************************************
+
+//********************************************
+// PID
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO - P_OUTSHIFT | --> T_LMTSHIFT
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + P_OUTLIM   | <<  T_LMTSHIFT | --> T_LMTLIM
+
+[INSTRUCTION] (IREF_FQ - IFB_IU) * P_KI + S_KI_Q      | LMT T_LMTLIM
+[INSTRUCTION] [LMT] + C_ZERO                          | --> S_KI_Q
+[INSTRUCTION] (IREF_FQ - IFB_AQ) * P_KP + [ALU]       | LMT T_LMTLIM
+//[INSTRUCTION] [LMT] + C_ZERO                          | <<  P_OUTSHIFT | --> VOUT_Q
+// manage Vout_Q user initialization value
+[INSTRUCTION] [LMT]   + C_ZERO          | << P_OUTSHIFT    | --> T_VOUT_B
+[INSTRUCTION] (P_INTSTS_Q + P_INTSTS_Q) * C_1D2 + T_VOUT_B | --> VOUT_Q
+//********************************************
+// Vout_U = -PidOut * 2
+// Vout_V = Vout_W = 0
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO - VOUT_Q |--> VOUT_D
+[INSTRUCTION] (VOUT_D + VOUT_D) * C_1D2  + [ALU]  |--> VOUT_U
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO |--> VOUT_U
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO |--> VOUT_V
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO |--> VOUT_W
+
+//********************************************
+// sum and differences for pwm modulator
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_U
+[INSTRUCTION] -VOUT_V + [ALU]        | --> VDIF_UV
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_U
+[INSTRUCTION]  VOUT_V + [ALU]        | --> VSUM_UV
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_U
+[INSTRUCTION] -VOUT_W + [ALU]        | --> VDIF_UW
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_V
+[INSTRUCTION] -VOUT_W + [ALU]        | --> VDIF_VW
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_U
+[INSTRUCTION]  VOUT_W + [ALU]        | --> VSUM_UW
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VOUT_V
+[INSTRUCTION]  VOUT_W + [ALU]        | --> VSUM_VW
+
+//********************************************
+// copy reference Vdc for pwm modulator,
+// selecting between adc reading or
+// user fixed value
+// due to internal optimizations and in order to
+// switch with only one variable:
+// P_VDC_SET = +1/2 => use VDC_I
+// P_VDC_SET = -1/2 => VdcBus from fw updated at 8kHz
+//[INSTRUCTION] (C_1D2 + P_VDC_SEL) * VDC_I        + C_ZERO
+[INSTRUCTION] (C_1D2 + P_VDC_SEL) * VDC_A        + C_ZERO
+[INSTRUCTION] (C_1D2 - P_VDC_SEL) * P_VDC_SETVAL + [ALU] | --> VDC_OUT
+//[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VDC_A | --> VDC_OUT
+
+//********************************************
+// Dbg (to be removed?)
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + S_KI_Q     | --> INTSTS_D
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + P_INTSTS_Q | --> INTSTS_Q
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + VDC_OUT    | --> VDC_OUTADC
+
+//********************************************
+// zeroes arm_comp user offset
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO | --> VDC_ARMC
+
+//********************************************
+[INSTRUCTION] (C_ZERO + C_ZERO) * C_ZERO + C_ZERO | --> DONE
+

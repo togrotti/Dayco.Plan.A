@@ -2,13 +2,13 @@
 set tcl_path      [file dirname [info script]]
 
 # Configure workspace (should be outside of the Git mapping)
-set workspace     ${tcl_path}/../zynq_axn_7014
+set workspace     ${tcl_path}/../zynq_axndc_imlpsu
 
 # Set platform and project names
-set hw_project {"zynq_axn_7z014i2"}
-set xsa_file   {"./xsa/zynq_axn_7z014i2.xsa"}
+set hw_project {"zynq_axndc_7z010i2"}
+set xsa_file   {"./xsa/zynq_axndc_7z010i2.xsa"}
 
-set app_project   "axn"
+set app_project   "axndc"
 
 # Configure path for sources, xsa file, setting, launch
 set app_sources   [file join ${tcl_path} src]
@@ -53,7 +53,7 @@ foreach i $hw_project j $xsa_file {
 	platform create -name $i -hw $j
 
 	# Add compiler definitions for fsbl application
-	platform config -extra-compiler-flags fsbl "-O2 -MMD -MP -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard -DDDRLESS_SYSTEM -DFSBL_DEBUG_INFO"
+	platform config -extra-compiler-flags fsbl "-O2 -MMD -MP -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard  -DDDRLESS_SYSTEM -DFSBL_DEBUG_INFO"
 
 	puts "creating FreeRTOS domain...";
 	domain create -name "freertos" -os freertos10_xilinx -proc ps7_cortexa9_0 
@@ -63,7 +63,7 @@ foreach i $hw_project j $xsa_file {
 	bsp setosversion -ver 1.11
 	bsp config use_tick_hook true
 	#decrease the stack and heap size, changed 2022-12-21
-	bsp config total_heap_size     15360 
+	bsp config total_heap_size     17360 
 	#####
 	bsp config tick_rate     1000
 	bsp config use_task_fpu_support 2
@@ -86,6 +86,9 @@ setSymbol       ${app_project} release ALPLC_P_ARM32;
 setSymbol       ${app_project} release ALPLC_C_GCCARM9;
 setSymbol       ${app_project} release _APP_XC;
 setSymbol       ${app_project} release _AXX_SYSAPP;
+setSymbol       ${app_project} release _HW_DC;
+setSymbol       ${app_project} release _IML_PSU
+setSymbol       ${app_project} release _HW_VERSION_C
 
 setBuildOptions ${app_project} debug;
 setSymbol       ${app_project} debug USE_STDINT_FOR_MISRA_C
@@ -94,7 +97,10 @@ setSymbol       ${app_project} debug ALPLC_P_ARM32;
 setSymbol       ${app_project} debug ALPLC_C_GCCARM9;
 setSymbol       ${app_project} debug _APP_XC;
 setSymbol       ${app_project} debug _AXX_SYSAPP;
+setSymbol       ${app_project} debug _HW_DC;
 setSymbol       ${app_project} debug _APP_DEBUG;
+setSymbol       ${app_project} debug _IML_PSU
+setSymbol       ${app_project} debug _HW_VERSION_C
 
 # Set the active build configuration to debug.
 setActive ${app_project} debug;

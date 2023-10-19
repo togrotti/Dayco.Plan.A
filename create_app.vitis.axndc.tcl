@@ -87,6 +87,7 @@ setSymbol       ${app_project} release ALPLC_C_GCCARM9;
 setSymbol       ${app_project} release _APP_XC;
 setSymbol       ${app_project} release _AXX_SYSAPP;
 setSymbol       ${app_project} release _HW_DC;
+setSymbol       ${app_project} release _HW_VERSION_C
 
 setBuildOptions ${app_project} debug;
 setSymbol       ${app_project} debug USE_STDINT_FOR_MISRA_C
@@ -97,6 +98,7 @@ setSymbol       ${app_project} debug _APP_XC;
 setSymbol       ${app_project} debug _AXX_SYSAPP;
 setSymbol       ${app_project} debug _HW_DC;
 setSymbol       ${app_project} debug _APP_DEBUG;
+setSymbol       ${app_project} debug _HW_VERSION_C
 
 # Set the active build configuration to debug.
 setActive ${app_project} debug;

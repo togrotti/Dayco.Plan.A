@@ -43,21 +43,20 @@
 [REGISTER]  T_VOUT_Q    0x148  // output of I_PI_Q loop (crs for DspAdvanced)
 [REGISTER]  T_FLTIFB_ID 0x150  // filtered ID @1MHz (crs for DspAdvanced)
 [REGISTER]  T_FLTIFB_IQ 0x158  // filtered IQ @1MHz (crs for DspAdvanced)
-[REGISTER]  D_KI_Q      0x178  // Dbg
 
-[INPUT]     P_KI        0x10 
-[INPUT]     P_KP        0x11 
-[INPUT]     P_OUTSHIFT  0x12 
-[INPUT]     P_OUTLIM    0x13
-[INPUT]     IREF_D      0x14 
-[INPUT]     P_CORR_VD   0x17  // crs for DspAdvanced
-[INPUT]     P_CORR_VQ   0x18  // crs for DspAdvanced
+[INPUT]     P_KI         0x10 
+[INPUT]     P_KP         0x11 
+[INPUT]     P_OUTSHIFT   0x12 
+[INPUT]     P_OUTLIM     0x13
+[INPUT]     IREF_D       0x14 
+[INPUT]     P_CORR_VD    0x17 // crs for DspAdvanced
+[INPUT]     P_CORR_VQ    0x18 // crs for DspAdvanced
 [INPUT]     P_VDC_SETVAL 0x19 // crs for DspAdvanced
-[INPUT]     P_CORR_ID   0x26  // crs for DspAdvanced
-[INPUT]     P_CORR_IQ   0x27  // crs for DspAdvanced
+[INPUT]     P_CORR_ID    0x26 // crs for DspAdvanced
+[INPUT]     P_CORR_IQ    0x27 // crs for DspAdvanced
 [INPUT]     P_SET_INTSTS 0x28 // crs for DspAdvanced (to be removed)
-[INPUT]     P_INTSTS_D  0x29  // crs_for DspAdvanced 
-[INPUT]     P_INTSTS_Q  0x2A  // crs_for DspAdvanced
+[INPUT]     P_INTSTS_D   0x29 // crs_for DspAdvanced 
+[INPUT]     P_INTSTS_Q   0x2A // crs_for DspAdvanced
 
 //********************************************
 // Constants

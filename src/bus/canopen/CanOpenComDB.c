@@ -28,7 +28,15 @@
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
 
+#if defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
 #pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
 #endif
 
 //***************************************************************************
@@ -85,6 +93,15 @@ BOOL CanOpenComDBCheckTable(void)
 {
     UWORD uwIndxCount;
 
+#if defined (_CRS_DBG)
+   static volatile UWORD uwCrsDbgCounter = 0 ;
+   static volatile UWORD uwCrsDbgCanOpenParamCount = 0 ;
+   static volatile UWORD uwCrsDbgCanOpenParamInfoCount = 0 ;
+
+   uwCrsDbgCanOpenParamCount = uwCanOpenParamCount ;
+   uwCrsDbgCanOpenParamInfoCount = uwCanOpenParamInfoCount ;
+#endif
+
         // Check Index Contiguity and Duplicates, only between adjacent elements that belong to same db (DS301 and COE)
     for ( uwIndxCount = 0; uwIndxCount < uwCanOpenParamCount-1; uwIndxCount++ )
         if ( (hpsCanOpenParamTable[ uwIndxCount ].uwFlags & hpsCanOpenParamTable[ uwIndxCount + 1 ].uwFlags & (CANOPENCOMDB_F_DS301_VALID|CANOPENCOMDB_F_ECATCOE_VALID)) )
@@ -100,24 +117,65 @@ BOOL CanOpenComDBCheckTable(void)
             // Check for PDO mappable type
         if(hpsCanOpenParamTable[ uwIndxCount ].uwFlags & CANOPENCOMDB_F_PDOMAPPABLE)
         {
+#if defined (_CRS_DBG)
+        	if( (hpsCanOpenParamTable[ uwIndxCount ].uwFlags & CANOPENCOMDB_F_WRDENYWHENOPER) == 0 )
+        	{
+#if defined(_DEBUG_TRACES)
+                xil_printf("CanOpenComDB::CanOpenComDBCheckTable::hpsCanOpenParamTable[ %d ].uwFlags: %04X \r\n", uwIndxCount, hpsCanOpenParamTable[ uwIndxCount ].uwFlags);
+#endif // _debug_traces
+                uwCrsDbgCounter = uwIndxCount ;
+                assert(TRUE) ;
+        	}
+
+        	if ( (hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags & (COMMONPARAMDB_FLAG_HOOK|COMMONPARAMDB_FLAG_VALIDATE|COMMONPARAMDB_FLAG_RESETREQ|COMMONPARAMDB_FLAG_WRLOCKREQ)) == 0)
+        	{
+#if defined(_DEBUG_TRACES)
+                xil_printf("CanOpenComDB::CanOpenComDBCheckTable::hpsCanOpenParamTable[ %d ].hpsComDBEntry->ubFlags: %04X\r\n", uwIndxCount, hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags);
+#endif  // _debug_traces
+                uwCrsDbgCounter = uwIndxCount ;
+                assert(TRUE) ;
+        	}
+#else // _crs_dbg
             assert ( (hpsCanOpenParamTable[ uwIndxCount ].uwFlags & CANOPENCOMDB_F_WRDENYWHENOPER) == 0 );
             assert ( (hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags & \
                     (COMMONPARAMDB_FLAG_HOOK|COMMONPARAMDB_FLAG_VALIDATE|COMMONPARAMDB_FLAG_RESETREQ|COMMONPARAMDB_FLAG_WRLOCKREQ)) == 0);
-/*
-#if (defined(_DEBUG_TRACES) && defined (_CRS_DBG))
-            xil_printf("CanOpenComDB::CanOpenComDBCheckTable::hpsCanOpenParamTable[ %d ].uwFlags: %04X \r\n", uwIndxCount, hpsCanOpenParamTable[ uwIndxCount ].uwFlags);
-            xil_printf("CanOpenComDB::CanOpenComDBCheckTable::hpsCanOpenParamTable[ %d ].hpsComDBEntry->ubFlags: %04X\r\n", uwIndxCount, hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags);
-#endif
-*/
+#endif // _crs_dbg
+
+
         }
 
+#if defined (_CRS_DBG)
+        	if ((hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags&COMMONPARAMDB_FLAG_HOOK) || hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->uwNElements<=0x00FE )
+        	{
+#if defined(_DEBUG_TRACES)
+                xil_printf("CanOpenComDB::CanOpenComDBCheckTable::hpsCanOpenParamTable[ %d ].hpsComDBEntry->ubFlags: %04X\r\n", uwIndxCount, hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags);
+                xil_printf("CanOpenComDB::CanOpenComDBCheckTable::hpsCanOpenParamTable[ %d ].hpsComDBEntry->uwNElements: %04X\r\n", uwIndxCount, hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->uwNElements);
+#endif // _debug_traces
+                uwCrsDbgCounter = uwIndxCount ;
+                assert(TRUE) ;
+        	}
+#else // _crs_dbg
             // Check for array size, as subindex is limited up to 0xFE, ignore for hooks
         assert ((hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags&COMMONPARAMDB_FLAG_HOOK) || \
                 hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->uwNElements<=0x00FE );
+#endif // _crs_dbg
 
             // Check for STRING type, only READ is supported
         if(hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubType==COMMONPARAMDB_TYPE_STRING)
+        {
+#if defined (_CRS_DBG)
+        	if ((hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags&COMMONPARAMDB_FLAG_WR) == 0)
+        	{
+#if defined(_DEBUG_TRACES)
+                xil_printf("CanOpenComDB::CanOpenComDBCheckTable::hpsCanOpenParamTable[ %d ].hpsComDBEntry->ubFlags: %04X\r\n", uwIndxCount, hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags);
+#endif // _debug_traces
+                uwCrsDbgCounter = uwIndxCount ;
+                assert(TRUE) ;
+        	}
+#else // _crs_dbg
             assert ((hpsCanOpenParamTable[ uwIndxCount ].hpsComDBEntry->ubFlags&COMMONPARAMDB_FLAG_WR)==0 );
+#endif // _crs_dbg
+        }
     }
 
         // Check Index Contiguity and Duplicates in the info table

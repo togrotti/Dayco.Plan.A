@@ -144,7 +144,7 @@
 //***************************************************************************
 // Define EtherCAT
 #if !defined(_HW_AXS) // AxN & AxN-DC
-#define CFG_ECAT	1
+#define CFG_ECAT    1
 #else // _hw_axs
 #define CFG_ECAT	0
 #endif

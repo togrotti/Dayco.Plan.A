@@ -38,7 +38,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
 #if defined(_CRS_DBG)
-#if (FALSE) //CRS_DBGDSK
+#if CRS_DBGDSK
 #pragma GCC optimize (0) // crs_dbg
 #else
 #pragma GCC optimize (2)
@@ -137,7 +137,7 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
 #if defined(_CRS_DBG)
     sMh_MotorDataOut.slDspIntSts_D = sMotorHandlerRun.slDspIntSts_D ;
     sMh_MotorDataOut.slDspIntSts_Q = sMotorHandlerRun.slDspIntSts_Q ;
-#endif
+#endif // _crs_dbg
   }
 
     /* check fault from PWM */
@@ -194,7 +194,10 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
     FPGA_REG16_SETBIT(FPGA_PWM_SET, FPGA_PWM_B_ENABLE_HOLD_SIGNALS, 0);
 
       // and return skipping remaining code for timing purpose
-    return TRUE;
+//crs    return TRUE;
+    // avoid current calibration execution
+    sMotorHandlerRun.flags.b.bCurrentCalibrEnable = FALSE ; // crs
+    sMotorHandlerRun.flags.b.bCurrentCalibrRTSum = FALSE ;  // crs
   }
 #if CFG_VMOTOR_READ
   // Analog Scaling for Veffective [0.1V]
@@ -343,9 +346,7 @@ BOOL Mh_MotorDataToFpga8KHz(void)
                  // reset integral status (48bit)
                  FPGA_CPUH_DRAM_WR_SW(FPGAIR_S_KI_D, 0);
                  FPGA_CPUH_DRAM_WR_SW(FPGAIR_S_KI_Q, 0);
-#ifdef _CRS_DBG
-                 FPGA_CPUH_DRAM_WR_SW(FPGAIR_D_KI_Q, 0);
-#endif
+
                  // when DSPStandard the mode (swUsrVdcSet) and the value (swUsrVdcVal) are set in background and applied  only here (enable command rised edge): it is not possibile to change the value @runtime
                  // when DSPAdvanced the mode (swUsrVdcSet) is set at ONLY boot (Mh_MotorDataFromFpgaInit) and the value (swUsrVdcVal) can be changed @8kHz (and it is used FPGAIR_P_VDC_SETVAL instead of FPGAIR_P_VDC_VAL)
                  FPGA_CPUH_DRAM_WR_SW(FPGAIR_P_VDC_SEL, sMotorHandlerRun.swUsrVdcSet); // select if Vdc@1MHz (USRVDC_SET_ADC) or Vdc@8kHz (USRVDC_SET_FIX)
@@ -596,12 +597,12 @@ BOOL Mh_MotorDataToFpga8KHz(void)
   FPGA_SCGEN_ANGLEBASE = *sMh_MotorDataIn.puwElecAngle;
   if(sEm_EncMngrParam.uwMainRelSel==ENCODER_TYPE_REL_BACK_EMF)
   {
-    swAngleIncConst = (SWORD)_sint32_scale_16(4294967,sGlbMotorParameters.uwPoleNumbers);
-    swAngleIncConst = (SWORD)_sint32_scale_16(_sint32_scale_16(*sMh_MotorDataIn.pslFilteredSpeed,1), swAngleIncConst);
+    swAngleIncConst = (SWORD)_sint32_scale_16(4294967, sGlbMotorParameters.uwPoleNumbers); // 2^32 / 4294967 = 1000 poles number
+    swAngleIncConst = (SWORD)_sint32_scale_16(_sint32_scale_16(*sMh_MotorDataIn.pslFilteredSpeed, 1), swAngleIncConst);
   }
   else
-  {
-    swAngleIncConst = _sint16_mpy_16_16(*sMh_MotorDataIn.pswElecSpeed, 524);
+  { // secondo marco il numero corretto NON e' 524, ma 262
+    swAngleIncConst = _sint16_mpy_16_16(*sMh_MotorDataIn.pswElecSpeed, 524); // 524 = 65536 / 125 = (1 electrical turn) / 125uS
   }
   if(swAngleIncConst!=0)
     FPGA_SCGEN_ANGLEINC = swAngleIncConst;
@@ -681,13 +682,19 @@ BOOL Mh_MotorDataToFpga8KHz(void)
 
     FPGA_CPUH_URAM_WR_SW(FPGAIR_IREF_D, sMh_MotorDataOut.sDSPOut.swId);
 
+#if (!defined(_IML_PSU))
     if (sMotorHandlerRun.flags.b.bDSPAdvance)
+#endif // !_iml_psu
     {  // **************** VdcBus management for DSP modulator ****************
 	  if(sMotorHandlerRun.swUsrVdcSet == USRVDC_SET_FIX) // it is set ONLY at boot (Mh_MotorDataFromFpgaInit)
       {  // VdcBus value from fw/plc @8kHz
         if (sMh_PlcAdvancedWorks.swVdcbusSet <= 0)
     	{  // Vdc < 0 not allowed
-    	  sMotorHandlerRun.swUsrVdcVal = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)31457280)) ; // set 48.0V (*65536) as default
+#if defined(_HW_AXS_DAYCO22KW)
+      	  sMotorHandlerRun.swUsrVdcVal = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)31457280)) ; // set 48.0V (*65536) as default
+#else
+    	  sMotorHandlerRun.swUsrVdcVal = (SWORD)(UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK,(SLONG)393216000)) ; // set 600.0V (*65536) as default
+#endif
     	}
     	else
     	{  // update value
@@ -719,11 +726,13 @@ BOOL Mh_MotorDataToFpga8KHz(void)
 	  FPGA_CPUH_URAM_WR_SW(FPGAIR_P_INTSTS_D, sMotorHandlerRun.swDspIntegralVal_D); // FPGAIR_P_INTSTS_VAL_D used only in DspAdvance
 	  FPGA_CPUH_URAM_WR_SW(FPGAIR_P_INTSTS_Q, sMotorHandlerRun.swDspIntegralVal_Q); // FPGAIR_P_INTSTS_VAL_Q used only in DspAdvance
 
+#if (!defined(_IML_PSU))
       // FPGA filter for  Vd, Vq, IdFb, IqFb
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_VD, -sMotorHandlerRun.swVdOut);
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_VQ, -sMotorHandlerRun.swVqOut);
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_ID, -sMotorHandlerRun.swIdFb);
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_IQ, -sMotorHandlerRun.swIqFb);
+#endif
     }
 
     // revert to data flush mode

@@ -45,7 +45,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
 #if defined(_CRS_DBG)
-#if (FALSE) //CRS_DBGDSK
+#if CRS_DBGDSK
 #pragma GCC optimize (0) // crs_dbg
 #else
 #pragma GCC optimize (2)
@@ -272,7 +272,10 @@ const MH_MOTORDATA_PARAM  sMh_MotorDataDefParam =
  
 //***************************************************************************
 // Externals
-
+#if defined(_IML_PSU)
+extern const unsigned char  ILoopImlPsu[];
+extern const unsigned long  ILoopImlPsu_length;
+#else
 extern const unsigned char  ILoopStandard[];
 extern const unsigned long  ILoopStandard_length;
 extern const unsigned char  ILoopAdvanced[];
@@ -285,9 +288,8 @@ extern const unsigned char  ILoopParBr1Adv[];
 extern const unsigned long  ILoopParBr1Adv_length;
 extern const unsigned char  ILoopParBr2[];
 extern const unsigned long  ILoopParBr2_length;
-
 #endif // _hw_dc
-
+#endif // _iml_psu
 //***************************************************************************
 // Locals
 
@@ -623,7 +625,11 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   memset(&sMotorHandlerRun.sPStageStatusSet.b, 0, sizeof(MH_POWERSTAGECONTROL)) ; /* clear status setup */
   sMotorHandlerRun.flags.l = 0l;
 
+#if defined(_IML_PSU)
+  sMotorHandlerRun.flags.b.bDSPAdvance = FALSE ;
+#else
   sMotorHandlerRun.flags.b.bDSPAdvance = bDSPAdvance ; // workaround to use bDSPAdvance in RT
+#endif
 
   sMh_MotorDataOut.sIqLimit.slMin=SLONG_MIN_VALUE;
   sMh_MotorDataOut.sIqLimit.slMax=SLONG_MAX_VALUE;
@@ -1020,7 +1026,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     uwPwmDeadTime = FPGA_PWM_DEADTIME;
 
   /* I and V ratios setup */
-  flRatioI_RMS = flRatioI_PEAK / FLOAT_SQRT_OF_TWO;
+  flRatioI_RMS     = flRatioI_PEAK    / FLOAT_SQRT_OF_TWO ;
   flRatioV_AC_RMS  = flRatioV_DC_PEAK / FLOAT_SQRT_OF_THREE ; // = Vdc / sqrt(3) (necessario per Vd, Vq (?))
   flRatioV_AC_PEAK = flRatioV_DC_PEAK * (FLOAT_SQRT_OF_TWO / 3.0) ;   // = Vdc * (sqrt(2) / (sqrt(3) * sqrt(3))) (necessario per Vu, Vv)
 
@@ -1265,13 +1271,18 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   sAInDef.sCal.uwOffst=uwDCBusOffst;
   sAInDef.sCal.swScale=swDCBusScale/2;  // old ADC has a preshift just for the DCBUS module
 
+#if defined (_IML_PSU)
+  sAInDef.uwDstIntImm=FPGAIR_VDC_I;
+  sAInDef.pvDstExtImm=&sMh_MotorDataOut.swDcBusValueImm;
+#else
   if(bVerifyDSPCustom)
     sAInDef.uwDstIntImm=FPGAIR_VDC_I;
   else
     sAInDef.uwDstIntImm=ANPROC_ADR_DISABLE;
 
-  sAInDef.uwDstIntAvg=FPGAIR_VDC_A;
   sAInDef.pvDstExtImm=NULL;
+#endif
+  sAInDef.uwDstIntAvg=FPGAIR_VDC_A;
   sAInDef.pvDstExtAvg=&sMh_MotorDataOut.swDcBusValue;
 
 #ifndef _HW_DC
@@ -1436,7 +1447,9 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   AnProc_RGOutSet(FPGAIR_RGO_VOUT_V,&sRGODef);
 
 #if defined(_CRS_DBG)
+#if !defined (_IML_PSU)
   if (sMotorHandlerRun.flags.b.bDSPAdvance)
+#endif // ! _iml_psu
   { // Dbg
     sRGODef.ubOpt=ANPROC_OF_DST_LONG;
     sRGODef.flScale=1.0;
@@ -1453,7 +1466,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     sRGODef.pvDst=&sMh_MotorDataOut.swVdcOut_ADC;
     AnProc_RGOutSet(FPGAIR_RGO_VDC_OUTADC,&sRGODef);
   }
-#endif
+#endif // _crs_dbg
 
   // setup standard address for current channels min/max
   SetMinMaxChannels(SETMINMAX_RUNMODE, 0);
@@ -1462,12 +1475,22 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   sMotorHandlerRun.flags.b.bCurrentCalibrFirstRun=TRUE;
   sMotorHandlerRun.flags.b.bCurrentCalibrResetTmr=TRUE;
 
-    // limits: imposto i limiti e le soglie di fault overcurrent ed overvoltage                     
+  // limits: imposto i limiti e le soglie di fault overcurrent ed overvoltage
   sMh_MotorDataOut.sDriveLimit.slOverCurrent = sMotorHandlerRun.slMaxOverCurrent;
-  FPGA_PWM_FLT_CURRLIMIT = UMCONV_CONVERT_32TO16(&sInternal2Fpga_I_RMS, sMh_MotorDataOut.sDriveLimit.slOverCurrent) ;
-
   sMh_MotorDataOut.sDriveLimit.swOverVoltage = sMotorHandlerRun.swMaxOverVoltage = swLocOverVoltage;
-  FPGA_PWM_FLT_DCBUSLIMIT = UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK, (SLONG)sMh_MotorDataOut.sDriveLimit.swOverVoltage<<16);
+#if defined(_CRS_DBG)
+  {
+	  UWORD uwTemp = 0 ;
+	  uwTemp = UMCONV_CONVERT_32TO16(&sInternal2Fpga_I_RMS, sMh_MotorDataOut.sDriveLimit.slOverCurrent) ;
+	  FPGA_PWM_FLT_CURRLIMIT = uwTemp ;
+
+	  uwTemp = UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK, (SLONG)sMh_MotorDataOut.sDriveLimit.swOverVoltage << 16) ;
+	  FPGA_PWM_FLT_DCBUSLIMIT = uwTemp ;
+  }
+#else
+  FPGA_PWM_FLT_CURRLIMIT = UMCONV_CONVERT_32TO16(&sInternal2Fpga_I_RMS, sMh_MotorDataOut.sDriveLimit.slOverCurrent) ;
+  FPGA_PWM_FLT_DCBUSLIMIT = UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK, (SLONG)sMh_MotorDataOut.sDriveLimit.swOverVoltage<<16) ;
+#endif // _crs_dbg
 
   // Setup drive current limit (minimum between drive and motor)
   if((SLONG)(sGlbMotorParameters.flCurrentPeak * 10000.0) < sMh_MotorDataOut.sDriveLimit.slCurrentLimit)
@@ -1578,6 +1601,12 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   }
   else
   {	// **************** FW Standard  DSP ****************
+#if defined(_IML_PSU)
+	// *************** FW DSP (IML PSU) ***************
+    sMh_MotorDataOut.ubDSPIsCustom=0;
+ 	assert(DSPHLoad(ILoopImlPsu, (UWORD)ILoopImlPsu_length, FPGAIR_IFB_AW));
+	// *************** FW DSP (IML PSU) ***************
+#else
 #ifdef _HW_DC
     if(sMotorHandlerRun.flags.b.bParallelBr1Mode)
     {
@@ -1614,6 +1643,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     	 assert(DSPHLoad(ILoopStandard, (UWORD)ILoopStandard_length, FPGAIR_IFB_AW));
       }
     }
+#endif // _iml_psu
   }
 
   {
@@ -1642,7 +1672,9 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     FPGA_CPUH_DRAM_WR_SW(FPGAIR_C_1D125,  0x0106); // = 262   = 32768 / 125
 
     // set user Vdc setup feature (only at boot) and initialize user set Vdcbus
+#if (!defined(_IML_PSU))
     if (sMotorHandlerRun.flags.b.bDSPAdvance)
+#endif // !_iml_psu
     {
       if(sMh_PlcAdvancedWorks.flags.b.bUserVdcBusSet)
         sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_FIX;
@@ -1665,11 +1697,13 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
       sMotorHandlerRun.swDspIntegralVal_D = 0 ;
       sMotorHandlerRun.swDspIntegralVal_Q = 0 ;
     }
+#if (!defined(_IML_PSU))
     else
     {
       sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_ADC;
       sMotorHandlerRun.swUsrVdcVal = 0;
     }
+#endif // !_iml_psu
   }
 
   // re-enable DSPH
@@ -2728,6 +2762,7 @@ static void MotorDataBkGd(void)
   // refresh propagation delays
   SetPDDelays(sMh_PlcAdvancedWorks.uwCurrPDTime, sMh_PlcAdvancedWorks.uwVoltPDTime);
 
+#if (!defined(_IML_PSU))
   if (!sMotorHandlerRun.flags.b.bDSPAdvance)
   { // refresh user Vdc setup
     if(sMh_PlcAdvancedWorks.flags.b.bUserVdcBusSet)
@@ -2743,6 +2778,7 @@ static void MotorDataBkGd(void)
       sMotorHandlerRun.swUsrVdcVal = 0;
     }
   }
+#endif // !_iml_psu
 }
 
 //***************************************************************************
@@ -2918,7 +2954,7 @@ void Mh_ForceCommandEx(UWORD uwCmd, ULONG ulParam)
            break;
 #if CFG_PWM_SHIFT
         case MH_CMD_PWM_SHIFT_SETVALUE:
-            // ulParam_LO = PWM shift for bridge 1; ulParam_HI = PWM shift for bridge 2
+          {   // ulParam_LO = PWM shift for bridge 1; ulParam_HI = PWM shift for bridge 2
             UWORD uwPwmShift2Use_1, uwPwmShift2Use_2 ;
           
             if (sMotorHandlerRun.flags.b.bParallelBr1Mode)
@@ -2938,7 +2974,7 @@ void Mh_ForceCommandEx(UWORD uwCmd, ULONG ulParam)
             // apply the shift to the FPGA 
             FPGA_PWM_SHIFT_1_DELAY = uwPwmShift2Use_1 ;
             FPGA_PWM_SHIFT_2_DELAY = uwPwmShift2Use_2 ;
-
+          }
             break;    
 #endif // cfg_pwm_shift
     }

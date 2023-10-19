@@ -2,11 +2,11 @@
 set tcl_path      [file dirname [info script]]
 
 # Configure workspace (should be outside of the Git mapping)
-set workspace     ${tcl_path}/../zynq_axn_7014
+set workspace     ${tcl_path}/../zynq_axn_7010
 
 # Set platform and project names
-set hw_project {"zynq_axn_7z014i2"}
-set xsa_file   {"./xsa/zynq_axn_7z014i2.xsa"}
+set hw_project {"zynq_axn_7z010i1"                 "zynq_axn_7z010i2"    }
+set xsa_file   {"./xsa/zynq_axn_7z010i1.xsa" "./xsa/zynq_axn_7z010i2.xsa"}
 
 set app_project   "axn"
 
