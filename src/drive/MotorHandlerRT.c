@@ -682,9 +682,9 @@ BOOL Mh_MotorDataToFpga8KHz(void)
 
     FPGA_CPUH_URAM_WR_SW(FPGAIR_IREF_D, sMh_MotorDataOut.sDSPOut.swId);
 
-#if (!defined(_IML_PSU))
+#if (!defined(_HW_AXS_IML_PSU))
     if (sMotorHandlerRun.flags.b.bDSPAdvance)
-#endif // !_iml_psu
+#endif // !_hw_axs_iml_psu
     {  // **************** VdcBus management for DSP modulator ****************
 	  if(sMotorHandlerRun.swUsrVdcSet == USRVDC_SET_FIX) // it is set ONLY at boot (Mh_MotorDataFromFpgaInit)
       {  // VdcBus value from fw/plc @8kHz
@@ -726,13 +726,13 @@ BOOL Mh_MotorDataToFpga8KHz(void)
 	  FPGA_CPUH_URAM_WR_SW(FPGAIR_P_INTSTS_D, sMotorHandlerRun.swDspIntegralVal_D); // FPGAIR_P_INTSTS_VAL_D used only in DspAdvance
 	  FPGA_CPUH_URAM_WR_SW(FPGAIR_P_INTSTS_Q, sMotorHandlerRun.swDspIntegralVal_Q); // FPGAIR_P_INTSTS_VAL_Q used only in DspAdvance
 
-#if (!defined(_IML_PSU))
+#if (!defined(_HW_AXS_IML_PSU))
       // FPGA filter for  Vd, Vq, IdFb, IqFb
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_VD, -sMotorHandlerRun.swVdOut);
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_VQ, -sMotorHandlerRun.swVqOut);
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_ID, -sMotorHandlerRun.swIdFb);
       FPGA_CPUH_URAM_WR_SW(FPGAIR_P_CORR_IQ, -sMotorHandlerRun.swIqFb);
-#endif
+#endif // !_hw_axs_iml_psu
     }
 
     // revert to data flush mode

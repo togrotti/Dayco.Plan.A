@@ -272,7 +272,7 @@ const MH_MOTORDATA_PARAM  sMh_MotorDataDefParam =
  
 //***************************************************************************
 // Externals
-#if defined(_IML_PSU)
+#if defined(_HW_AXS_IML_PSU)
 extern const unsigned char  ILoopImlPsu[];
 extern const unsigned long  ILoopImlPsu_length;
 #else
@@ -289,7 +289,7 @@ extern const unsigned long  ILoopParBr1Adv_length;
 extern const unsigned char  ILoopParBr2[];
 extern const unsigned long  ILoopParBr2_length;
 #endif // _hw_dc
-#endif // _iml_psu
+#endif // _hw_axs_iml_psu
 //***************************************************************************
 // Locals
 
@@ -625,11 +625,11 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   memset(&sMotorHandlerRun.sPStageStatusSet.b, 0, sizeof(MH_POWERSTAGECONTROL)) ; /* clear status setup */
   sMotorHandlerRun.flags.l = 0l;
 
-#if defined(_IML_PSU)
+#if defined(_HW_AXS_IML_PSU)
   sMotorHandlerRun.flags.b.bDSPAdvance = FALSE ;
 #else
   sMotorHandlerRun.flags.b.bDSPAdvance = bDSPAdvance ; // workaround to use bDSPAdvance in RT
-#endif
+#endif // _hw_axs_iml_psu
 
   sMh_MotorDataOut.sIqLimit.slMin=SLONG_MIN_VALUE;
   sMh_MotorDataOut.sIqLimit.slMax=SLONG_MAX_VALUE;
@@ -1271,7 +1271,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   sAInDef.sCal.uwOffst=uwDCBusOffst;
   sAInDef.sCal.swScale=swDCBusScale/2;  // old ADC has a preshift just for the DCBUS module
 
-#if defined (_IML_PSU)
+#if defined (_HW_AXS_IML_PSU)
   sAInDef.uwDstIntImm=FPGAIR_VDC_I;
   sAInDef.pvDstExtImm=&sMh_MotorDataOut.swDcBusValueImm;
 #else
@@ -1281,7 +1281,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     sAInDef.uwDstIntImm=ANPROC_ADR_DISABLE;
 
   sAInDef.pvDstExtImm=NULL;
-#endif
+#endif // _hw_axs_iml_psu
   sAInDef.uwDstIntAvg=FPGAIR_VDC_A;
   sAInDef.pvDstExtAvg=&sMh_MotorDataOut.swDcBusValue;
 
@@ -1447,9 +1447,9 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   AnProc_RGOutSet(FPGAIR_RGO_VOUT_V,&sRGODef);
 
 #if defined(_CRS_DBG)
-#if !defined (_IML_PSU)
+#if !defined (_HW_AXS_IML_PSU)
   if (sMotorHandlerRun.flags.b.bDSPAdvance)
-#endif // ! _iml_psu
+#endif // !_hw_axs_iml_psu
   { // Dbg
     sRGODef.ubOpt=ANPROC_OF_DST_LONG;
     sRGODef.flScale=1.0;
@@ -1601,7 +1601,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   }
   else
   {	// **************** FW Standard  DSP ****************
-#if defined(_IML_PSU)
+#if defined(_HW_AXS_IML_PSU)
 	// *************** FW DSP (IML PSU) ***************
     sMh_MotorDataOut.ubDSPIsCustom=0;
  	assert(DSPHLoad(ILoopImlPsu, (UWORD)ILoopImlPsu_length, FPGAIR_IFB_AW));
@@ -1643,7 +1643,7 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     	 assert(DSPHLoad(ILoopStandard, (UWORD)ILoopStandard_length, FPGAIR_IFB_AW));
       }
     }
-#endif // _iml_psu
+#endif // _hw_axs_iml_psu
   }
 
   {
@@ -1672,9 +1672,9 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
     FPGA_CPUH_DRAM_WR_SW(FPGAIR_C_1D125,  0x0106); // = 262   = 32768 / 125
 
     // set user Vdc setup feature (only at boot) and initialize user set Vdcbus
-#if (!defined(_IML_PSU))
+#if (!defined(_HW_AXS_IML_PSU))
     if (sMotorHandlerRun.flags.b.bDSPAdvance)
-#endif // !_iml_psu
+#endif // !_hw_axs_iml_psu
     {
       if(sMh_PlcAdvancedWorks.flags.b.bUserVdcBusSet)
         sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_FIX;
@@ -1697,13 +1697,13 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
       sMotorHandlerRun.swDspIntegralVal_D = 0 ;
       sMotorHandlerRun.swDspIntegralVal_Q = 0 ;
     }
-#if (!defined(_IML_PSU))
+#if (!defined(_HW_AXS_IML_PSU))
     else
     {
       sMotorHandlerRun.swUsrVdcSet = USRVDC_SET_ADC;
       sMotorHandlerRun.swUsrVdcVal = 0;
     }
-#endif // !_iml_psu
+#endif // !_hw_axs_iml_psu
   }
 
   // re-enable DSPH
@@ -2762,7 +2762,7 @@ static void MotorDataBkGd(void)
   // refresh propagation delays
   SetPDDelays(sMh_PlcAdvancedWorks.uwCurrPDTime, sMh_PlcAdvancedWorks.uwVoltPDTime);
 
-#if (!defined(_IML_PSU))
+#if (!defined(_HW_AXS_IML_PSU))
   if (!sMotorHandlerRun.flags.b.bDSPAdvance)
   { // refresh user Vdc setup
     if(sMh_PlcAdvancedWorks.flags.b.bUserVdcBusSet)
@@ -2778,7 +2778,7 @@ static void MotorDataBkGd(void)
       sMotorHandlerRun.swUsrVdcVal = 0;
     }
   }
-#endif // !_iml_psu
+#endif // !_hw_axs_iml_psu
 }
 
 //***************************************************************************

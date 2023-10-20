@@ -228,9 +228,9 @@ typedef struct {
   SLONG slBr2IwFb_Imm ;
 #endif
 
-#if defined (_IML_PSU)
+#if defined (_HW_AXS_IML_PSU)
   SWORD swDcBusValueImm;
-#endif // _iml_psu
+#endif // _hw_axs_iml_psu
 
 #if defined(_CRS_DBG)
   SLONG slDspIntSts_D ; // Dbg
