@@ -329,7 +329,9 @@ static void setdefaults(void)
     sDflx_In.pswActualVdc               = &sTm_ThModOut.sOutValue.swDcBusAvrg ;
     sDflx_In.pswActualSpd               = &psFbEncoder->swElecSpeed ;
     sDflx_In.psPowerStageStatus         = &sMh_MotorDataOut.sPowerStageSts ;
-
+#if CFG_DFLX_VMOTOR
+    sDflx_In.pswActualVMotor            = &sMh_MotorDataOut.swVMotor ;
+#endif
         // Thermal model
     sTm_ThModIn.psMotorData             = &sMh_MotorDataOut ;
     sTm_ThModIn.psMotorHandlers         = &sMh_MotorHandlers ;

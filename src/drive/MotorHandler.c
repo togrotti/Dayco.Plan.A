@@ -1603,19 +1603,19 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
       if(sMotorHandlerRun.flags.b.bParallelBr2Mode)
       { // ********** FW Standard DSP  (3 bridges) **********
         sMh_MotorDataOut.ubDSPIsCustom=0;
-        assert(DSPHLoad(ILoopParBr2, (UWORD)ILoopParBr2_length, FPGAIR_IFB_AW));
+        assert(DSPHLoad(ILoopParBr2, (UWORD)ILoopParBr2_length, FPGAIR_IFB_BR2_AW));
       }
       else
       { // *************** FW DSP (2 bridges) ***************
         if(sMotorHandlerRun.flags.b.bDSPAdvance)
         {  // ****************** Advanced DSP ******************
            sMh_MotorDataOut.ubDSPIsCustom=2;
-           assert(DSPHLoad(ILoopParBr1Adv, (UWORD)ILoopParBr1Adv_length, FPGAIR_IFB_AW));
+           assert(DSPHLoad(ILoopParBr1Adv, (UWORD)ILoopParBr1Adv_length, FPGAIR_IFB_BR1_AW));
         }
         else
         { // ****************** Standard DSP ******************
           sMh_MotorDataOut.ubDSPIsCustom=0;
-          assert(DSPHLoad(ILoopParBr1, (UWORD)ILoopParBr1_length, FPGAIR_IFB_AW));
+          assert(DSPHLoad(ILoopParBr1, (UWORD)ILoopParBr1_length, FPGAIR_IFB_BR1_AW));
         }
       }
     }
@@ -4147,3 +4147,4 @@ BOOL Mh_PlcDSPConfig(BOOL bAdvance)
 
     return TRUE;
 }
+

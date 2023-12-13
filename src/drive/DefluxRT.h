@@ -61,4 +61,20 @@ extern DFLX_DATA sDlfxData[2];
 
 extern DFLX_DATA * psDflxData;
 
+#if CFG_DFLX_VMOTOR
+typedef struct
+{
+	// parameters needed by PI
+	UWORD uwPiEnableSpeed ;
+	FLOAT flMargin ;
+	FLOAT flPiManualRefVal ;
+	FLOAT flPiLimitMin ;
+	FLOAT flPiLimitMax ;
+	FLOAT flPiKp ;
+	FLOAT flPiKi ;
+} DFLX_VMOTOR ;
+
+extern DFLX_VMOTOR  sDflxVMotor8kHz ;
+extern DFLX_VMOTOR *psDflxVMotor ;
+#endif // crs_dflx_vmotor
 #endif

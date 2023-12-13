@@ -43,6 +43,7 @@
 [REGISTER]  T_VOUT_Q    0x148  // output of I_PI_Q loop (crs for DspAdvanced)
 [REGISTER]  T_FLTIFB_ID 0x150  // filtered ID @1MHz (crs for DspAdvanced)
 [REGISTER]  T_FLTIFB_IQ 0x158  // filtered IQ @1MHz (crs for DspAdvanced)
+[REGISTER]  D_KI_Q      0x178  // Dbg
 
 [INPUT]     P_KI         0x10 
 [INPUT]     P_KP         0x11 

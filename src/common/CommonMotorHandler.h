@@ -237,6 +237,9 @@ typedef struct {
   SLONG slDspIntSts_Q ; // Dbg
   SWORD swVdcOut_ADC  ; // Dbg
 #endif
+
+  SWORD swVMotor;
+
 } MH_MOTORDATA_OUT ;
 
 //****************************************************************************

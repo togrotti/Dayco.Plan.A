@@ -22,6 +22,7 @@
 // Versioning, provided both as number and as string
 
 #ifndef _HW_DC
+
 #ifndef _HW_CT
 #define IDENT_VERSION_MAJOR                 1   // #%m
 #define IDENT_VERSION_MINOR                 16  // #%n
@@ -34,15 +35,25 @@
 
 #define IDENT_SVERSION_MAJOR                "3"
 #define IDENT_SVERSION_MINOR                "4"
-#endif
+#endif // !_hw_ct
 
 #else
-#define IDENT_VERSION_MAJOR                 2   // #%r
-#define IDENT_VERSION_MINOR                 5   // #%s
 
-#define IDENT_SVERSION_MAJOR                "2"
-#define IDENT_SVERSION_MINOR                "5"
-#endif
+#if defined(_HW_AXS) &&  defined(_HW_AXS_DAYCO22KW)
+	#define IDENT_VERSION_MAJOR                 10   // #%r
+	#define IDENT_VERSION_MINOR                 0   // #%s
+
+	#define IDENT_SVERSION_MAJOR                "10"
+	#define IDENT_SVERSION_MINOR                "0"
+#else
+	#define IDENT_VERSION_MAJOR                 2   // #%r
+	#define IDENT_VERSION_MINOR                 5   // #%s
+
+	#define IDENT_SVERSION_MAJOR                "2"
+	#define IDENT_SVERSION_MINOR                "5"
+#endif // _hw_axs && _hw_axs_dayco22kw
+
+#endif // !_hw_dc
 
 //***************************************************************************
 // Build number, provided both as number and as string

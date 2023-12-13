@@ -669,7 +669,8 @@ UWORD EndatInitializeEncoder(ULONG dwBaseAddress, UWORD uwClockFreq, ENDAT_WORKS
     uwDistingRevolut = (UWORD)( ulResult & 0x0000ffff );
     
         // Assuming Single Turn
-    uwStepPerRevolutionBits = uwTransferFormat; uwRevolutionNumbersBits = 0;
+    uwStepPerRevolutionBits = uwTransferFormat;
+    uwRevolutionNumbersBits = 0;
     
         // EnDat 2.2 encoder with more than 65535 revolutions
     if(uwDistingRevolut == 65535 && bProt22)

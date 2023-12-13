@@ -191,24 +191,24 @@ typedef struct {
     // Flags
     union {
         struct {
-            UWORD bUseOPLTurns : 1 ;      // Manager: flag per imporre n. giri elettrici OpenLoop = n. giri Emf
-            UWORD bEmfSpeedMeasured : 1 ; // Manager: flag per il rientro al volo
+            UWORD bUseOPLTurns         : 1 ; // Manager: flag per imporre n. giri elettrici OpenLoop = n. giri Emf
+            UWORD bEmfSpeedMeasured    : 1 ; // Manager: flag per il rientro al volo
             UWORD bKtOneSecondTimerSet : 1 ; // Timer per la valutazione del Kt
-            UWORD bDummy: 2 ;
-            UWORD bOpenLoopOnly : 1 ; // flag to work in openloop only
-            UWORD bRotorZeroFound : 1;
-            UWORD bHookInTransition : 1;
-            UWORD bNegativeSign : 1 ;
+            UWORD bDummy               : 2 ;
+            UWORD bOpenLoopOnly        : 1 ; // flag to work in openloop only
+            UWORD bRotorZeroFound      : 1 ;
+            UWORD bHookInTransition    : 1 ;
+            UWORD bNegativeSign        : 1 ;
         } b ;
         UWORD w ;
     } flags ; 
 
     union {
         struct {
-            UWORD bAntiGlitch : 1 ;
-            UWORD bSyncLost : 1 ;
+            UWORD bAntiGlitch         : 1 ;
+            UWORD bSyncLost           : 1 ;
             UWORD bInvalidMagicNumber : 1 ;
-            UWORD bKtOutOfRange : 1 ;
+            UWORD bKtOutOfRange       : 1 ;
         } b ;
         UWORD w ;
     } sErrorSent ;

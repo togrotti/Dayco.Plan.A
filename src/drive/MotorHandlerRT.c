@@ -199,34 +199,24 @@ BOOL Mh_MotorDataFromFpga8KHz(void)
     sMotorHandlerRun.flags.b.bCurrentCalibrEnable = FALSE ; // crs
     sMotorHandlerRun.flags.b.bCurrentCalibrRTSum = FALSE ;  // crs
   }
-#if CFG_VMOTOR_READ
-  // Analog Scaling for Veffective [0.1V]
-#if (TRUE)
-  /*
-   * NOTE: 20231006:
-   * Voltage are integrated by FPGA and dead time are considered
-   */
-  sMh_MotorDataOut.swVuEffective = (SWORD)((SWORD)FPGA_VEST_U * sMotorHandlerRun.flRatioV_DC_PEAK) ;
-  sMh_MotorDataOut.swVvEffective = (SWORD)((SWORD)FPGA_VEST_V * sMotorHandlerRun.flRatioV_DC_PEAK) ;
-  sMh_MotorDataOut.swVwEffective = (SWORD)((SWORD)FPGA_VEST_W * sMotorHandlerRun.flRatioV_DC_PEAK) ;
-#else
-  /*
-   * NOTE 20230704:
-   * 	DC Bus voltage in FPGA is fixed to value 2048d. This means
-   * 	that here we need to divide by 2000 (to normalize the estimation)
-   * 	and to multiply for current DC Bus value (unit is 0.1V).
-   */
-  sMh_MotorDataOut.swVuEffective = (SWORD)((FLOAT)sMh_MotorDataOut.swDcBusValue * (((SWORD)FPGA_VEST_U) / 2000.0F));
-  sMh_MotorDataOut.swVvEffective = (SWORD)((FLOAT)sMh_MotorDataOut.swDcBusValue * (((SWORD)FPGA_VEST_V) / 2000.0F));
-  sMh_MotorDataOut.swVwEffective = (SWORD)((FLOAT)sMh_MotorDataOut.swDcBusValue * (((SWORD)FPGA_VEST_W) / 2000.0F));
-#endif // true
-#endif // cfg_vmotor_read
 
   if (sMotorHandlerRun.flags.b.bDSPAdvance)
   {  // Vd and Vq filtered by DSP: conversion from FPGA unit to internal unit
     sMh_MotorDataOut.swVdOut = (SWORD)((FLOAT)sMotorHandlerRun.swVdOut * sMotorHandlerRun.flRatioV_DC_PEAK) ;
     sMh_MotorDataOut.swVqOut = (SWORD)((FLOAT)sMotorHandlerRun.swVqOut * sMotorHandlerRun.flRatioV_DC_PEAK) ;
   }
+
+#if CFG_VMOTOR_READ
+  // Analog Scaling for Veffective [0.1V]
+  // Voltage are integrated by FPGA and dead time are considered
+  sMh_MotorDataOut.swVuEffective = (SWORD)((SWORD)FPGA_VEST_U * sMotorHandlerRun.flRatioV_DC_PEAK) ;
+  sMh_MotorDataOut.swVvEffective = (SWORD)((SWORD)FPGA_VEST_V * sMotorHandlerRun.flRatioV_DC_PEAK) ;
+  sMh_MotorDataOut.swVwEffective = (SWORD)((SWORD)FPGA_VEST_W * sMotorHandlerRun.flRatioV_DC_PEAK) ;
+  // calculate Vmotor rms
+  sMh_MotorDataOut.swVMotor = Mh_Vmotor_rms(sMh_MotorDataOut.swVuEffective, sMh_MotorDataOut.swVvEffective, sMh_MotorDataOut.swVwEffective) ;
+#else
+  sMh_MotorDataOut.swVMotor = Mh_Vmotor_rms(sMh_MotorDataOut.swVdOut, sMh_MotorDataOut.swVqOut, 0) ;
+#endif // cfg_vmotor_read
 
   sMh_MotorDataOut.swVuEstimated = sMh_MotorDataOut.swVuOut;
   sMh_MotorDataOut.swVvEstimated = sMh_MotorDataOut.swVvOut;
@@ -346,7 +336,9 @@ BOOL Mh_MotorDataToFpga8KHz(void)
                  // reset integral status (48bit)
                  FPGA_CPUH_DRAM_WR_SW(FPGAIR_S_KI_D, 0);
                  FPGA_CPUH_DRAM_WR_SW(FPGAIR_S_KI_Q, 0);
-
+#ifdef _CRS_DBG
+                 FPGA_CPUH_DRAM_WR_SW(FPGAIR_D_KI_Q, 0);
+#endif
                  // when DSPStandard the mode (swUsrVdcSet) and the value (swUsrVdcVal) are set in background and applied  only here (enable command rised edge): it is not possibile to change the value @runtime
                  // when DSPAdvanced the mode (swUsrVdcSet) is set at ONLY boot (Mh_MotorDataFromFpgaInit) and the value (swUsrVdcVal) can be changed @8kHz (and it is used FPGAIR_P_VDC_SETVAL instead of FPGAIR_P_VDC_VAL)
                  FPGA_CPUH_DRAM_WR_SW(FPGAIR_P_VDC_SEL, sMotorHandlerRun.swUsrVdcSet); // select if Vdc@1MHz (USRVDC_SET_ADC) or Vdc@8kHz (USRVDC_SET_FIX)
@@ -786,4 +778,35 @@ void Mh_PlcDSPHalt(void)
 void Mh_PlcDSPResume(void)
 {
     FPGA_DSPH_SET_HALT = FALSE;
+}
+
+//***************************************************************************
+// VMotor on V motor phase
+SWORD Mh_Vmotor_rms(SWORD swVu, SWORD swVv, SWORD swVw)
+{
+    SWORD swVMotorImm ;
+#if CFG_VMOTOR_READ
+    /* ########### VMotor on VmotorPhase ########### */
+    SWORD swVuv, swVvw, swAlfa, swBeta ;
+
+    /* calculate linked voltage */
+    swVuv = swVu - swVv ;
+    swVvw = swVv - swVw ;
+
+    /* RMS@8kHz and then filter */
+    swAlfa = abs(swVuv) ;
+    swBeta = abs((SWORD)((((SLONG)swVuv + 2 * (SLONG)swVvw) * 18918) / 32768)) ; /* Beta = (Vuv + 2Vvw) / SQRT(3) */
+
+    /* SQRT((Alfa^2 + Beta^2) / 2) */
+    /* to get RMS used RootOfSquareSum16 * 0.607252935 */
+    /* 14070 = 32768 * (0.607252935 / SQRT(2)) */
+    swVMotorImm = (SWORD)(14070 * (ULONG)(RootOfSquareSum16(swAlfa, swBeta)) / 32768) ; /* 1e-1V */
+#else
+    /* ########### VMotor on Vd and Vq ########### */
+    /* SQRT((Vd^2+Vq^2)/3) */
+    /* to get RMS used RootOfSquareSum16 * 0.607252935 */
+    /* 11488 / 32768 = 0.3505859375 = 0.607252935 / SQRT(3.0) */
+    swVMotorImm = (SWORD)(11488 * (ULONG)(RootOfSquareSum16(abs(swVu), abs(swVv))) / 32768) ;
+#endif
+    return swVMotorImm ;
 }

@@ -10,9 +10,6 @@
 /*               (extension of MotorHandler)                                */
 /*                                                                          */
 /****************************************************************************/
-// Compiler Option
-#pragma GCC optimize (2)
-
 #include <math.h>
 #include <stdlib.h>
 #include "system\SysAppGlobals.h"
@@ -23,6 +20,17 @@
 #include "drive\Deflux.h"
 #include "drive\DefluxRT.h"
 
+/////////////////////////////////////////////////////////////////////////////
+// Compiler Option
+#if defined(_CRS_DBG)
+#if (FALSE) /* CRS_DBGDSK */
+#pragma GCC optimize (0) // crs_dbg
+#else
+#pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
 //***************************************************************************
 // Global
 DFLX_IN     sDflx_In ;
@@ -39,6 +47,23 @@ const DFLX_PARAM sDflx_DefParam =
   0ul,    // MaxSpeed
   950,    // fattore di sicurezza
   0,      // fix Vdcbus, se zero usa lettura VdcBus
+#if CFG_DFLX_VMOTOR
+  0.0, 	  // flPiManualRefVal
+  1.0,    // flMargin
+  0.0,    // flPiKi
+  0.0,    // flPiKp
+  0.0,    // flPiLimitMax
+  0.0,    // flPiLimitMin
+  314.0,  // flPiEnableSpeed
+  1,      // bDefluxOnly_Matrix
+  0,      // bDefluxOnly_VmotorPi
+  0,      // bDummy_0
+  0,      // bDummy_1
+  0,      // bDummy_2
+  0,      // bDummy_3
+  0,      // bDummy_4
+  0       // bDummy_5
+#endif
 } ;
 
 //***************************************************************************
@@ -53,6 +78,12 @@ typedef struct
     // DrivePeakCurrent e' il valore piu' basso tra Picco Azionamento e Picco Motore (init)
     SWORD   swDrivePeakCurrentShift ;
     SWORD   swDrivePeakCurrentMax ; 
+    UBYTE   ubOnlyMatrix ;
+    UBYTE   ubOnlyVMotor ;
+
+#if CFG_DFLX_VMOTOR
+    FLOAT   flPiEnableSpeed ;
+#endif
 } DFLX_RUNTIME ;
 #ifdef _INFINEON_
 static DFLX_RUNTIME huge sDflxRun ;
@@ -71,23 +102,63 @@ void DflxInit(SLONG slDrivePeakCurrent)
     FLOAT flDrivePeakCurrent ;
     SLONG slPeakCurrent ;
 
-    // DrivePeakCurrent e' il valore piu' basso tra picco azionamento e picco motore
-    flDrivePeakCurrent = (FLOAT)slDrivePeakCurrent / 10000.0 ; // Arms
+    // DrivePeakCurrent is the lower between drive and motor peak current
+    flDrivePeakCurrent = (FLOAT)slDrivePeakCurrent / ARMS2IU_FLOAT ; // Arms
 
     if (flDrivePeakCurrent > sGlbMotorParameters.flCurrentPeak)
         sDflxRun.flDrivePeakCurrent = sGlbMotorParameters.flCurrentPeak ;
     else
         sDflxRun.flDrivePeakCurrent = flDrivePeakCurrent ;
 
-    // ottimizzazione codice
-    slPeakCurrent = (SLONG)(sDflxRun.flDrivePeakCurrent * 10000.0) ; // i.u. 
+    // code optimization
+    slPeakCurrent = (SLONG)(sDflxRun.flDrivePeakCurrent * ARMS2IU_FLOAT) ; // i.u.
     sDflxRun.swDrivePeakCurrentShift = _ilog2((ULONG)slPeakCurrent / 32768) ;
     sDflxRun.swDrivePeakCurrentMax   = (SWORD)(slPeakCurrent >> sDflxRun.swDrivePeakCurrentShift) ;
 
     sDflx_Out.flags.b.bDefluxActive = FALSE ;
     sDflx_Out.flags.b.bMaxSpeedReachable = FALSE ;
+	
+    sDflx_Out.flags.b.bDefluxActive_Matrix = TRUE ;
 
     LiveParametersCheck();
+
+    sDflx_Out.slDflxId = 0 ;
+	sDflx_Out.slDflxId_Matrix = 0 ;
+
+#if CFG_DFLX_VMOTOR
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // for the moment both deflux methods together are not allowed
+    if ((BOOL)sDflx_Param.bDefluxOnly_Matrix)
+    {
+    	sDflx_Param.bDefluxOnly_VmotorPi = FALSE ;
+    }
+    else if ((BOOL)sDflx_Param.bDefluxOnly_VmotorPi)
+    {
+    	sDflx_Param.bDefluxOnly_Matrix = FALSE ;
+    }
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    sDflx_Out.flags.b.bDefluxOnly_Matrix   = (BOOL)sDflx_Param.bDefluxOnly_Matrix ;
+    sDflx_Out.flags.b.bDefluxOnly_VmotorPi = (BOOL)sDflx_Param.bDefluxOnly_VmotorPi ;
+
+    sDflx_Out.flags.b.bDefluxActive_VmotorPi = FALSE ;
+    sDflx_Out.flags.b.bVmotorPiLimitActive = FALSE ;
+
+    sDflx_Out.flVdcBus = 0.0 ;
+    sDflx_Out.flVMotorMax = 0.0 ;
+    sDflx_Out.flPiRef = 0.0 ;
+    sDflx_Out.flPiErr = 0.0 ;
+    sDflx_Out.flPiIntegral = 0.0 ;
+    sDflx_Out.flPiProportional = 0.0 ;
+    sDflx_Out.flPiOut = 0.0 ;
+    sDflx_Out.sPiIqLimit.slMax =  slPeakCurrent ; // SLONG_MAX_VALUE ;
+    sDflx_Out.sPiIqLimit.slMin = -sDflx_Out.sPiIqLimit.slMax ;
+	sDflx_Out.slDflxId_VmotorPi = 0 ;
+#else
+    sDflx_Out.flags.b.bDefluxOnly_Matrix = TRUE ;
+#endif
 }
 
 //***************************************************************************
@@ -95,7 +166,7 @@ void DflxInit(SLONG slDrivePeakCurrent)
 static BOOL LiveParametersCheck(void)
 {
     // ----------------------------------------------------------------
-    // cambio runtime di Induttanza diretta e SpeedMax
+	//runtime change of direct inductance and speedmax
 
     if (sGlbMotorParameters.flDirectInductance <= 0.0) 
         sDflx_Out.flDirectInductance = sGlbMotorParameters.flInductance ;
@@ -106,6 +177,62 @@ static BOOL LiveParametersCheck(void)
         sDflx_Out.slDflxSpdMax = (SLONG)(sGlbMotorParameters.flSpeedNominal * SPEED_RADS_K_CONVERSION) ;
     else
         sDflx_Out.slDflxSpdMax = sDflx_Param.slDflxSpdMax;
+
+#if CFG_DFLX_VMOTOR
+    // ***********
+	if ((sDflx_Param.flMargin <= 0.0) || (sDflx_Param.flMargin > 1.0))
+		sDflx_Param.flMargin = 1.0 ;
+
+	if (sDflxVMotor8kHz.flMargin != sDflx_Param.flMargin)
+		sDflxVMotor8kHz.flMargin  = sDflx_Param.flMargin ;
+
+    // ***********
+	if (sDflx_Param.flPiManualRefVal < 0.0)
+		sDflx_Param.flPiManualRefVal  = sDflx_Out.flVdcBus * sDflxVMotor8kHz.flMargin / FLOAT_SQRT_OF_TWO ; ;
+
+	if (sDflxVMotor8kHz.flPiManualRefVal != sDflx_Param.flPiManualRefVal)
+		sDflxVMotor8kHz.flPiManualRefVal  = sDflx_Param.flPiManualRefVal ;
+
+    // ***********
+	if (sDflx_Param.flPiKi < 0.0)
+		sDflx_Param.flPiKi = 0.0 ;
+
+	if (sDflxVMotor8kHz.flPiKi != sDflx_Param.flPiKi)
+		sDflxVMotor8kHz.flPiKi  = sDflx_Param.flPiKi ;
+
+    // ***********
+	if (sDflx_Param.flPiKp < 0.0)
+		sDflx_Param.flPiKp = 0.0 ;
+
+	if (sDflxVMotor8kHz.flPiKp != sDflx_Param.flPiKp)
+		sDflxVMotor8kHz.flPiKp  = sDflx_Param.flPiKp ;
+
+    // ***********
+	if (sDflx_Param.flPiLimitMax < 0.0)
+		sDflx_Param.flPiLimitMax = 0.0 ;
+
+	if (sDflxVMotor8kHz.flPiLimitMax != sDflx_Param.flPiLimitMax)
+		sDflxVMotor8kHz.flPiLimitMax  = sDflx_Param.flPiLimitMax ;
+
+    // ***********
+	if (sDflx_Param.flPiLimitMin > 0.0)
+		sDflx_Param.flPiLimitMin = 0.0 ;
+
+	if (sDflxVMotor8kHz.flPiLimitMin != sDflx_Param.flPiLimitMin)
+		sDflxVMotor8kHz.flPiLimitMin  = sDflx_Param.flPiLimitMin ;
+
+    // ***********
+	if (sDflx_Param.flPiEnableSpeed <= 0.0)
+		sDflx_Param.flPiEnableSpeed = 0.2 * sGlbMotorParameters.flSpeedNominal ; // 20% of nominal speed
+
+	if (sDflxRun.flPiEnableSpeed != sDflx_Param.flPiEnableSpeed)
+	{
+		sDflxRun.flPiEnableSpeed = sDflx_Param.flPiEnableSpeed ;
+		sDflxVMotor8kHz.uwPiEnableSpeed = (UWORD)((sDflxRun.flPiEnableSpeed * SPEED_RADS_K_CONVERSION * (FLOAT)sGlbMotorParameters.uwPoleNumbers) / 131072.0) ; // elec speed
+	}
+
+    // ***********
+#endif
 
     return TRUE;
 }
@@ -119,6 +246,7 @@ void DlfxSlow(BOOL bDflxEnabled)
     FLOAT   flVdc, flIdMax ;
     FLOAT   flDflxSpdDelta, flDflxKneeSpd ;
     FLOAT   fl24Vdc_2, fl4Kt_2, fl3LmotPn_2, fl3ImaxLmotPn_2, flMotorIcc ;
+    FLOAT   flSqrt ;
     UWORD   uwRow, uwCol ;
     DFLX_DATA *psDflxData2Set ;
 
@@ -130,7 +258,7 @@ void DlfxSlow(BOOL bDflxEnabled)
     else
         flVdc = (FLOAT)*sDflx_In.pswActualVdc / 10.0 ;
     
-    // ottimizzazioni
+    // optimizations
     flVdc     = flVdc * (FLOAT)sDflx_Param.uwKVOut / 1000.0 ; // V
     fl24Vdc_2 = 24.0 * flVdc * flVdc ;    // = 24 * V^2
     sDflxRun.fl4Kt     = 4.0 * sGlbMotorParameters.flKT ; // = 4 * Kt
@@ -142,7 +270,7 @@ void DlfxSlow(BOOL bDflxEnabled)
     // calcolo la IdMax da usare: e' la piu' bassa tra corrente di 
     // corto circuito del motore e DrivePeakCurrent (valore piu' basso tra picco azionamento e picco motore (init))
     flMotorIcc = sDflxRun.fl4Kt / sDflxRun.fl3LmotPn ; // Arms; corrente di corto circuito del motore
-    sDflx_Out.slMotorIcc = (SLONG)(flMotorIcc * 10000.0) ; // 1e-4Arms 
+    sDflx_Out.slMotorIcc = (SLONG)(flMotorIcc * ARMS2IU_FLOAT) ; // 1e-4Arms
 
     if (flMotorIcc > sDflxRun.flDrivePeakCurrent)
         flIdMax = sDflxRun.flDrivePeakCurrent ;
@@ -158,7 +286,7 @@ void DlfxSlow(BOOL bDflxEnabled)
     sDflx_Out.slDflxKneeSpd = (SLONG)(flDflxKneeSpd * SPEED_RADS_K_CONVERSION) ; // i.u.
 
     // ----------------------------------------------------------------
-    if (bDflxEnabled)
+    if (bDflxEnabled && sDflx_Out.flags.b.bDefluxOnly_Matrix)
     { // deflussaggio abilitato: riempo alternativamente le matrici per il fast task 
         psDflxData2Set = &sDlfxData[sDflxRun.ubDataSel];
 
@@ -172,7 +300,6 @@ void DlfxSlow(BOOL bDflxEnabled)
         // calcolo la matrice ed il vettore
         for (uwRow = 0; uwRow < MATRIX_DIMENSION; uwRow++)
         {
-            FLOAT   flSqrt ;
             FLOAT   flOmega, flOmega2 ;
 
             // calcolo il vettore di IqLimite
@@ -212,7 +339,7 @@ void DlfxSlow(BOOL bDflxEnabled)
             }
 
             // converto a 16bit per ottimizzare i tempi in fast task
-            psDflxData2Set->hpsMatrix->swIqRefLimMaxVector[uwRow] = (SWORD)((SLONG)(10000.0 * sDflx_Out.flIqLimit2Use[uwRow]) >> psDflxData2Set->swIqRefShift) ; // i.u. shiftate su Imax
+            psDflxData2Set->hpsMatrix->swIqRefLimMaxVector[uwRow] = (SWORD)((SLONG)(ARMS2IU_FLOAT * sDflx_Out.flIqLimit2Use[uwRow]) >> psDflxData2Set->swIqRefShift) ; // i.u. shiftate su Imax
            
             // calcolo la matrice di Id da fornire
             for (uwCol = 0; uwCol < MATRIX_DIMENSION; uwCol++)
@@ -230,14 +357,14 @@ void DlfxSlow(BOOL bDflxEnabled)
                     // verifico cosa fare sulla base del radicando
                     if (flSqrt >= 0.0)
                     {   // radice strettamente positiva: esiste una soluzione
-                        swElem = (SWORD)((SLONG)(10000.0 * (sqrt(flSqrt) / (sDflxRun.fl3LmotPn * flOmega) - flMotorIcc)) >> psDflxData2Set->swIqRefShift) ;
+                        swElem = (SWORD)((SLONG)(ARMS2IU_FLOAT * (sqrt(flSqrt) / (sDflxRun.fl3LmotPn * flOmega) - flMotorIcc)) >> psDflxData2Set->swIqRefShift) ;
                         
                         // voglio solo Id negativa
                         if (swElem > 0)
                             swElem = 0 ;
                     }
                     else  
-                         swElem = -(SWORD)((SLONG)(flMotorIcc * 10000.0)  >> psDflxData2Set->swIqRefShift) ;  // radice <= 0, non esiste soluzione: clippo al valore di corrente di corto circuito del motore
+                         swElem = -(SWORD)((SLONG)(flMotorIcc * ARMS2IU_FLOAT)  >> psDflxData2Set->swIqRefShift) ;  // radice <= 0, non esiste soluzione: clippo al valore di corrente di corto circuito del motore
                     
                     // clippo al valore (negativo) di DrivePeakCurrent = valore piu' basso tra corrente di picco del drive e corrente di picco del motore (init)
                     if (swElem < -sDflxRun.swDrivePeakCurrentMax)
@@ -259,11 +386,29 @@ void DlfxSlow(BOOL bDflxEnabled)
         }
 
         // se non raggiungibile e potenza abilitata segnalo warning
-        if(!bSpeedReachable && sDflx_In.psPowerStageStatus->b.bVoltageEnabled)
+        if((!bSpeedReachable) && sDflx_In.psPowerStageStatus->b.bVoltageEnabled)
             atomic_long_set_bits( &ulSystemWarnings, SYSTEMWARNINGS_DEFLUX_SPEEDNOTREACHABLE );
         else
             atomic_long_clear_bits( &ulSystemWarnings, SYSTEMWARNINGS_DEFLUX_SPEEDNOTREACHABLE );
     }
     else
         atomic_long_clear_bits( &ulSystemWarnings, SYSTEMWARNINGS_DEFLUX_SPEEDNOTREACHABLE );
+
+
+#if CFG_DFLX_VMOTOR
+    if (bDflxEnabled && sDflx_Out.flags.b.bDefluxOnly_VmotorPi)
+    {
+		flSqrt = sDflxRun.flDrivePeakCurrent * sDflxRun.flDrivePeakCurrent - (FLOAT)sDflx_Out.slDflxId * (FLOAT)sDflx_Out.slDflxId / ARMS2IU_FLOAT_SQUARED ;
+		if (flSqrt < 0.0)
+			sDflx_Out.sPiIqLimit.slMax = 0 ;
+		else
+			sDflx_Out.sPiIqLimit.slMax = (SLONG)(ARMS2IU_FLOAT * sqrt(flSqrt)) ;
+    }
+    else
+    {
+    	sDflx_Out.sPiIqLimit.slMax = SLONG_MAX_VALUE ;
+    }
+	sDflx_Out.sPiIqLimit.slMin = -sDflx_Out.sPiIqLimit.slMax ;
+#endif
+
 }

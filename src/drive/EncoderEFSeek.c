@@ -145,7 +145,7 @@ void EfsInit(void)
 //****************************************************************************
 // Setup data process
 
-SWORD EfsSetup(MH_MOTORDATA_OUT * psPSStatus,ENCMGR_SPACEFEEDBACK * psFeedback,GLB_IREF * psIRefIn,GLB_IREF * psIRefOut,GLB_IREF * psSpdLoopIRefIn,EFS_RUNTIME * psRuntime)
+SWORD EfsSetup(MH_MOTORDATA_OUT * psPSStatus, ENCMGR_SPACEFEEDBACK * psFeedback, GLB_IREF * psIRefIn, GLB_IREF * psIRefOut, GLB_IREF * psSpdLoopIRefIn, EFS_RUNTIME * psRuntime)
 {
         // record all input/output data structures
     psRuntime->psPSStatus       =psPSStatus;

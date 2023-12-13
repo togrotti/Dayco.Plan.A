@@ -226,5 +226,6 @@ void Mh_ResetPwrModFaults(void);
 void Mh_MotorBackEMF(BOOL);
 void Mh_ResetMotorBackEmf(void);
 UBYTE Mh_GetActualPwmFrequency(void);
+SWORD Mh_Vmotor_rms(SWORD swVu, SWORD swVv, SWORD swVw) ;
 
 #endif

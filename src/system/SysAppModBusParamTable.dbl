@@ -618,6 +618,7 @@ const MODBUSCOMDB_ENTRY hpsModBusParamTable[]=
     {27452 /*6B3C*/, #%p 0x0E32 }, // Vac TR (RO)
     {27453 /*6B3D*/, #%p 0x0E33 }, // Vd Out (RO)
     {27454 /*6B3E*/, #%p 0x0E34 }, // Vq Out (RO)
+    {27455 /*6B3F*/, #%p 0x0E35 }, // Vmotor (RO)
     {27464 /*6B48*/, #%p 0x0E40 }, // UsrIdRef (Torque mode) (RW)
     {27465 /*6B49*/, #%p 0x0E41 }, // UsrIqRef (Torque mode) (RW)
     {27480 /*6B58*/, #%p 0x0E50 }, // AutoModKp (RO)
@@ -689,14 +690,54 @@ const MODBUSCOMDB_ENTRY hpsModBusParamTable[]=
 #ifdef _HW_CT
     {27654         , #%p 0x0E8E },
 #endif
+ 
+        /* ######## Field Weakening ######## */
+    {27660         , #%p 0x0EA0 },  // Matrix deflux (par): max speed
+    {27661         , #%p 0x0EA1 },  // Matrix deflux (par): Vdc margin
+    {27662         , #%p 0x0EA2 },  // Matrix deflux (par): Vdc fixed
+//    {27663         , #%p 0x0EA3 },  // free
+//    {27664         , #%p 0x0EA4 },  // free
+    {27665         , #%p 0x0EA5 },  // Deflux IdRef (var)
+    {27666         , #%p 0x0EA6 },  // Matrix deflux (var): IdRef
+    
+#if CFG_DFLX_VMOTOR
+    {27667         , #%p 0x0EA7 },  // Vmotor deflux (var): IdRef
+#endif
 
-    {27660         , #%p 0x0EA0 },
-    {27661         , #%p 0x0EA1 },
-    {27662         , #%p 0x0EA2 },
-    {27670         , #%p 0x0EA8 },
-    {27671         , #%p 0x0EA9 },
-    {27672         , #%p 0x0EAA },
-    {27673         , #%p 0x0EAB },
+    {27670         , #%p 0x0EA8 },  // Deflux active (var)
+    {27671         , #%p 0x0EA9 },  // Matrix deflux (var): max speed reachable
+    {27672         , #%p 0x0EAA },  // Matrix deflux (var): knee speed
+    {27673         , #%p 0x0EAB },  // Matrix deflux (var): motor Icc
+
+    {27674         , #%p 0x0EAC },  // Matrix deflux (var): matrix only defluxed 
+    {27675         , #%p 0x0EAD },  // Matrix deflux (var): active
+    {27676         , #%p 0x0EAE },  // Matrix deflux (var): Iq limit max
+    {27677         , #%p 0x0EAF },  // Matrix deflux (var): Iq limit min
+   
+#if CFG_DFLX_VMOTOR   
+    {27678         , #%p 0x0EB0 },  // Vmotor deflux (par): manual Vref
+    {27679         , #%p 0x0EB1 },  // Vmotor deflux (par): Vdc margin  
+    {27680         , #%p 0x0EB2 },  // Vmotor deflux (par): PI Ki
+    {27681         , #%p 0x0EB3 },  // Vmotor deflux (par): PI Kp
+    {27682         , #%p 0x0EB4 },  // Vmotor deflux (par): PI limit min
+    {27683         , #%p 0x0EB5 },  // Vmotor deflux (par): PI limit min
+    {27684         , #%p 0x0EB6 },  // Vmotor deflux (par): PI enable speed
+    {27685         , #%p 0x0EB7 },  // Matrix deflux (par): matrix only deflux
+    {27686         , #%p 0x0EB8 },  // Vmotor deflux (par): Vmotor only deflux
+    {27687         , #%p 0x0EB9 },  // Vmotor deflux (var): Vmotor only defluxed
+    {27688         , #%p 0x0EBA },  // Vmotor deflux (var): active
+    {27689         , #%p 0x0EBB },  // Vmotor deflux (var): PI limit active
+    {27690         , #%p 0x0EBC },  // Vmotor deflux (var): VdcBus filtered
+    {27691         , #%p 0x0EBD },  // Vmotor deflux (var): Vmotor max (VdcBus * VdcMargin / sqrt(2))
+    {27692         , #%p 0x0EBE },  // Vmotor deflux (var): PI ref
+    {27693         , #%p 0x0EBF },  // Vmotor deflux (var): PI fbk
+    {27694         , #%p 0x0EC0 },  // Vmotor deflux (var): PI err
+    {27695         , #%p 0x0EC1 },  // Vmotor deflux (var): PI integral part
+    {27696         , #%p 0x0EC2 },  // Vmotor deflux (var): PI proportional part
+    {27697         , #%p 0x0EC3 },  // Vmotor deflux (var): PI out
+    {27698         , #%p 0x0EC4 },  // Vmotor deflux (var): PI Iq limit min
+    {27699         , #%p 0x0EC5 },  // Vmotor deflux (var): PI Iq limit min      
+#endif   
 
         /* ######## Motor Parameters ######## */
     {27800 /*6C98*/, #%p 0x2000 },  // SerialNumber (RO)

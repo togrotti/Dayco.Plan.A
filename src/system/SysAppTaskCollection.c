@@ -10,9 +10,6 @@
 /*				 and run both in background and realtime					*/
 /*                                                                          */
 /****************************************************************************/
-// Compiler Option
-#pragma GCC optimize (2)
-
 #include "common\CommonDefines.h"
 #include "system\SysLogManagement.h"
 #include "SystemStatus.h"
@@ -61,7 +58,17 @@
   #include "drive\stgap4s.h"
 #endif
 
-
+/////////////////////////////////////////////////////////////////////////////
+// Compiler Option
+#if defined(_CRS_DBG)
+#if (FALSE) /* CRS_DBGDSK */
+#pragma GCC optimize (0) // crs_dbg
+#else
+#pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
 
 #ifndef _DEBUG_TRACES
   #define TASK_ENTRY(name, param) {&name, param}

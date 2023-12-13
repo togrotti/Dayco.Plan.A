@@ -997,7 +997,7 @@ BOOL initcore(void)
     OpenLoopEncResetOut() ;
 
     if (sEm_EncMngrOut.flags.b.bOpenLoop)
-    {
+    {	// get data from open loop "encoder"
 		sEncMgrRun.psqPosition2Use         = &sEncMgrRun.sOpenLoop.sEncoder.sEncData.sqPostn ;
 		sEncMgrRun.pubStatus2Use           = &sEncMgrRun.sOpenLoop.sEncoder.ubStatus ;
 		sEncMgrRun.psqMechAbsOffset2Use    = &sEncMgrRun.sOpenLoop.sEncoder.sqMechAbsPosOffset ;
@@ -1009,7 +1009,7 @@ BOOL initcore(void)
 		sEncMgrRun.sFlags.b.bCritFbFromAux = FALSE ;
     }
     else
-#else
+#endif // cfg_encmgr_openloop
     {		// select which position-information will be used by the control loop
 		if (sEm_EncMngrParam.flags.b.bPos2CntrLoop)
 		{
@@ -1050,7 +1050,6 @@ BOOL initcore(void)
 			sEncMgrRun.sFlags.b.bCritFbFromAux = TRUE;
 		}
     }
-#endif // cfg_encmgr_openloop
     
         // runtime flags init
     rtflagsapply();
@@ -1312,9 +1311,9 @@ static BOOL task8kHzfull(void)
             // if valid, take values from relative encoder
         if(sEm_MainRelEnc.ubStatus & ENCMGR_ELE_ANGLE_VALID)
         {
-            sEm_MainEnc.uwElecAngle=*sEncMgrRun.puwMainElecAngle;
-            sEm_MainEnc.uwDeltaElecAngle=*sEncMgrRun.puwMainDeltaElecAngle;
-            sEm_MainEnc.swElecSpeed=*sEncMgrRun.pswMainElecSpeed;
+            sEm_MainEnc.uwElecAngle      = *sEncMgrRun.puwMainElecAngle;
+            sEm_MainEnc.uwDeltaElecAngle = *sEncMgrRun.puwMainDeltaElecAngle;
+            sEm_MainEnc.swElecSpeed      = *sEncMgrRun.pswMainElecSpeed;
         }
         else
         {
@@ -1441,7 +1440,7 @@ static BOOL task8kHzfull(void)
         // if requested then filter speed
     if(sEncMgrRun.sFlags.b.bSpeedFilter)
     {
-        if(*sEncMgrRun.pslSpeed2Use>0)
+        if(*sEncMgrRun.pslSpeed2Use > 0)
             sEm_Fbk2CntrLoop.sEncData.slSpeed = ( sEm_Fbk2CntrLoop.sEncData.slSpeed >> 4) *  15 + (*sEncMgrRun.pslSpeed2Use >> 4) ;
         else
             sEm_Fbk2CntrLoop.sEncData.slSpeed = (-sEm_Fbk2CntrLoop.sEncData.slSpeed >> 4) * -15 + (*sEncMgrRun.pslSpeed2Use >> 4) ;
@@ -1569,8 +1568,8 @@ static BOOL hook8kHz(void)
 #endif
 
             // Set main fb elec angle to right value and enable ELE_ANGLE_VALID
-        sEm_Fbk2CntrLoop.uwElecAngle=*sEncMgrRun.puwElecAngle2Use ;
-        sEm_Fbk2CntrLoop.ubStatus|=ENCMGR_ELE_ANGLE_VALID;
+        sEm_Fbk2CntrLoop.uwElecAngle = *sEncMgrRun.puwElecAngle2Use ;
+        sEm_Fbk2CntrLoop.ubStatus   |= ENCMGR_ELE_ANGLE_VALID;
 
 #if CFG_ENCMGR_OPENLOOP
         // Pay attention that OpenLoop must override BEMF

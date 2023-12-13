@@ -318,7 +318,11 @@ static BOOL endathandlerinit(UWORD uwChannelSel, UWORD uwClockFreq, BOOL bFullIn
         }
     }
 #endif // endat22 && endat22_addinfo
+
         // Initialize EnDat Encoder
+#if (CRS_DBGDSK)
+    uwRetVal=EndatInitializeEncoder(ulBaseAddress[uwChannelSel], uwClockFreq, &sWorks[uwChannelSel], bFullInit);
+#else
     uwTimeOut=timer_settimeout(uwSysTimers1ms, ENDAT_WAITE_TIMEOUT);
     for(;;)
     {
@@ -328,6 +332,8 @@ static BOOL endathandlerinit(UWORD uwChannelSel, UWORD uwClockFreq, BOOL bFullIn
             break;
         }
     }
+#endif
+
     if(uwRetVal)
     {
         SysLogMgm_PostAlarm(SYSTEMALARMS_BIT_EN_ENDAT_FAIL, ulAlarmSubCode[uwChannelSel] | SYSTEMALARMS_SUBCODE_ENDAT_INIT | ((ULONG)uwRetVal<<16), FALSE);
