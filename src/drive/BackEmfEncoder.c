@@ -1344,32 +1344,26 @@ BOOL Be_Hook8KHz(GLB_IREF * psIRefIn, GLB_IREF * psIRefOut)
     GLB_IREF sIRefs, * psROut=NULL;
 
 #if CFG_ENC_BEMF_DITEN
+    SLONG slHookId2Use ;
+
     // if psIRefIn = NULL it means that EncMngr keep in reset (efs is in progress and/or elec angle is not valid)
     // psIRefOut is the output current reference to use
     if(psIRefIn==NULL)
-    {   // efs is in progress and/or elec angle is not valid
-        sEmfEncRun.flags.b.bHookInTransition=TRUE;
+    {   // efs is in progress and/or elec angle is not valid: exit
+        sEmfEncRun.flags.b.bHookInTransition = TRUE ;
         return TRUE;
     }
-    else
-        sEmfEncRun.flags.b.bHookInTransition=FALSE;
 
-    // crea uscita locale
-    if(sEmfEncRun.flags.b.bHookInTransition)
-    {
-        psROut=psIRefOut;
-        psIRefOut=&sIRefs;
-    }
-
+    slHookId2Use = (SLONG)(sDitenRun.id_inject.current_value * 10000) ;
+    psIRefOut->slIdRef = psIRefIn->slIdRef + slHookId2Use ;
 
     if (sEmfEncRun.flags.b.bHookInTransition)
-    {   // efs is in progress and/or elec angle is not valid
-    	psROut->slIdRef =  (SLONG)(sDitenRun.id_inject.current_value * 10000) ;
+    {   // efs just finished: for one tick keep IqRef = 0
     	psROut->slIqRef = 0 ;
+        sEmfEncRun.flags.b.bHookInTransition = FALSE;
     }
     else
     {   // efs is not in progress and elec angle is valid
-        psIRefOut->slIdRef = psIRefIn->slIdRef + (SLONG)(sDitenRun.id_inject.current_value * 10000) ;
         psIRefOut->slIqRef = psIRefIn->slIqRef ;
     }
 

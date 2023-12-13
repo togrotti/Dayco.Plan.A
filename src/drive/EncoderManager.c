@@ -142,7 +142,11 @@ ENCMGR_SPACEFB_EXT       sEm_PlcFbk2CLExt ;
 
 const ENCMGR_PARAMS  sEm_EncMngrDefParam=
 {
-    {1,1,1,1,1,0,0,0,0,0,0,0},// position, speed, acceleration, el ang from main enc, dis if rel fail
+    {1,1,1,1,1,0,0,0,0,0,0,0
+#if (CFG_ENCMGR_OPENLOOP)
+    ,0
+#endif
+    },// position, speed, acceleration, el ang from main enc, dis if rel fail
 #ifndef _HW_CT
 
 #ifdef _HW_AXS_DAYCO22KW
@@ -166,35 +170,55 @@ const ENCMGR_PARAMS  sEm_EncMngrDefParam=
 
 //****************************************************************************
 // Data structures
+#if (CFG_ENCMGR_OPENLOOP)
+typedef struct{
+	union {
+		struct {
+			UWORD bHookInTransition : 1 ; // b.0
+		} b ;
+		UWORD w ;
+	} flags ;
+
+	ENCMGR_SPACEFEEDBACK sEncoder ;
+	SLONG slPostnOPL ;
+	SLONG slSpeedOPL ;
+	SWORD swElecTurns ;
+	ULONG ulMechAdder ;
+	ULONG ulElecAngle ;
+	ULONG ulMechSteps ;
+	UWORD uwPolePairs ;
+} OPEN_LOOP ;
+#endif
 
 typedef struct {
     union {
         struct {
-            UWORD bEncFatalFault    : 1 ;
-            UWORD bEncNonFatalFault : 1 ;
-            UWORD bMaxDiffFault     : 1 ;
-            UWORD bEfsFault         : 1 ;
-            UWORD bOverSpeedFault   : 1 ;
+            UWORD bEncFatalFault    : 1 ; // b.0
+            UWORD bEncNonFatalFault : 1 ; // b.1
+            UWORD bMaxDiffFault     : 1 ; // b.2
+            UWORD bEfsFault         : 1 ; // b.3
+            UWORD bOverSpeedFault   : 1 ; // b.4
         } b ;
         UWORD w ;
     } sErrorSent ;
     union {
         struct {
-            UWORD bPlcInput         : 1 ;
-            UWORD bMainCombine      : 1 ;
-            UWORD bCritFbFromAux    : 1 ;
-            UWORD bPrevPSState      : 1 ;
-            UWORD bEFSInProgress    : 1 ;
-            UWORD bBEMFHook         : 1 ;
-            UWORD bAbsFbFromAux     : 1 ;
-            UWORD bEnSinCosHw       : 1 ;
-            UWORD bDisFaultMgm      : 1 ;
-            UWORD bDummy            : 1 ;
-            UWORD bExecAbsRelDiff   : 1 ;
-            UWORD bDisAbsAfterValid : 1 ;
-            UWORD bMainEncPresent   : 1 ;
-            UWORD bSpeedFilter      : 1 ;
-            UWORD bEnIncrementalHw  : 1 ;
+            UWORD bPlcInput         : 1 ; // b.0
+            UWORD bMainCombine      : 1 ; // b.1
+            UWORD bCritFbFromAux    : 1 ; // b.2
+            UWORD bPrevPSState      : 1 ; // b.3
+            UWORD bEFSInProgress    : 1 ; // b.4
+            UWORD bBEMFHook         : 1 ; // b.5
+            UWORD bAbsFbFromAux     : 1 ; // b.6
+            UWORD bEnSinCosHw       : 1 ; // b.7
+            UWORD bDisFaultMgm      : 1 ; // b.8
+            UWORD bFreeBit09        : 1 ; // b.9
+            UWORD bExecAbsRelDiff   : 1 ; // b.10
+            UWORD bDisAbsAfterValid : 1 ; // b.11
+            UWORD bMainEncPresent   : 1 ; // b.12
+            UWORD bSpeedFilter      : 1 ; // b.13
+            UWORD bEnIncrementalHw  : 1 ; // b.14
+            UWORD bFreeBit15        : 1 ; // b.15
         } b ;
         UWORD w ;
     } sFlags ;
@@ -240,6 +264,9 @@ typedef struct {
 
     UWORD uwVEncVoltage;
 
+#if (CFG_ENCMGR_OPENLOOP)
+    OPEN_LOOP sOpenLoop ;
+#endif
 } ENCMGR_RUNTIME ;
 
 //****************************************************************************
@@ -273,6 +300,14 @@ static void slowtask(void);
 static BOOL paramcheck(void);
 static BOOL elecanglefftime(void);
 static BOOL absreldiffcheck(void);
+
+#if CFG_ENCMGR_OPENLOOP
+static BOOL OpenLoopEncInit(void) ;
+static BOOL OpenLoopEnc8KHz(GLB_IREF * psIRefIn, GLB_IREF * psIRefOut) ;
+static void OpenLoopEncResetOut(void) ;
+static void OpenLoopEncZeroOut(void) ;
+static void OpenLoopEncData(void) ;
+#endif
 
 //***************************************************************************
 // Initialization entry point
@@ -402,6 +437,9 @@ BOOL eplate(void)
     BOOL bRetVal = TRUE ;
     SBYTE bDataValid=FALSE;
 
+#if (FALSE)// (CRS_DBGDSK)
+    return TRUE;
+#else
         // if not requested exit
     if(sEm_EncMngrParam.flags.b.bDisableEPlate)
         return TRUE;
@@ -425,7 +463,7 @@ BOOL eplate(void)
             bRetVal=En_GetEPlate(ENDAT_SEL_MAIN,&sMotPar,&bDataValid);
         }
     }
-#endif
+#endif // cfg_enc_endat
 
         // if not generic error and valid data reading
     if(bRetVal && bDataValid)
@@ -444,6 +482,7 @@ BOOL eplate(void)
     }
 
     return bRetVal;
+#endif // crs_dbgdsk
 }
 
 //***************************************************************************
@@ -527,6 +566,10 @@ BOOL initcore(void)
         // if EFS procedure selected then require hook
     sEm_EncMngrOut.flags.b.bRequireIRefHook=(sEfsParam.ubProcType!=EFS_TYPE_DISABLED);
 
+#if CFG_ENCMGR_OPENLOOP
+    OpenLoopEncInit() ;
+#endif
+
         // check for aux encoder
     if(sEm_EncMngrParam.flags.b.bPos2CntrLoop && sEm_EncMngrParam.flags.b.bSpd2CntrLoop && \
         sEm_EncMngrParam.flags.b.bAcc2CntrLoop && sEm_EncMngrParam.flags.b.bElecAngle2Fpga && \
@@ -566,7 +609,7 @@ BOOL initcore(void)
     }
 
         // then extract pointers for dest fb
-    if(bMainAbsValid && !bMainRelValid && !sEm_EncMngrOut.flags.b.bRequireIRefHook && bAuxNull)
+    if(bMainAbsValid && (!bMainRelValid) && (!sEm_EncMngrOut.flags.b.bRequireIRefHook) && bAuxNull)
     {
         psAbsSel=&sEm_MainEnc;
         psRelSel=NULL;
@@ -950,46 +993,65 @@ BOOL initcore(void)
             sEm_AuxEnc.ubStatus=ENCMGR_FATAL_FAULT;
     }
 
-        // select which position-information will be used by the control loop
-    if (sEm_EncMngrParam.flags.b.bPos2CntrLoop)
-    {
-        sEncMgrRun.psqPosition2Use = &sEm_MainEnc.sEncData.sqPostn ;
-        sEncMgrRun.pubStatus2Use = &sEm_MainEnc.ubStatus ;
-        sEncMgrRun.psqMechAbsOffset2Use = &sEm_MainEnc.sqMechAbsPosOffset ;     
-    }
-    else
-    {
-        sEncMgrRun.psqPosition2Use = &sEm_AuxEnc.sEncData.sqPostn ;
-        sEncMgrRun.pubStatus2Use = &sEm_AuxEnc.ubStatus ; 
-        sEncMgrRun.psqMechAbsOffset2Use = &sEm_AuxEnc.sqMechAbsPosOffset ;
-        sEncMgrRun.sFlags.b.bAbsFbFromAux = TRUE;
-    }
-    
-        // select which speed-information will be used by the control loop
-    if (sEm_EncMngrParam.flags.b.bSpd2CntrLoop)
-        sEncMgrRun.pslSpeed2Use = &sEm_MainEnc.sEncData.slSpeed ; 
-    else
-        sEncMgrRun.pslSpeed2Use = &sEm_AuxEnc.sEncData.slSpeed ;
-    
-        // select which acceleration-information will be used by the control loop
-    if(sEm_EncMngrParam.flags.b.bAcc2CntrLoop)
-        sEncMgrRun.pslAccel2Use = &sEm_MainEnc.sEncData.slAccel ;
-    else
-        sEncMgrRun.pslAccel2Use = &sEm_AuxEnc.sEncData.slAccel ;
-    
-        // select which electrical angle-information will be used by the FPGA
-    if(sEm_EncMngrParam.flags.b.bElecAngle2Fpga)
-    {
-        sEncMgrRun.puwElecAngle2Use = &sEm_MainEnc.uwElecAngle ;
-        sEncMgrRun.pswElecSpeed2Use = &sEm_MainEnc.swElecSpeed ;
-    }
-    else
-    {
-        sEncMgrRun.puwElecAngle2Use = &sEm_AuxEnc.uwElecAngle ;
-        sEncMgrRun.pswElecSpeed2Use = &sEm_AuxEnc.swElecSpeed ;
-        sEncMgrRun.sFlags.b.bCritFbFromAux = TRUE;
-    }
+#if CFG_ENCMGR_OPENLOOP
+    OpenLoopEncResetOut() ;
 
+    if (sEm_EncMngrOut.flags.b.bOpenLoop)
+    {
+		sEncMgrRun.psqPosition2Use         = &sEncMgrRun.sOpenLoop.sEncoder.sEncData.sqPostn ;
+		sEncMgrRun.pubStatus2Use           = &sEncMgrRun.sOpenLoop.sEncoder.ubStatus ;
+		sEncMgrRun.psqMechAbsOffset2Use    = &sEncMgrRun.sOpenLoop.sEncoder.sqMechAbsPosOffset ;
+		sEncMgrRun.pslSpeed2Use            = &sEncMgrRun.sOpenLoop.sEncoder.sEncData.slSpeed ;
+		sEncMgrRun.pslAccel2Use            = &sEncMgrRun.sOpenLoop.sEncoder.sEncData.slAccel ;
+		sEncMgrRun.puwElecAngle2Use        = &sEncMgrRun.sOpenLoop.sEncoder.uwElecAngle ;
+		sEncMgrRun.pswElecSpeed2Use        = &sEncMgrRun.sOpenLoop.sEncoder.swElecSpeed ;
+		sEncMgrRun.sFlags.b.bAbsFbFromAux  = FALSE ;
+		sEncMgrRun.sFlags.b.bCritFbFromAux = FALSE ;
+    }
+    else
+#else
+    {		// select which position-information will be used by the control loop
+		if (sEm_EncMngrParam.flags.b.bPos2CntrLoop)
+		{
+			sEncMgrRun.psqPosition2Use      = &sEm_MainEnc.sEncData.sqPostn ;
+			sEncMgrRun.pubStatus2Use        = &sEm_MainEnc.ubStatus ;
+			sEncMgrRun.psqMechAbsOffset2Use = &sEm_MainEnc.sqMechAbsPosOffset ;
+		}
+		else
+		{
+			sEncMgrRun.psqPosition2Use      = &sEm_AuxEnc.sEncData.sqPostn ;
+			sEncMgrRun.pubStatus2Use        = &sEm_AuxEnc.ubStatus ;
+			sEncMgrRun.psqMechAbsOffset2Use = &sEm_AuxEnc.sqMechAbsPosOffset ;
+			sEncMgrRun.sFlags.b.bAbsFbFromAux = TRUE;
+		}
+
+			// select which speed-information will be used by the control loop
+		if (sEm_EncMngrParam.flags.b.bSpd2CntrLoop)
+			sEncMgrRun.pslSpeed2Use = &sEm_MainEnc.sEncData.slSpeed ;
+		else
+			sEncMgrRun.pslSpeed2Use = &sEm_AuxEnc.sEncData.slSpeed ;
+
+			// select which acceleration-information will be used by the control loop
+		if(sEm_EncMngrParam.flags.b.bAcc2CntrLoop)
+			sEncMgrRun.pslAccel2Use = &sEm_MainEnc.sEncData.slAccel ;
+		else
+			sEncMgrRun.pslAccel2Use = &sEm_AuxEnc.sEncData.slAccel ;
+
+			// select which electrical angle-information will be used by the FPGA
+		if(sEm_EncMngrParam.flags.b.bElecAngle2Fpga)
+		{
+			sEncMgrRun.puwElecAngle2Use = &sEm_MainEnc.uwElecAngle ;
+			sEncMgrRun.pswElecSpeed2Use = &sEm_MainEnc.swElecSpeed ;
+		}
+		else
+		{
+			sEncMgrRun.puwElecAngle2Use = &sEm_AuxEnc.uwElecAngle ;
+			sEncMgrRun.pswElecSpeed2Use = &sEm_AuxEnc.swElecSpeed ;
+			sEncMgrRun.sFlags.b.bCritFbFromAux = TRUE;
+		}
+    }
+#endif // cfg_encmgr_openloop
+    
         // runtime flags init
     rtflagsapply();
     sEncMgrRun.prevflags = sEm_EncMngrParam.flags;
@@ -1012,36 +1074,50 @@ BOOL initcore(void)
 
 static void rtflagsapply()
 {
-        // speed filtering selection
-    sEncMgrRun.sFlags.b.bSpeedFilter = sEm_EncMngrParam.flags.b.bSpeedFilter ;
-
-        // abs/rel selection
-    if(sEm_EncMngrParam.flags.b.bMainPosSel)
-        sEncMgrRun.psqMainPos = &sEm_MainAbsEnc.sEncData.sqPostn;
-    else
-        sEncMgrRun.psqMainPos = &sEm_MainRelEnc.sEncData.sqPostn;
-
-    if(sEm_EncMngrParam.flags.b.bMainSpdSel)
-        sEncMgrRun.pslMainSpd = &sEm_MainAbsEnc.sEncData.slSpeed;
-    else
-        sEncMgrRun.pslMainSpd = &sEm_MainRelEnc.sEncData.slSpeed;
-
-    if(sEm_EncMngrParam.flags.b.bMainAccSel)
-        sEncMgrRun.pslMainAcc = &sEm_MainAbsEnc.sEncData.slAccel;
-    else
-        sEncMgrRun.pslMainAcc = &sEm_MainRelEnc.sEncData.slAccel;
-
-    if(sEm_EncMngrParam.flags.b.bMainElecAngleSel)
+#if CFG_ENCMGR_OPENLOOP
+    if (sEm_EncMngrOut.flags.b.bOpenLoop)
     {
-        sEncMgrRun.puwMainElecAngle     = &sEm_MainAbsEnc.uwElecAngle;
-        sEncMgrRun.puwMainDeltaElecAngle= &sEm_MainAbsEnc.uwDeltaElecAngle;
-        sEncMgrRun.pswMainElecSpeed     = &sEm_MainAbsEnc.swElecSpeed;
+    	sEncMgrRun.sFlags.b.bSpeedFilter = FALSE ;
+    	sEncMgrRun.psqMainPos            = &sEncMgrRun.sOpenLoop.sEncoder.sEncData.sqPostn ;
+    	sEncMgrRun.pslMainSpd            = &sEncMgrRun.sOpenLoop.sEncoder.sEncData.slSpeed ;
+    	sEncMgrRun.pslMainAcc            = &sEncMgrRun.sOpenLoop.sEncoder.sEncData.slAccel ;
+		sEncMgrRun.puwMainElecAngle      = &sEncMgrRun.sOpenLoop.sEncoder.uwElecAngle ;
+		sEncMgrRun.puwMainDeltaElecAngle = &sEncMgrRun.sOpenLoop.sEncoder.uwDeltaElecAngle ;
+		sEncMgrRun.pswMainElecSpeed      = &sEncMgrRun.sOpenLoop.sEncoder.swElecSpeed ;
     }
     else
-    {
-        sEncMgrRun.puwMainElecAngle     = &sEm_MainRelEnc.uwElecAngle;
-        sEncMgrRun.puwMainDeltaElecAngle= &sEm_MainRelEnc.uwDeltaElecAngle;
-        sEncMgrRun.pswMainElecSpeed     = &sEm_MainRelEnc.swElecSpeed;
+#endif
+    {	// speed filtering selection
+		sEncMgrRun.sFlags.b.bSpeedFilter = sEm_EncMngrParam.flags.b.bSpeedFilter ;
+
+			// abs/rel selection
+		if(sEm_EncMngrParam.flags.b.bMainPosSel)
+			sEncMgrRun.psqMainPos = &sEm_MainAbsEnc.sEncData.sqPostn;
+		else
+			sEncMgrRun.psqMainPos = &sEm_MainRelEnc.sEncData.sqPostn;
+
+		if(sEm_EncMngrParam.flags.b.bMainSpdSel)
+			sEncMgrRun.pslMainSpd = &sEm_MainAbsEnc.sEncData.slSpeed;
+		else
+			sEncMgrRun.pslMainSpd = &sEm_MainRelEnc.sEncData.slSpeed;
+
+		if(sEm_EncMngrParam.flags.b.bMainAccSel)
+			sEncMgrRun.pslMainAcc = &sEm_MainAbsEnc.sEncData.slAccel;
+		else
+			sEncMgrRun.pslMainAcc = &sEm_MainRelEnc.sEncData.slAccel;
+
+		if(sEm_EncMngrParam.flags.b.bMainElecAngleSel)
+		{
+			sEncMgrRun.puwMainElecAngle     = &sEm_MainAbsEnc.uwElecAngle;
+			sEncMgrRun.puwMainDeltaElecAngle= &sEm_MainAbsEnc.uwDeltaElecAngle;
+			sEncMgrRun.pswMainElecSpeed     = &sEm_MainAbsEnc.swElecSpeed;
+		}
+		else
+		{
+			sEncMgrRun.puwMainElecAngle     = &sEm_MainRelEnc.uwElecAngle;
+			sEncMgrRun.puwMainDeltaElecAngle= &sEm_MainRelEnc.uwDeltaElecAngle;
+			sEncMgrRun.pswMainElecSpeed     = &sEm_MainRelEnc.swElecSpeed;
+		}
     }
 }
 
@@ -1155,7 +1231,7 @@ BOOL inithook(void)
      )
         return FALSE;
 
-        // if req'ed add rt task
+        // if requested/required add rt task
     if(sEm_EncMngrOut.flags.b.bRequireIRefHook)
         return TaskSched_AddRTTask(&hook8kHz, TASKSCHEDULER_FLAG_NONE, 0, SYSTEMSTATUS_MASK(SYSTEMSTATUS_BIT_BOOTING), 0) ;
     else
@@ -1381,9 +1457,14 @@ static BOOL task8kHzfull(void)
     }
     else
     {
+#if CFG_ENCMGR_OPENLOOP
+        sEm_Fbk2CntrLoop.uwElecAngle = *sEncMgrRun.puwElecAngle2Use ;
+        sEm_Fbk2CntrLoop.swElecSpeed = *sEncMgrRun.pswElecSpeed2Use ;
+#else
         elecangleff_calc();
         sEm_Fbk2CntrLoop.uwElecAngle=*sEncMgrRun.puwElecAngle2Use+sEncMgrRun.swElecAngleFF;
         sEm_Fbk2CntrLoop.swElecSpeed=*sEncMgrRun.pswElecSpeed2Use;
+#endif
     }
 
         // setup resulting encoder status
@@ -1435,8 +1516,22 @@ static BOOL hook8kHz(void)
             return TRUE;
 
             // run EFS setup to check if EFS is needed
-        if(EfsSetup(sEm_EncMngrIn.psMotorData, &sEm_MainEnc, sEm_EncMngrIn.sIRefIn, &sEm_EncMngrOut.sIRefOut, sEm_EncMngrIn.sSpdLoopIRefIn, &sEncMgrRun.sEfsRun)==EFS_RV_INPROGRESS)
-            sEncMgrRun.sFlags.b.bEFSInProgress=TRUE;
+#if CFG_ENCMGR_OPENLOOP
+        {
+			ENCMGR_SPACEFEEDBACK *psEnc2Use ;
+
+			if(sEm_EncMngrOut.flags.b.bOpenLoop)
+				psEnc2Use = &sEncMgrRun.sOpenLoop.sEncoder ;
+			else
+				psEnc2Use = &sEm_MainEnc ;
+
+		    if(EfsSetup(sEm_EncMngrIn.psMotorData, psEnc2Use, sEm_EncMngrIn.sIRefIn, &sEm_EncMngrOut.sIRefOut, sEm_EncMngrIn.sSpdLoopIRefIn, &sEncMgrRun.sEfsRun)==EFS_RV_INPROGRESS)
+		    	sEncMgrRun.sFlags.b.bEFSInProgress=TRUE;
+        }
+#else
+	    if(EfsSetup(sEm_EncMngrIn.psMotorData, &sEm_MainEnc, sEm_EncMngrIn.sIRefIn, &sEm_EncMngrOut.sIRefOut, sEm_EncMngrIn.sSpdLoopIRefIn, &sEncMgrRun.sEfsRun)==EFS_RV_INPROGRESS)
+	    	sEncMgrRun.sFlags.b.bEFSInProgress=TRUE;
+#endif
     }
 #endif
 
@@ -1477,12 +1572,31 @@ static BOOL hook8kHz(void)
         sEm_Fbk2CntrLoop.uwElecAngle=*sEncMgrRun.puwElecAngle2Use ;
         sEm_Fbk2CntrLoop.ubStatus|=ENCMGR_ELE_ANGLE_VALID;
 
+#if CFG_ENCMGR_OPENLOOP
+        // Pay attention that OpenLoop must override BEMF
+		if(sEm_EncMngrOut.flags.b.bOpenLoop)
+		{
+#if CFG_ENC_BEMF
+	        if(sEncMgrRun.sFlags.b.bBEMFHook)
+	            Be_Hook8KHz(NULL, &sEm_EncMngrOut.sIRefOut);
+#endif // cfg_enc_bemf
+	        OpenLoopEnc8KHz(NULL, &sEm_EncMngrOut.sIRefOut);
+		}
+		else
+		{
+#if CFG_ENC_BEMF
+	        if(sEncMgrRun.sFlags.b.bBEMFHook)
+	            Be_Hook8KHz(NULL, &sEm_EncMngrOut.sIRefOut);
+#endif // cfg_enc_bemf
+		}
+#else // cfg_encmgr_openloop
 #if CFG_ENC_BEMF
             // if BEMF hook active then notify current transition
         	// set NULL pointer: in this way backemf knows EFS has ended
         if(sEncMgrRun.sFlags.b.bBEMFHook)
             Be_Hook8KHz(NULL, &sEm_EncMngrOut.sIRefOut);
-#endif
+#endif // cfg_enc_bemf
+#endif // cfg_encmgr_openloop
 
 #if CFG_ENC_EFS
             // signal fault
@@ -1491,33 +1605,76 @@ static BOOL hook8kHz(void)
             SysLogMgm_PostAlarm(SYSTEMALARMS_BIT_ENCODERMANAGER_FAIL, SYSTEMALARMS_SUBCODE_ENCMGR_EFSFAIL, bSysStatPowerEnabled) ;
             sEncMgrRun.sErrorSent.b.bEfsFault=TRUE;
         }
-#endif
-        return TRUE; // when EFS is in progress, EXIT HERE
+#endif // cfg_enc_efs
+        return TRUE; // when EFS is in progress, hook8kHz EXIT HERE
     }
 
     	// ****** EFS procedure is no more in progress ******
         // copy in PSTAGE control to out, as BEMF do not use it
     sEm_EncMngrOut.sPowerStageCtrlOut=*sEm_EncMngrIn.sPowerStageCtrlIn;
 
+#if CFG_ENCMGR_OPENLOOP
+    // Pay attention that OpenLoop must override BEMF
+	if(sEm_EncMngrOut.flags.b.bOpenLoop)
+	{	// open loop: hook8kHz EXIT HERE
+#if CFG_ENC_BEMF
+		if(sEncMgrRun.sFlags.b.bBEMFHook)
+		{	// keep bemf stopped (for bemf EFS never ends)
+			Be_Hook8KHz(NULL, &sEm_EncMngrOut.sIRefOut);
+		}
+#endif  // cfg_enc_bemf
+
+		sEm_EncMngrOut.sPowerStageCtrlOut.b.bReferenceEnable = sEm_EncMngrIn.psMotorData->sPowerStageSts.b.bFullyActive;
+
+		if(sEm_EncMngrIn.sPowerStageCtrlIn->b.bReferenceEnable)
+			return OpenLoopEnc8KHz(sEm_EncMngrIn.sIRefIn, &sEm_EncMngrOut.sIRefOut);
+		else
+		{	// when no power, keep OpenLoop encoder in reset (needed NULL pointer)
+			return OpenLoopEnc8KHz(NULL, &sEm_EncMngrOut.sIRefOut);
+		}
+	}
+	else
+	{
+#if CFG_ENC_BEMF
+			// if BEMF hook active
+		if(sEncMgrRun.sFlags.b.bBEMFHook)
+		{	// BEMF: hook8kHz EXIT HERE
+				// here reference must be always enabled to keep steady,
+				// if incoming reference enable is off then override
+				// with zero current references
+			sEm_EncMngrOut.sPowerStageCtrlOut.b.bReferenceEnable = sEm_EncMngrIn.psMotorData->sPowerStageSts.b.bFullyActive;
+
+			if(sEm_EncMngrIn.sPowerStageCtrlIn->b.bReferenceEnable)
+				return Be_Hook8KHz(sEm_EncMngrIn.sIRefIn, &sEm_EncMngrOut.sIRefOut);
+			else
+			{
+				GLB_IREF sLRefNull = {0l,0l};
+				return Be_Hook8KHz(&sLRefNull, &sEm_EncMngrOut.sIRefOut);
+			}
+		}
+#endif // cfg_enc_bemf
+	}
+#else // cfg_encmgr_openloop
 #if CFG_ENC_BEMF
         // if BEMF hook active
     if(sEncMgrRun.sFlags.b.bBEMFHook)
-    {
+    {	// BEMF: hook8kHz EXIT HERE
             // here reference must be always enabled to keep steady,
             // if incoming reference enable is off then override
             // with zero current references
-        sEm_EncMngrOut.sPowerStageCtrlOut.b.bReferenceEnable=sEm_EncMngrIn.psMotorData->sPowerStageSts.b.bFullyActive;
+        sEm_EncMngrOut.sPowerStageCtrlOut.b.bReferenceEnable = sEm_EncMngrIn.psMotorData->sPowerStageSts.b.bFullyActive;
+
         if(sEm_EncMngrIn.sPowerStageCtrlIn->b.bReferenceEnable)
             return Be_Hook8KHz(sEm_EncMngrIn.sIRefIn, &sEm_EncMngrOut.sIRefOut);
         else
         {
-            GLB_IREF sLRefNull={0l,0l};
+            GLB_IREF sLRefNull = {0l,0l};
             return Be_Hook8KHz(&sLRefNull, &sEm_EncMngrOut.sIRefOut);
         }
     }
-#endif
-
-        // otherwise copy in to out
+#endif // cfg_enc_bemf
+#endif // cfg_encmgr_openloop
+        // otherwise copy in to out (hook8kHz EXIT HERE)
     sEm_EncMngrOut.sIRefOut=*sEm_EncMngrIn.sIRefIn;
 
     return TRUE ; 
@@ -1849,3 +2006,135 @@ static BOOL absreldiffcheck(void)
     sEncMgrRun.sFlags.b.bExecAbsRelDiff=FALSE;
     return TRUE;
 }
+
+//***************************************************************************
+#if (CFG_ENCMGR_OPENLOOP)
+static BOOL OpenLoopEncInit(void)
+{
+    if(sEm_EncMngrOut.flags.b.bRequireIRefHook)
+    	sEm_EncMngrOut.flags.b.bOpenLoop = sEm_EncMngrParam.flags.b.bOpenLoop ;
+    else
+    	sEm_EncMngrOut.flags.b.bOpenLoop = FALSE ;
+
+	sEncMgrRun.sOpenLoop.uwPolePairs = sEncMgrRun.uwMotorPoleNumbers / 2 ;
+	sEncMgrRun.sOpenLoop.ulMechSteps = ((ULONG)(0UL - sEncMgrRun.sOpenLoop.uwPolePairs) / sEncMgrRun.sOpenLoop.uwPolePairs) + 1 ;
+	sEncMgrRun.sOpenLoop.ulMechAdder = 0UL ;
+
+	OpenLoopEncResetOut() ;
+
+    return TRUE ;
+}
+
+// manage open loop
+static BOOL OpenLoopEnc8KHz(GLB_IREF *psIRefIn, GLB_IREF *psIRefOut)
+{
+    // if NULL then I don't have to do anything, out = present reference
+    if(psIRefIn == NULL)
+    {
+    	sEncMgrRun.sOpenLoop.flags.b.bHookInTransition = TRUE ;
+    	OpenLoopEncResetOut() ;
+        return TRUE ;
+    }
+
+    if(sEncMgrRun.sOpenLoop.flags.b.bHookInTransition)
+    {	// declare open loop encoder ready
+    	sEncMgrRun.sOpenLoop.sEncoder.ubStatus = (ENCMGR_RELATIVE_VALID | ENCMGR_EFS_READY | ENCMGR_ELE_ANGLE_VALID) ;
+    	sEncMgrRun.sOpenLoop.flags.b.bHookInTransition = FALSE ;
+    }
+
+    // Current output
+    psIRefOut->slIdRef = psIRefIn->slIdRef + sEncMgrRun.sEfsRun.ulIdRampCurrent ; // keep EFS Id value
+    psIRefOut->slIqRef = 0 ; // since I'm in open loop, keep IqRef = 0
+
+    OpenLoopEncData() ;
+
+    return TRUE ;
+}
+
+static void OpenLoopEncResetOut(void)
+{
+	sEncMgrRun.sOpenLoop.slSpeedOPL  = 0L ;
+	sEncMgrRun.sOpenLoop.slPostnOPL  = 0L ;
+	sEncMgrRun.sOpenLoop.ulMechAdder = 0UL ;
+	sEncMgrRun.sOpenLoop.swElecTurns = 0 ;
+	sEncMgrRun.sOpenLoop.ulElecAngle = 0UL ;
+
+	OpenLoopEncZeroOut() ;
+}
+
+static void OpenLoopEncZeroOut(void)
+{
+	INT64_ASSIGN(sEncMgrRun.sOpenLoop.sEncoder.sEncData.sqPostn, 0L, 0UL) ;
+	INT64_ASSIGN(sEncMgrRun.sOpenLoop.sEncoder.sqMechAbsPosOffset, 0L, 0UL) ;
+	sEncMgrRun.sOpenLoop.sEncoder.sEncData.slSpeed = 0 ;
+	sEncMgrRun.sOpenLoop.sEncoder.sEncData.slAccel = 0 ;
+	sEncMgrRun.sOpenLoop.sEncoder.uwElecAngle      = 0 ;
+	sEncMgrRun.sOpenLoop.sEncoder.swElecSpeed      = 0 ;
+	sEncMgrRun.sOpenLoop.sEncoder.ubStatus         = ENCMGR_EFS_READY ;
+}
+
+static void OpenLoopEncData(void)
+{
+    ULONG ulElecAngle_1, ulMechEncAngle_1, ulMechEncAngle ;
+    SLONG slPostnOPL_1 ;
+
+    // speedOPL = SpeedRef (open loop uses reference speed as open loop speed)
+    sEncMgrRun.sOpenLoop.slSpeedOPL = sEm_EncMngrIn.psRef->slSpeed ;
+
+    // positionOPL = electrical position
+    slPostnOPL_1 = sEncMgrRun.sOpenLoop.slPostnOPL ;
+    sEncMgrRun.sOpenLoop.slPostnOPL = slPostnOPL_1 + ((sEncMgrRun.sOpenLoop.slSpeedOPL * sEncMgrRun.sOpenLoop.uwPolePairs + 0x80) >> 8) + ((SLONG)sEncMgrRun.sOpenLoop.swElecTurns << 24) ;
+
+    // ------------------------------------------------------------------------
+    // -------------------- turns number OL  overflow mgmt --------------------
+    // ------------------------------------------------------------------------
+    ulElecAngle_1 = sEncMgrRun.sOpenLoop.ulElecAngle ;
+    sEncMgrRun.sOpenLoop.ulElecAngle = (ULONG)sEncMgrRun.sOpenLoop.slPostnOPL << 8 ;
+
+    if ( (                     ulElecAngle_1 & 0x80000000) &&  (                    ulElecAngle_1 & 0x40000000) &&
+        !(sEncMgrRun.sOpenLoop.ulElecAngle   & 0x80000000) && !(sEncMgrRun.sOpenLoop.ulElecAngle  & 0x40000000)   )
+    { // Clockwise Overflow
+        sEncMgrRun.sOpenLoop.swElecTurns  = -1 ;
+        sEncMgrRun.sOpenLoop.ulMechAdder += sEncMgrRun.sOpenLoop.ulMechSteps ; // update adder
+    }
+    else if (!(                     ulElecAngle_1 & 0x80000000) && !(                     ulElecAngle_1 & 0x40000000) &&
+              (sEncMgrRun.sOpenLoop.ulElecAngle   & 0x80000000) &&  (sEncMgrRun.sOpenLoop.ulElecAngle   & 0x40000000)   )
+    { // Anticlockwise Overflow
+        sEncMgrRun.sOpenLoop.swElecTurns  = +1 ;
+        sEncMgrRun.sOpenLoop.ulMechAdder -= sEncMgrRun.sOpenLoop.ulMechSteps ; // update adder */
+    }
+    else
+        sEncMgrRun.sOpenLoop.swElecTurns = 0 ;
+    // ------------------------------------------------------------------------
+
+    // ------------------------------------------------------------------------
+    // ---------- Mechanical Outputs (Position, Speed, Acceleration) ----------
+    // ------------------------------------------------------------------------
+    // saving previous mechanical data necessary to calculate turns number, speed and acceleration
+    ulMechEncAngle_1 = sEncMgrRun.sOpenLoop.sEncoder.sEncData.sqPostn.lo ;
+
+    // calculating mechanical angle
+    ulMechEncAngle = sEncMgrRun.sOpenLoop.ulElecAngle / sEncMgrRun.sOpenLoop.uwPolePairs + sEncMgrRun.sOpenLoop.ulMechAdder ;
+
+    // calculating mechanical turns number
+    if ( (ulMechEncAngle_1 & 0x80000000) &&  (ulMechEncAngle_1 & 0x40000000) &&
+        !(ulMechEncAngle   & 0x80000000) && !(ulMechEncAngle   & 0x40000000)   )
+    {
+        sEncMgrRun.sOpenLoop.sEncoder.sEncData.sqPostn.hi++ ; // Clockwise Overflow
+    }
+    else if (!(ulMechEncAngle_1 & 0x80000000) && !(ulMechEncAngle_1 & 0x40000000) &&
+              (ulMechEncAngle   & 0x80000000) &&  (ulMechEncAngle   & 0x40000000)   )
+    {
+        sEncMgrRun.sOpenLoop.sEncoder.sEncData.sqPostn.hi-- ; // Anticlockwise Overflow
+    }
+
+    sEncMgrRun.sOpenLoop.sEncoder.sEncData.sqPostn.lo = ulMechEncAngle ;
+    sEncMgrRun.sOpenLoop.sEncoder.sEncData.slSpeed    = sEncMgrRun.sOpenLoop.slSpeedOPL ;
+    sEncMgrRun.sOpenLoop.sEncoder.sEncData.slAccel    = 0l ;
+    sEncMgrRun.sOpenLoop.sEncoder.uwElecAngle         = HIWORD(sEncMgrRun.sOpenLoop.ulElecAngle) ;
+
+    // Actual electrical speed = MechSpeed * MotorPolePairs
+    sEncMgrRun.sOpenLoop.sEncoder.swElecSpeed = (SWORD)_sint32_scale_32(sEncMgrRun.sOpenLoop.sEncoder.sEncData.slSpeed, sEncMgrRun.sOpenLoop.uwPolePairs) ;
+    // ------------------------------------------------------------------------
+}
+#endif

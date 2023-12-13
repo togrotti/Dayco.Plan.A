@@ -78,7 +78,17 @@
 #endif
 #define MAX_FIFO  64
 
+/////////////////////////////////////////////////////////////////////////////
+// Compiler Option
+#if (FALSE) //defined(_CRS_DBG)
+#if CRS_DBGDSK
+#pragma GCC optimize (0) // crs_dbg
+#else
 #pragma GCC optimize (2)
+#endif
+#else
+#pragma GCC optimize (2)
+#endif
 /************************** Constant Definitions ****************************/
 
 

@@ -126,6 +126,7 @@
 //#define ENDAT22_ADDINFO           1
 #define CFG_ENC_BEMF_DITEN        1
 #define CFG_ENC_BEMF_DITEN_PARAM  1
+#define CFG_ENCMGR_OPENLOOP       1
 //***************************************************************************
 // Define Modbus
 
@@ -164,15 +165,19 @@
 
 
 //***************************************************************************
-#define CRS_DBGDSK        0
 // Manage fast task overtime
 #if defined(_CRS_DBG)
+
+#define CRS_DBGDSK 0
+
 #if CRS_DBGDSK
 #define	CFG_FASTTASKOVERTIMEDISABLE 1
 #else
 #define	CFG_FASTTASKOVERTIMEDISABLE 0
 #endif
+
 #else
+#define CRS_DBGDSK 0
 #define	CFG_FASTTASKOVERTIMEDISABLE 0
 #endif
 
@@ -192,6 +197,6 @@
 
 //***************************************************************************
 // PLC
-#define CFG_PLC_DIAGNOSTIC 0
+#define CFG_PLC_DIAGNOSTIC 0	// load the plc application to autosetup the system
 
 #endif

@@ -444,6 +444,12 @@ const MODBUSCOMDB_ENTRY hpsModBusParamTable[]=
     {26336         , #%p 0x09A6, },
     {26337         , #%p 0x09A7, },
     {26338         , #%p 0x09A8, },
+    
+#if (CFG_ENCMGR_OPENLOOP)
+    /* ======== Encoder Manager OpenLoop ======== */
+    {26350         , #%p 0x09B0, }, // encoder openloop enable
+    {26351         , #%p 0x09B1, }, // encoder openloop enabled
+#endif 
 
     /* ====== Main Abs ====== */
     {26400 /*65A0*/, #%p 0x0900 }, /* mechanical turns number (RO) */

@@ -63,13 +63,19 @@ typedef struct
     GLB_IREF                *sIRefIn;
     MH_POWERSTAGECONTROL    *sPowerStageCtrlIn ;
     GLB_IREF                *sSpdLoopIRefIn;
+#if (CFG_ENCMGR_OPENLOOP)
+    GLB_KINEMATIC_DATA 		*psRef ; /* reference for openloop */
+#endif
 } ENCMGR_IN ;
 
 typedef struct
 {
     union {
         struct {
-            BOOL bRequireIRefHook;
+            BOOL bRequireIRefHook; // b.0
+#if (CFG_ENCMGR_OPENLOOP)
+            BOOL bOpenLoop ;       // b.1
+#endif
         } b ;
         UWORD w ;
     } flags ;
@@ -95,7 +101,9 @@ typedef union {
         BOOL bMainAccSel       ; /* abs/rel acc force abs */
         BOOL bMainElecAngleSel ; /* abs/rel elec angle force abs */
         BOOL bSpeedFilter      ; /* enable speed filtering */
-        // BOOL bDummy            ;
+#if CFG_ENCMGR_OPENLOOP
+        BOOL bOpenLoop         ; /* enable open loop */
+#endif
     } b ;
     // UWORD w[8] ;
 #ifdef _INFINEON_

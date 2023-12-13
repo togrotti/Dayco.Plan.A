@@ -176,7 +176,7 @@ SWORD EfsSetup(MH_MOTORDATA_OUT * psPSStatus,ENCMGR_SPACEFEEDBACK * psFeedback,G
         case EFS_TYPE_IDR_LOCAL_PID:
                 // if not forced and ENCMGR_ELE_ANGLE_VALID is valid
                 // then immediately exit
-        	if(!psRuntime->bForce && (psRuntime->psFeedback->ubStatus&ENCMGR_ELE_ANGLE_VALID))//if(!psRuntime->options.f.bForce && (psRuntime->psFeedback->ubStatus&ENCMGR_ELE_ANGLE_VALID))
+        	if((!psRuntime->bForce) && (psRuntime->psFeedback->ubStatus&ENCMGR_ELE_ANGLE_VALID))//if(!psRuntime->options.f.bForce && (psRuntime->psFeedback->ubStatus&ENCMGR_ELE_ANGLE_VALID))
                 return EFS_RV_ABORTED;
 
                 // setup number of ticks for the ramps and for the steady state
@@ -185,8 +185,17 @@ SWORD EfsSetup(MH_MOTORDATA_OUT * psPSStatus,ENCMGR_SPACEFEEDBACK * psFeedback,G
             psRuntime->uwIdSteadyTicksCounter=sEfsCheckedParam.uwIdSteadyTime;
 
                 // then get current step
+#if CFG_ENCMGR_OPENLOOP
+/*
+            slMotorCurrentPeak = Arms * 10 (1e-1A)
+            Percentage: 0 = 0, 100.0% = 1000
+            -> IdRampCurrent (iu, 1e-4A) =  Arms * 10000
+*/
+            psRuntime->ulIdRampCurrent = slMotorCurrentPeak * sEfsCheckedParam.uwIdRampCurrent ;
+            psRuntime->ulIdRampCurrentStep = psRuntime->ulIdRampCurrent / psRuntime->uwIdRampTicksCounter;
+#else
             psRuntime->ulIdRampCurrentStep=slMotorCurrentPeak * sEfsCheckedParam.uwIdRampCurrent / psRuntime->uwIdRampTicksCounter;
-
+#endif // cf_encmgr_openloop
             if(psRuntime->ulIdRampCurrentStep==0)
                 psRuntime->ulIdRampCurrentStep=1;
 
@@ -264,7 +273,7 @@ SWORD EfsProcess(EFS_RUNTIME * psRuntime, UWORD * puwElecAngleCorrection)
 
                 // if not forced, then if at any time ENCMGR_ELE_ANGLE_VALID became valid
                 // then exit from procedure
-            if(!psRuntime->bForce && (psRuntime->psFeedback->ubStatus&ENCMGR_ELE_ANGLE_VALID))//if(!psRuntime->options.f.bForce && (psRuntime->psFeedback->ubStatus&ENCMGR_ELE_ANGLE_VALID))
+            if((!psRuntime->bForce) && (psRuntime->psFeedback->ubStatus&ENCMGR_ELE_ANGLE_VALID))//if(!psRuntime->options.f.bForce && (psRuntime->psFeedback->ubStatus&ENCMGR_ELE_ANGLE_VALID))
             {
             	if(psRuntime->ubProcType==EFS_TYPE_IDR_AND_PLOOP)
                 {

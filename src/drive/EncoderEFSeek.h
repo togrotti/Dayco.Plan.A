@@ -96,6 +96,9 @@ typedef struct
 
     SLONG slElecAngleMult;
 
+#if CFG_ENCMGR_OPENLOOP
+    ULONG ulIdRampCurrent ; // 1e-4A
+#endif
     EFS_PI_RUNTIME sPI_Run ;
 } EFS_RUNTIME;
 

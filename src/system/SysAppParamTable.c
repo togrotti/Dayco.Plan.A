@@ -646,6 +646,12 @@ const COMMONPARAMDB_ENTRY psCommonParamTable[]=
     {0x09A7, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_SWORD, 0, 1, WRDENY_DEFAULT,   &sEfsOut.swEfsPiAutoKp, NULL},
     {0x09A8, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_SWORD, 0, 1, WRDENY_DEFAULT,   &sEfsOut.swEfsPiAutoShift, NULL},
 
+#if (CFG_ENCMGR_OPENLOOP)
+    	/* ======== Encoder Manager OpenLoop ======== */
+	{0x09B0, COMMONPARAMDB_FLAG_RW|COMMONPARAMDB_FLAG_RESETREQ, COMMONPARAMDB_TYPE_UBYTE, 0, 1, WRDENY_PARAMSAVE, &sEm_EncMngrParam.flags.b.bOpenLoop, NULL}, // flags to enable open loop with encoder
+    {0x09B1, COMMONPARAMDB_FLAG_RD,                             COMMONPARAMDB_TYPE_UBYTE, 0, 1, WRDENY_DEFAULT,   &sEm_EncMngrOut.flags.b.bOpenLoop,   NULL},
+#endif
+
         //****************************************************************************
         // SpaceSpeed Control Loop
         //****************************************************************************

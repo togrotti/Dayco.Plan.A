@@ -47,7 +47,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
 #if defined(_CRS_DBG)
-#if CRS_DBGDSK
+#if (FALSE) // CRS_DBGDSK
 #pragma GCC optimize (0) // crs_dbg
 #else
 #pragma GCC optimize (2)
@@ -306,6 +306,9 @@ static void setdefaults(void)
    sEm_EncMngrIn.sPowerStageCtrlIn     = &sEm_EncMngrOut.sPowerStageCtrlOut ;
    sEm_EncMngrIn.psMotorData           = &sMh_MotorDataOut ;
    sEm_EncMngrIn.sSpdLoopIRefIn        = &sSS_CntrLoopOut.sIRef ;
+#if (CFG_ENCMGR_OPENLOOP)
+    sEm_EncMngrIn.psRef                = &sPo_PostnerOut.sDemand ;
+#endif
 
         // BackEmf Encoder
     sBe_EmfEncIn.psRef                  = &sPo_PostnerOut.sDemand ;
@@ -564,6 +567,10 @@ UBYTE DrvTskCtrl_Config(UBYTE ubOperation)
 
             /* ================ BackEMF ========================= */
             sBe_EmfEncIn.psRef = sSS_CntrLoopIn.psRef;
+
+#if (CFG_ENCMGR_OPENLOOP)
+            sEm_EncMngrIn.psRef = sSS_CntrLoopIn.psRef ; // for the moment input "blocked"
+#endif
 
             // ========= Add and delete limit to the list =======
             (*sMh_MotorHandlers.pfDeleteLimitFromList)(MH_LIMITLIST_ID, &sMh_MotorDataParam.sIdLimit);  /* delete Torque ID current limits */

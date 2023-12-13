@@ -45,7 +45,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Compiler Option
 #if defined(_CRS_DBG)
-#if CRS_DBGDSK
+#if (FALSE) //CRS_DBGDSK
 #pragma GCC optimize (0) // crs_dbg
 #else
 #pragma GCC optimize (2)
@@ -1478,19 +1478,9 @@ static BOOL Mh_MotorDataFromFpgaInit(void)
   // limits: imposto i limiti e le soglie di fault overcurrent ed overvoltage
   sMh_MotorDataOut.sDriveLimit.slOverCurrent = sMotorHandlerRun.slMaxOverCurrent;
   sMh_MotorDataOut.sDriveLimit.swOverVoltage = sMotorHandlerRun.swMaxOverVoltage = swLocOverVoltage;
-#if defined(_CRS_DBG)
-  {
-	  UWORD uwTemp = 0 ;
-	  uwTemp = UMCONV_CONVERT_32TO16(&sInternal2Fpga_I_RMS, sMh_MotorDataOut.sDriveLimit.slOverCurrent) ;
-	  FPGA_PWM_FLT_CURRLIMIT = uwTemp ;
 
-	  uwTemp = UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK, (SLONG)sMh_MotorDataOut.sDriveLimit.swOverVoltage << 16) ;
-	  FPGA_PWM_FLT_DCBUSLIMIT = uwTemp ;
-  }
-#else
-  FPGA_PWM_FLT_CURRLIMIT = UMCONV_CONVERT_32TO16(&sInternal2Fpga_I_RMS, sMh_MotorDataOut.sDriveLimit.slOverCurrent) ;
+  FPGA_PWM_FLT_CURRLIMIT  = UMCONV_CONVERT_32TO16(&sInternal2Fpga_I_RMS, sMh_MotorDataOut.sDriveLimit.slOverCurrent) ;
   FPGA_PWM_FLT_DCBUSLIMIT = UMCONV_CONVERT_32TO16(&sInternal2Fpga_V_DC_PEAK, (SLONG)sMh_MotorDataOut.sDriveLimit.swOverVoltage<<16) ;
-#endif // _crs_dbg
 
   // Setup drive current limit (minimum between drive and motor)
   if((SLONG)(sGlbMotorParameters.flCurrentPeak * 10000.0) < sMh_MotorDataOut.sDriveLimit.slCurrentLimit)

@@ -40,7 +40,7 @@
 // Compiler Option
 // Compiler Option
 #if defined(_CRS_DBG)
-#if CRS_DBGDSK
+#if (FALSE) //CRS_DBGDSK
 #pragma GCC optimize (0) // crs_dbg
 #else
 #pragma GCC optimize (2)

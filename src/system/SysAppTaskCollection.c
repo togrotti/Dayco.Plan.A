@@ -89,9 +89,9 @@ const TASKSCHEDULER_TASK_INIT psSysAppTaskCollection[]=
 #if CFG_ECAT
 	TASK_ENTRY(EcatCM_Init, ECATCM_INIT_ALWAYS),
 #endif
-#ifdef _HW_DC
+#if CFG_ETHPMC
 	TASK_ENTRY(EpmcCM_Init, EPMCCM_INIT_ALWAYS),
-#endif // _hw_dc
+#endif // cfg_ethpmc
 #endif // _HW_AXS
 
 #ifndef _APP_LIMITED
@@ -141,7 +141,7 @@ const TASKSCHEDULER_TASK_INIT psSysAppTaskCollection[]=
 
 #if CFG_ETHPMC
 	TASK_ENTRY(EpmcCM_Init, EPMCCM_INIT_CORE),
-#endif // !CFG_ETHPMC
+#endif // cfg_ethpmc
 
 #if CFG_CANDRV_CMDMGR
 	TASK_ENTRY(CanOpenCM_Init, CANOPENCM_INIT_SYNCEVENT),
