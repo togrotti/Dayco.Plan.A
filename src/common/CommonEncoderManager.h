@@ -29,6 +29,7 @@
 #define ENCMGR_EFS_READY                        0x40
 #define ENCMGR_SNAPSHOT_VALID                   0x80
 
+#define ENCMGR_ELECANGLE_DEG2IU                 (FLOAT)(65536.0 / 360.0)
 //****************************************************************************
 // Input/Output data structures
 
@@ -53,5 +54,4 @@ typedef struct
         // Filtered Speed (32)
     SLONG  slFilteredSpeed;
 } ENCMGR_SPACEFB_EXT;
-
 #endif

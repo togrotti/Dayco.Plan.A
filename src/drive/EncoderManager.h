@@ -81,28 +81,47 @@ typedef struct
     } flags ;
     GLB_IREF                sIRefOut;
     MH_POWERSTAGECONTROL    sPowerStageCtrlOut ;
+
+#if CFG_IPM_PHASEOFFSET
+    SWORD	swElecAngleFF ;
+    SWORD   swElecAngleIPM ;
+#endif
 } ENCMGR_OUT ;
 
 //****************************************************************************
 // Parameters data structure
+#if CFG_IPM_PHASEOFFSET
+typedef struct{
+    FLOAT flK0 ;
+    FLOAT flK1 ;
+    FLOAT flK2 ;
+    FLOAT flK3 ;
+    SLONG slMaxI ;
+    SWORD swMaxPhaseOffset ;
+} IPM_PHASEOFFSET ;
+#endif
 
 typedef union {
     struct {
-        BOOL bPos2CntrLoop     ; /* boolean to select which position-information will be used by the control loop (primary/auxiliary encoder)     */
-        BOOL bSpd2CntrLoop     ; /* boolean to select which speed-information will be used by the control loop (primary/auxiliary encoder)        */
-        BOOL bAcc2CntrLoop     ; /* boolean to select which acceleration-information will be used by the control loop (primary/auxiliary encoder) */
-        BOOL bElecAngle2Fpga   ; /* boolean to select which electrical angle-information will be used by the FPGA (primary/auxiliary encoder)     */
-        BOOL bDisableIfRelFail ; /* disable power if relative fail, otherwise (default) switch to absolute and emit NONFATAL fault                */
-        BOOL bDisableEPlate    ; /* disable electronic plate reading at startup                                                                   */
-        BOOL bRestoreEPlate    ; /* restore original electronic plate parameters at next reset                                                    */
-        BOOL bDisAbsAfterValid ; /* disable absolute track processing after initial position validity                                             */
-        BOOL bMainPosSel       ; /* abs/rel pos force abs */
-        BOOL bMainSpdSel       ; /* abs/rel spd force abs */
-        BOOL bMainAccSel       ; /* abs/rel acc force abs */
-        BOOL bMainElecAngleSel ; /* abs/rel elec angle force abs */
-        BOOL bSpeedFilter      ; /* enable speed filtering */
+        BOOL bPos2CntrLoop     ; /* b.0.0 - boolean to select which position-information will be used by the control loop (primary/auxiliary encoder)     */
+        BOOL bSpd2CntrLoop     ; /* b.0.1 - boolean to select which speed-information will be used by the control loop (primary/auxiliary encoder)        */
+        BOOL bAcc2CntrLoop     ; /* b.1.0 - boolean to select which acceleration-information will be used by the control loop (primary/auxiliary encoder) */
+        BOOL bElecAngle2Fpga   ; /* b.1.1 - boolean to select which electrical angle-information will be used by the FPGA (primary/auxiliary encoder)     */
+        BOOL bDisableIfRelFail ; /* b.2.0 - disable power if relative fail, otherwise (default) switch to absolute and emit NONFATAL fault                */
+        BOOL bDisableEPlate    ; /* b.2.1 - disable electronic plate reading at startup                                                                   */
+        BOOL bRestoreEPlate    ; /* b.3.0 - restore original electronic plate parameters at next reset                                                    */
+        BOOL bDisAbsAfterValid ; /* b.3.1 - disable absolute track processing after initial position validity                                             */
+        BOOL bMainPosSel       ; /* b.4.0 - abs/rel pos force abs */
+        BOOL bMainSpdSel       ; /* b.4.1 - abs/rel spd force abs */
+        BOOL bMainAccSel       ; /* b.5.0 - abs/rel acc force abs */
+        BOOL bMainElecAngleSel ; /* b.5.1 - abs/rel elec angle force abs */
+        BOOL bSpeedFilter      ; /* b.6.0 - enable speed filtering */
 #if CFG_ENCMGR_OPENLOOP
-        BOOL bOpenLoop         ; /* enable open loop */
+        BOOL bOpenLoop         ; /* b.6.1 - enable open loop */
+#endif
+
+#if CFG_IPM_PHASEOFFSET
+        BOOL bIpmMgmt          ; /* b.7.0 - IPM phase offset mgmt */
 #endif
     } b ;
     // UWORD w[8] ;
@@ -135,6 +154,11 @@ typedef struct {
     SLONG slMaxSpeed;           // Maximum allowed speed [d.u.]
 
     UWORD uwSimSel;             // parameter to select the simulation encoder to use
+
+#if CFG_IPM_PHASEOFFSET
+    IPM_PHASEOFFSET sIPM ;      // parameters to manage IPM motors
+#endif
+
 } ENCMGR_PARAMS ;
 
 //****************************************************************************

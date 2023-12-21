@@ -37,9 +37,9 @@
 //****************************************************************************
 // Values
 
-#define EFS_VL_ELECANGLE_MIN    ((UWORD)((60.0)*182.0444))  // 60deg electrical
-#define EFS_VL_IDRLPID_EA_MIN   ((UWORD)(( 80.0)*182.0444)) // 90 - 10 deg electrical
-#define EFS_VL_IDRLPID_EA_MAX   ((UWORD)((100.0)*182.0444)) // 90 + 10 deg electrical
+#define EFS_VL_ELECANGLE_MIN    ((UWORD)(( 60.0) * ENCMGR_ELECANGLE_DEG2IU)) // 60 deg electrical (iu)
+#define EFS_VL_IDRLPID_EA_MIN   ((UWORD)(( 80.0) * ENCMGR_ELECANGLE_DEG2IU)) // 90 - 10 deg electrical (iu)
+#define EFS_VL_IDRLPID_EA_MAX   ((UWORD)((100.0) * ENCMGR_ELECANGLE_DEG2IU)) // 90 + 10 deg electrical (iu)
 																			   
 //****************************************************************************
 // Data structures

@@ -256,8 +256,11 @@ void DlfxSlow(BOOL bDflxEnabled)
     if(sDflx_Param.swDflxVdc > 0)
         flVdc = (FLOAT)sDflx_Param.swDflxVdc / 10.0 ;
     else
+#if (CFG_DFLX_VMOTOR)
+    	flVdc = sDflx_Out.flVdcBus ;
+#else
         flVdc = (FLOAT)*sDflx_In.pswActualVdc / 10.0 ;
-    
+#endif
     // optimizations
     flVdc     = flVdc * (FLOAT)sDflx_Param.uwKVOut / 1000.0 ; // V
     fl24Vdc_2 = 24.0 * flVdc * flVdc ;    // = 24 * V^2

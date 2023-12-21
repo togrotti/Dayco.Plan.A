@@ -61,7 +61,7 @@ typedef struct {
     GLB_TORQUE_LIMIT sMatrixIqLimit ;
 
 #if CFG_DFLX_VMOTOR
-    FLOAT flVdcBus ; // filtered
+    FLOAT flVdcBus ; // filtered (V)
     FLOAT flVMotorMax ; // VdcBus/sqrt(2)
     FLOAT flPiRef ;
     FLOAT flPiFbk ; // Vmotor filtered

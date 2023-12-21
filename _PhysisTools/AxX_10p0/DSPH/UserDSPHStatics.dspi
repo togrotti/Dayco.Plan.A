@@ -1,0 +1,13 @@
+//********************************************
+// UserDSPHStatics.dspi
+// Rev 1
+//********************************************
+// Fixed-address DSPH inputs for additional
+// adc mapping when using custom dsp
+//********************************************
+
+[INPUT]     VDC_I       0x0A
+[INPUT]     VAC_ARS     0x0B
+[INPUT]     VAC_AST     0x0C
+[INPUT]     VAC_IRS     0x0D
+[INPUT]     VAC_IST     0x0E

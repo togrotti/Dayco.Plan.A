@@ -43,6 +43,10 @@
 #include "drive\MotionController.h"
 #include "common\IOManager.h"
 
+#if CFG_IPM_PHASEOFFSET
+#include "drive\MotorHandler.h" // to catch filtered and limited IqRef
+#endif
+
 //#include <intrins.h>
 #include <string.h>
 #include <math.h>
@@ -146,11 +150,15 @@ const ENCMGR_PARAMS  sEm_EncMngrDefParam=
 #if (CFG_ENCMGR_OPENLOOP)
     ,0
 #endif
+
+#if (CFG_IPM_PHASEOFFSET)
+	,0
+#endif
     },// position, speed, acceleration, el ang from main enc, dis if rel fail
 #ifndef _HW_CT
 
 #ifdef _HW_AXS_DAYCO22KW
-    0,
+    0,						// Dayco cannot manage encoder supply voltage
     ENCODER_TYPE_ABS_ANALOG,
 #else
     415,                    // Encoder Supply Voltage = 5.2V
@@ -166,6 +174,15 @@ const ENCMGR_PARAMS  sEm_EncMngrDefParam=
     ENCODER_TYPE_NULL,      // main rel encoder to use 
     1820,                   // max angle diff, default 10deg
     ENCODER_TYPE_NULL,      // simulation encoder selection
+
+#if (CFG_IPM_PHASEOFFSET)
+	0.0,                    // flK0 // offset
+	0.0,                    // flK1 // x
+	0.0,                    // flK2 // x^2
+	0.0,                    // flK3 // x^3
+	SLONG_MAX_VALUE,        // slMaxI
+	0                       // swMaxPhaseOffset
+#endif
 };
 
 //****************************************************************************
@@ -218,7 +235,12 @@ typedef struct {
             UWORD bMainEncPresent   : 1 ; // b.12
             UWORD bSpeedFilter      : 1 ; // b.13
             UWORD bEnIncrementalHw  : 1 ; // b.14
+#if CFG_IPM_PHASEOFFSET
+            UWORD bIpmMgmt          : 1 ; // b.15
+#else
             UWORD bFreeBit15        : 1 ; // b.15
+#endif
+
         } b ;
         UWORD w ;
     } sFlags ;
@@ -267,6 +289,12 @@ typedef struct {
 #if (CFG_ENCMGR_OPENLOOP)
     OPEN_LOOP sOpenLoop ;
 #endif
+
+#if CFG_IPM_PHASEOFFSET
+    IPM_PHASEOFFSET sIPM ;
+    SWORD swElecAngleIPM ;
+#endif
+
 } ENCMGR_RUNTIME ;
 
 //****************************************************************************
@@ -309,6 +337,11 @@ static void OpenLoopEncZeroOut(void) ;
 static void OpenLoopEncData(void) ;
 #endif
 
+#if CFG_IPM_PHASEOFFSET
+static SWORD elecangleIPM_calc(void) ;
+static BOOL  elecangleIPM_param(void) ;
+static void  elecangle_diagout(void) ;
+#endif
 //***************************************************************************
 // Initialization entry point
 
@@ -609,6 +642,7 @@ BOOL initcore(void)
     }
 
         // then extract pointers for dest fb
+    	// when openloop, RequireIRefHook is always TRUE
     if(bMainAbsValid && (!bMainRelValid) && (!sEm_EncMngrOut.flags.b.bRequireIRefHook) && bAuxNull)
     {
         psAbsSel=&sEm_MainEnc;
@@ -1061,11 +1095,17 @@ BOOL initcore(void)
     else
         sEncMgrRun.sFlags.b.bMainEncPresent = FALSE ; 
 
+    sEncMgrRun.swElecAngleIPM = 0 ;
+
         // add rt task
     if(bSmartSelection)
+    {	// when openloop, RequireIRefHook is always TRUE: smartselection is always FALSE
         return TaskSched_AddRTTask(&task8kHzminimal, TASKSCHEDULER_FLAG_NONE, 0, SYSTEMSTATUS_MASK(SYSTEMSTATUS_BIT_BOOTING), 0) ;
+    }
     else
+    {
         return TaskSched_AddRTTask(&task8kHzfull, TASKSCHEDULER_FLAG_NONE, 0, SYSTEMSTATUS_MASK(SYSTEMSTATUS_BIT_BOOTING), 0) ;
+    }
 }
 
 //***************************************************************************
@@ -1250,6 +1290,12 @@ static BOOL task8kHzminimal(void)
     }
 
         // feedforward calculation
+#if CFG_IPM_PHASEOFFSET
+    sEncMgrRun.swElecAngleIPM = elecangleIPM_calc() ;
+#else
+    sEncMgrRun.swElecAngleIPM = 0 ;
+#endif
+
     elecangleff_calc();
 
         // if snapshot then reset all flags, position/electrical 
@@ -1262,7 +1308,7 @@ static BOOL task8kHzminimal(void)
     sEm_Fbk2CntrLoop.sEncData.sqPostn.hi=sEm_MainEnc.sEncData.sqPostn.hi;
     sEm_Fbk2CntrLoop.sEncData.slSpeed=sEm_MainEnc.sEncData.slSpeed;
     sEm_Fbk2CntrLoop.sEncData.slAccel=sEm_MainEnc.sEncData.slAccel;
-    sEm_Fbk2CntrLoop.uwElecAngle=sEm_MainEnc.uwElecAngle+sEncMgrRun.swElecAngleFF;
+    sEm_Fbk2CntrLoop.uwElecAngle=sEm_MainEnc.uwElecAngle+sEncMgrRun.swElecAngleFF+sEncMgrRun.swElecAngleIPM;
     sEm_Fbk2CntrLoop.swElecSpeed=sEm_MainEnc.swElecSpeed;
     sEm_Fbk2CntrLoop.sqMechAbsPosOffset.lo=sEm_MainEnc.sqMechAbsPosOffset.lo;
     sEm_Fbk2CntrLoop.sqMechAbsPosOffset.hi=sEm_MainEnc.sqMechAbsPosOffset.hi;
@@ -1280,6 +1326,10 @@ static BOOL task8kHzminimal(void)
 
         // filtered speed calculation
     filterspeed_calc();
+
+#if CFG_IPM_PHASEOFFSET
+    elecangle_diagout() ;
+#endif
 
     return TRUE ; 
 }
@@ -1453,17 +1503,26 @@ static BOOL task8kHzfull(void)
     {
         ubStatus&=~ENCMGR_ELE_ANGLE_VALID;
         sEm_Fbk2CntrLoop.swElecSpeed = 0 ;
+        sEncMgrRun.swElecAngleIPM = 0 ;
     }
     else
     {
-#if CFG_ENCMGR_OPENLOOP
-        sEm_Fbk2CntrLoop.uwElecAngle = *sEncMgrRun.puwElecAngle2Use ;
-        sEm_Fbk2CntrLoop.swElecSpeed = *sEncMgrRun.pswElecSpeed2Use ;
+#if CFG_IPM_PHASEOFFSET
+    	sEncMgrRun.swElecAngleIPM = elecangleIPM_calc() ;
 #else
-        elecangleff_calc();
-        sEm_Fbk2CntrLoop.uwElecAngle=*sEncMgrRun.puwElecAngle2Use+sEncMgrRun.swElecAngleFF;
-        sEm_Fbk2CntrLoop.swElecSpeed=*sEncMgrRun.pswElecSpeed2Use;
+    	sEncMgrRun.swElecAngleIPM = 0 ;
 #endif
+
+		elecangleff_calc() ;
+
+#if CFG_ENCMGR_OPENLOOP
+    	if (sEm_EncMngrOut.flags.b.bOpenLoop)
+    		sEm_Fbk2CntrLoop.uwElecAngle = *sEncMgrRun.puwElecAngle2Use ;
+    	else
+#endif
+    		sEm_Fbk2CntrLoop.uwElecAngle = *sEncMgrRun.puwElecAngle2Use + sEncMgrRun.swElecAngleFF + sEncMgrRun.swElecAngleIPM ;
+
+		sEm_Fbk2CntrLoop.swElecSpeed = *sEncMgrRun.pswElecSpeed2Use ;
     }
 
         // setup resulting encoder status
@@ -1493,6 +1552,10 @@ static BOOL task8kHzfull(void)
 
         // filtered speed calculation
     filterspeed_calc();
+
+#if CFG_IPM_PHASEOFFSET
+    elecangle_diagout() ;
+#endif
 
     return TRUE ; 
 }
@@ -1686,30 +1749,40 @@ static void slowtask(void)
 {
     paramcheck();
     elecanglefftime();
+#if (CFG_IPM_PHASEOFFSET)
+    elecangleIPM_param();
+#endif
+
 #if CFG_ENC_EFS
     absreldiffcheck();
     EfsParametersCheck();
 #endif
+
 #if CFG_ENC_ENDAT
     En_ParametersCheck(ENDAT_SEL_MAIN);
 #ifndef _HW_DC
     En_ParametersCheck(ENDAT_SEL_AUX);
 #endif
 #endif
+
 #if CFG_ENC_SINCOS
     Sc_ParametersCheck();
 #endif
+
 #if CFG_ENC_HALL
     Hl_ParametersCheck();
 #endif
+
 #if CFG_ENC_HIP
     Hf_ParametersCheck();
 #endif
+
 #if CFG_ENC_INCR
     Ic_EncoderParametersCheck(INCREMENTAL_SEL_MAIN);
     Ic_EncoderParametersCheck(INCREMENTAL_SEL_AUX);
     Ic_SimulationParametersCheck(sEm_EncMngrParam.uwMainRelSel==ENCODER_TYPE_REL_INCREMENTAL);
 #endif
+
 #if CFG_ENC_BEMF
     Be_ParametersCheck();
 #endif
@@ -1717,12 +1790,15 @@ static void slowtask(void)
 #if CFG_ENC_EFS
     EfsSlowTask();
 #endif
+
 #if CFG_ENC_NIKON
     Nk_ParametersCheck(NIKON_SEL_MAIN);
 #endif
+
 #if CFG_ENC_TMGW
     Tm_ParametersCheck(TMGW_SEL_MAIN);
 #endif
+
 #ifndef _HW_DC
     adjustvencoder();
 #endif
@@ -2137,3 +2213,76 @@ static void OpenLoopEncData(void)
     // ------------------------------------------------------------------------
 }
 #endif
+
+#if CFG_IPM_PHASEOFFSET
+SWORD elecangleIPM_calc(void)
+{
+    SWORD swPhaseOffsetIPM ;
+
+	if (sEncMgrRun.sFlags.b.bIpmMgmt)
+	{
+
+	    SLONG slAbsI ;
+	    FLOAT flAbsI, flAbsI2, flAbsI3 ;
+
+	    slAbsI = abs(sMh_MotorDataOut.slIqFltRef) ;
+	    if (slAbsI > sEncMgrRun.sIPM.slMaxI)
+	        slAbsI = sEncMgrRun.sIPM.slMaxI ;
+
+	    flAbsI = (FLOAT)slAbsI / 10000.0 ; // Arms
+	    flAbsI2 = flAbsI * flAbsI ;  // I^2
+	    flAbsI3 = flAbsI * flAbsI2 ; // I^3
+
+	    swPhaseOffsetIPM = (SWORD)((sEncMgrRun.sIPM.flK0 + sEncMgrRun.sIPM.flK1 * flAbsI + sEncMgrRun.sIPM.flK2 * flAbsI2 + sEncMgrRun.sIPM.flK3 * flAbsI3) * ENCMGR_ELECANGLE_DEG2IU) ; // iu elec angle
+
+	    if(swPhaseOffsetIPM > sEncMgrRun.sIPM.swMaxPhaseOffset)
+	        swPhaseOffsetIPM = sEncMgrRun.sIPM.swMaxPhaseOffset ;
+
+	    if (sMh_MotorDataOut.slIqFltRef < 0)
+	    	swPhaseOffsetIPM = -swPhaseOffsetIPM ;
+	}
+	else
+		swPhaseOffsetIPM = 0 ;
+
+	return swPhaseOffsetIPM ;
+}
+
+// Setup elec angle IPM params
+ BOOL elecangleIPM_param(void)
+ {
+	 sEncMgrRun.sFlags.b.bIpmMgmt = sEm_EncMngrParam.flags.b.bIpmMgmt ;
+
+	 if (sEncMgrRun.sIPM.flK0 != sEm_EncMngrParam.sIPM.flK0)
+		 sEncMgrRun.sIPM.flK0 = sEm_EncMngrParam.sIPM.flK0 ;
+
+	 if (sEncMgrRun.sIPM.flK1 != sEm_EncMngrParam.sIPM.flK1)
+		 sEncMgrRun.sIPM.flK1 = sEm_EncMngrParam.sIPM.flK1 ;
+
+	 if (sEncMgrRun.sIPM.flK2 != sEm_EncMngrParam.sIPM.flK2)
+		 sEncMgrRun.sIPM.flK2 = sEm_EncMngrParam.sIPM.flK2 ;
+
+	 if (sEncMgrRun.sIPM.flK3 != sEm_EncMngrParam.sIPM.flK3)
+		 sEncMgrRun.sIPM.flK3 = sEm_EncMngrParam.sIPM.flK3 ;
+
+	 if (sEm_EncMngrParam.sIPM.slMaxI < 0)
+		 sEm_EncMngrParam.sIPM.slMaxI = SLONG_MAX_VALUE ;
+
+	 if (sEncMgrRun.sIPM.slMaxI != sEm_EncMngrParam.sIPM.slMaxI)
+		 sEncMgrRun.sIPM.slMaxI = sEm_EncMngrParam.sIPM.slMaxI ;
+
+	 if (sEm_EncMngrParam.sIPM.swMaxPhaseOffset < 0)
+		 sEm_EncMngrParam.sIPM.swMaxPhaseOffset = 0 ;
+
+	 if (sEncMgrRun.sIPM.swMaxPhaseOffset != sEm_EncMngrParam.sIPM.swMaxPhaseOffset)
+		 sEncMgrRun.sIPM.swMaxPhaseOffset = sEm_EncMngrParam.sIPM.swMaxPhaseOffset ;
+
+	 return TRUE ;
+ }
+
+void elecangle_diagout(void)
+{  // show values to user
+    sEm_EncMngrOut.swElecAngleFF  = sEncMgrRun.swElecAngleFF ;
+    sEm_EncMngrOut.swElecAngleIPM = sEncMgrRun.swElecAngleIPM ;
+}
+#endif
+

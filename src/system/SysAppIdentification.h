@@ -58,8 +58,8 @@
 //***************************************************************************
 // Build number, provided both as number and as string
 
-#define IDENT_VERSION_BUILD_NUMBER          17 // #%b
-#define IDENT_SVERSION_BUILD_NUMBER         "17" // #%c
+#define IDENT_VERSION_BUILD_NUMBER          18 // #%b
+#define IDENT_SVERSION_BUILD_NUMBER         "18" // #%c
 
 //***************************************************************************
 // Identification

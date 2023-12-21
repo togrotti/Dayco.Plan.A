@@ -128,6 +128,7 @@
 #define CFG_ENC_BEMF_DITEN_PARAM  1
 #define CFG_ENCMGR_OPENLOOP       1
 #define CFG_DFLX_VMOTOR	          1
+#define CFG_IPM_PHASEOFFSET       1
 //***************************************************************************
 // Define Modbus
 

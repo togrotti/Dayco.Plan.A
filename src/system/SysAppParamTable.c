@@ -615,6 +615,19 @@ const COMMONPARAMDB_ENTRY psCommonParamTable[]=
 #endif
     {0x0944, COMMONPARAMDB_FLAG_RW|COMMONPARAMDB_FLAG_RESETREQ, COMMONPARAMDB_TYPE_UWORD, 0, 1, WRDENY_PARAMSAVE,   &sEm_EncMngrParam.uwSimSel, NULL},
 
+#if CFG_IPM_PHASEOFFSET
+    {0x0945, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_SWORD, 0, 1, WRDENY_DEFAULT,   &sEm_EncMngrOut.swElecAngleFF, NULL},              // elec angle additional ff offset
+
+    {0x0950, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_UBYTE, 0, 1, WRDENY_PARAMSAVE, &sEm_EncMngrParam.flags.b.bIpmMgmt, NULL},         // IPM: flags to enable IPM mgmt
+    {0x0951, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_SLONG, 0, 1, WRDENY_PARAMSAVE, &sEm_EncMngrParam.sIPM.slMaxI, NULL},              // IPM: max current at max phase offset
+    {0x0952, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_SWORD, 0, 1, WRDENY_PARAMSAVE, &sEm_EncMngrParam.sIPM.swMaxPhaseOffset, NULL},    // IPM: max phase offset at max current
+    {0x0953, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_FLOAT, 0, 1, WRDENY_PARAMSAVE, &sEm_EncMngrParam.sIPM.flK0, NULL},                // IPM: equation offset          (K0)
+    {0x0954, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_FLOAT, 0, 1, WRDENY_PARAMSAVE, &sEm_EncMngrParam.sIPM.flK1, NULL},                // IPM: equation 1st order coeff (K1 * x)
+    {0x0955, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_FLOAT, 0, 1, WRDENY_PARAMSAVE, &sEm_EncMngrParam.sIPM.flK2, NULL},                // IPM: equation 2nd order coeff (K2 * x^2)
+    {0x0956, COMMONPARAMDB_FLAG_RW, COMMONPARAMDB_TYPE_FLOAT, 0, 1, WRDENY_PARAMSAVE, &sEm_EncMngrParam.sIPM.flK3, NULL},                // IPM: equation 3rd order coeff (K3 * x^3)
+    {0x0957, COMMONPARAMDB_FLAG_RD, COMMONPARAMDB_TYPE_SWORD, 0, 1, WRDENY_DEFAULT,   &sEm_EncMngrOut.swElecAngleIPM, NULL},             // IPM: elec angle additional IPM offset
+#endif
+
         /* -------- Incremental MAIN Extras -------- */
     {0x0980, COMMONPARAMDB_FLAG_RW,                             COMMONPARAMDB_TYPE_UWORD, 0,       1, WRDENY_PARAMSAVE, &sIc_IncEncParams[INCREMENTAL_SEL_MAIN].uwMaxFrequency, NULL},                // Max frequency [kHz]
     {0x0981, COMMONPARAMDB_FLAG_RW|COMMONPARAMDB_FLAG_RESETREQ, COMMONPARAMDB_TYPE_UBYTE , 0,/* 8*/ 1, WRDENY_PARAMSAVE, &sIc_IncEncParams[INCREMENTAL_SEL_MAIN].flags.b.bDisIdxEAngle, NULL},         // disable index track for electrical angle adjustment

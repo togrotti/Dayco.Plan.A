@@ -1,0 +1,24 @@
+//********************************************
+// FpgaDSPHStatics.dspi
+// Rev 1
+//********************************************
+// Fixed-address DSPH out direct bus for
+// data used by PWM modulator and for end
+// of operations triggering
+// values must be adapted according to HDL
+// static definitions
+//********************************************
+
+[REGISTER]  VOUT_U      0x000
+[REGISTER]  VOUT_V      0x008
+[REGISTER]  VOUT_W      0x010
+[REGISTER]  VDIF_UV     0x018
+[REGISTER]  VDIF_UW     0x020
+[REGISTER]  VDIF_VW     0x028
+[REGISTER]  VSUM_UV     0x030
+[REGISTER]  VSUM_UW     0x038
+[REGISTER]  VSUM_VW     0x040
+[REGISTER]  VDC_OUT     0x048
+[REGISTER]  VDC_ARMC    0x0B8
+
+[REGISTER]  DONE        0x1F8

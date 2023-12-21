@@ -351,6 +351,10 @@ const MODBUSCOMDB_ENTRY hpsModBusParamTable[]=
 #endif
     {26107 /*65FB*/, #%p 0x0944 },
 
+#if CFG_IPM_PHASEOFFSET
+	{26108 /*65FC*/, #%p 0x0945 }, // elec angle additional ff offset  
+#endif
+
     /* ==== Auxiliary ==== */
     {26110 /*6610*/, #%p 0x0880 }, /* Auxiliary sensor mechanical turns number (RO) */
     {26111 /*6611*/, #%p 0x0881 }, /* Auxiliary sensor mechanical angle (RO) */
@@ -760,7 +764,16 @@ const MODBUSCOMDB_ENTRY hpsModBusParamTable[]=
     {27817 /*6CA9*/, #%p 0x2011 },  // MaximumTemp (RW)
     {27818 /*6CAA*/, #%p 0x2012 },  // Synchronous or direct inductance (RW)
 
-
+#if CFG_IPM_PHASEOFFSET
+	{27900 /*6CFC*/, #%p 0x0950 }, // IPM: flags to enable IPM mgmt            (RW)
+	{27901 /*6CFD*/, #%p 0x0951 }, // IPM: max current at max phase offset     (RW)
+	{27902 /*6CFE*/, #%p 0x0952 }, // IPM: max phase offset at max current     (RW)
+	{27903 /*6CFF*/, #%p 0x0953 }, // IPM: equation offset          (K0)       (RW)       
+	{27904 /*6D00*/, #%p 0x0954 }, // IPM: equation 1st order coeff (K1 * x)   (RW)
+	{27905 /*6D01*/, #%p 0x0955 }, // IPM: equation 2nd order coeff (K2 * x^2) (RW)
+	{27906 /*6D02*/, #%p 0x0956 }, // IPM: equation 3rd order coeff (K3 * x^3) (RW)
+	{27907 /*6D03*/, #%p 0x0957 }, // IPM: elec angle additional IPM offset    (RO)
+#endif
 
     /* ######### Thermal Model ######### */
     {28100 /*6C98*/, #%p 0x3000 }, /* R Brake Value (RW)     */

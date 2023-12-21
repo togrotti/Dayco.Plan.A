@@ -326,12 +326,15 @@ static void setdefaults(void)
     sMh_MotorDataIn.pswElecSpeed        = &psFbEncoder->swElecSpeed ;
 
         // Deflux
-    sDflx_In.pswActualVdc               = &sTm_ThModOut.sOutValue.swDcBusAvrg ;
+#if (CFG_DFLX_VMOTOR)
+    sDflx_In.pswActualVdc               = &sMh_MotorDataOut.swDcBusValue ; // actual value from servo (8kHz)
+    sDflx_In.pswActualVMotor            = &sMh_MotorDataOut.swVMotor ;
+#else
+    sDflx_In.pswActualVdc               = &sTm_ThModOut.sOutValue.swDcBusAvrg ; // actual value from Thermal model (filtered 8ms<->16ms)
+#endif
     sDflx_In.pswActualSpd               = &psFbEncoder->swElecSpeed ;
     sDflx_In.psPowerStageStatus         = &sMh_MotorDataOut.sPowerStageSts ;
-#if CFG_DFLX_VMOTOR
-    sDflx_In.pswActualVMotor            = &sMh_MotorDataOut.swVMotor ;
-#endif
+
         // Thermal model
     sTm_ThModIn.psMotorData             = &sMh_MotorDataOut ;
     sTm_ThModIn.psMotorHandlers         = &sMh_MotorHandlers ;

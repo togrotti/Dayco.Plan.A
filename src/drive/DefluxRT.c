@@ -153,8 +153,14 @@ void Dflx8KHz(BOOL bReferenceEnabled, SLONG * pslIdRef, SLONG * pslIqRef)
 // ###################################################################################################
 // ###################################################################################################
 #if CFG_DFLX_VMOTOR
-    // Filter VdcBus @2ms; 0.00625 = 0.0625 / 10.0
-    sDflx_Out.flVdcBus = 0.9375 * sDflx_Out.flVdcBus + 0.00625 * (FLOAT)(*sDflx_In.pswActualVdc) ; // V
+    if (sDflx_Out.flags.b.bDefluxOnly_VmotorPi)
+    {   // Filter VdcBus @2ms -> 1/(2*8) = 1/16 = 0.0625 / 10.0 = 0.00625
+        sDflx_Out.flVdcBus = 0.9375 * sDflx_Out.flVdcBus + 0.00625 * (FLOAT)(*sDflx_In.pswActualVdc) ; // V
+    }
+    else
+    {   // Filter VdcBus @8ms -> 1/(8*8) = 1/64 = 0.015625 / 10.0 = 0.0015625
+        sDflx_Out.flVdcBus = 0.9984375 * sDflx_Out.flVdcBus + 0.0015625 * (FLOAT)(*sDflx_In.pswActualVdc) ; // V
+    }
 
     // Filter VdcMotor @1ms; 0.0125 = 0.125 / 10.0
     sDflx_Out.flPiFbk = 0.875 * sDflx_Out.flPiFbk + 0.0125 * (FLOAT)(*sDflx_In.pswActualVMotor) ; // V
